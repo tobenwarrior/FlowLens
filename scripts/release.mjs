@@ -70,6 +70,7 @@ const allowlist = [
   "server/safe-provider.ts",
   "server/trace-provider.ts",
   "server/label-store.ts",
+  "server/price-provider.ts",
   "src/App.tsx",
   "src/main.tsx",
   "src/protocol.css",
@@ -119,6 +120,7 @@ const allowlist = [
   "tests/label-store.test.ts",
   "tests/label-memory.test.ts",
   "tests/net-flow.test.ts",
+  "tests/price-provider.test.ts",
   "tests/protocols.test.ts",
   "tests/acquisition-workflow.test.ts",
 ].sort();

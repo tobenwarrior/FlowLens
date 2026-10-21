@@ -94,6 +94,7 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
         "replay",
         "acquire",
         "annotate",
+        "prices",
         "label_put",
         "label_search",
         "label_forget",

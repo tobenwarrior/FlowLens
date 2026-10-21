@@ -30,6 +30,7 @@ import {
   withFileLock,
 } from "./store.ts";
 import { LabelStore } from "./label-store.ts";
+import { fetchOnChainPrices } from "./price-provider.ts";
 import { ProviderError } from "./etherscan.ts";
 import { RpcProviderError } from "./rpc.ts";
 import {
@@ -358,6 +359,34 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         };
       });
     }
+    // Spot USD over the same public RPC acquisition already uses. Explicitly invoked,
+    // never fetched in the background, and bounded to a handful of assets per call.
+    if (operation === "prices") {
+      const chainId = input.chainId;
+      if (!Number.isSafeInteger(chainId) || (chainId as number) < 1)
+        throw new AgentOperationError(
+          "INVALID_ARGUMENT",
+          "Price lookup requires a positive integer chain ID.",
+        );
+      const assets = Array.isArray(input.assets) ? input.assets : [];
+      if (assets.length > 50)
+        throw new AgentOperationError(
+          "INVALID_ARGUMENT",
+          "Price lookup accepts at most 50 assets per call.",
+        );
+      const result = await fetchOnChainPrices(
+        chainId as number,
+        assets as never,
+        { maxAssets: input.maxAssets as number | undefined },
+      );
+      return {
+        ...result,
+        scope: "spot-price",
+        basis:
+          "Spot price at the current block from a single Uniswap V3 pool. Not a market rate, and applying it to an older transfer values that transfer at today's price.",
+      };
+    }
+
     // Attribution the user or an agent can reuse in every later trace.
     if (operation === "label_put") {
       const entry = await labels.put({

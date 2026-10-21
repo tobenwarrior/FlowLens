@@ -957,6 +957,13 @@ samp {
   color: var(--text-dim);
 }
 
+.price-note {
+  color: var(--text-faint);
+  font-size: 10px;
+  border-bottom: 1px dotted var(--border-strong);
+  cursor: help;
+}
+
 .txtools-right {
   margin-left: auto;
   display: flex;

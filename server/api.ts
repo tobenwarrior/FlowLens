@@ -168,6 +168,12 @@ export function createApiServer(options: ApiOptions) {
           200,
           await agentService.call("replay", await body(req)),
         );
+      if (method === "POST" && url.pathname === "/api/prices")
+        return send(
+          res,
+          200,
+          await agentService.call("prices", await body(req)),
+        );
       if (method === "POST" && url.pathname === "/api/acquire")
         return send(
           res,

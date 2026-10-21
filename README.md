@@ -34,6 +34,8 @@ Try the demo:
 
 **Gross inflow, gross outflow and net stay separate**, by chain and asset contract. Transfers are not automatically buys or sells. Shared funders, graph proximity and labels do not prove common ownership.
 
+USD values are optional and off until requested. **Load USD prices** reads spot prices from Uniswap V3 pools over the same public RPC used elsewhere — no extra provider, key or account. A quote is a single-pool spot price at the current block, not a market rate, and it names the pool it came from. Applying it to an older transfer values that transfer at today's price, which the interface states. Assets without a pool stay unpriced rather than guessed, and USD never feeds the exact integer amounts the engine keeps.
+
 <details>
 <summary>Phone view</summary>
 

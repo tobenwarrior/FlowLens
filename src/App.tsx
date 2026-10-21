@@ -44,7 +44,8 @@ import {
   demoPriceBook,
   demoProvider,
 } from "./domain/demo.ts";
-import { EMPTY_PRICE_BOOK } from "./domain/pricing.ts";
+import { EMPTY_PRICE_BOOK, priceBook } from "./domain/pricing.ts";
+import type { PriceBook, PriceQuote } from "./domain/pricing.ts";
 import { TransferTable } from "./components/TransferTable.tsx";
 import { AddressOverview } from "./components/AddressOverview.tsx";
 import { Graph, chainName, displayUnits, short } from "./components/Graph.tsx";
@@ -135,6 +136,53 @@ export default function App() {
   const [to, setTo] = useState("");
   const [showDates, setShowDates] = useState(false);
   const [view, setView] = useState<"graph" | "list">("graph");
+  // Live quotes are fetched only when asked for: a price lookup is a network call, and
+  // FlowLens does not make those in the background.
+  const [liveBook, setLiveBook] = useState<PriceBook>(EMPTY_PRICE_BOOK);
+  const [pricing, setPricing] = useState(false);
+  const activeBook = investigation?.mode === "demo" ? demoPriceBook : liveBook;
+
+  /**
+   * Fetch spot quotes for the assets already in loaded evidence, one call per chain.
+   * Bounded by the chains actually present; nothing recursive, nothing retried.
+   */
+  async function loadPrices() {
+    if (!investigation || pricing) return;
+    setPricing(true);
+    setError("");
+    try {
+      const byChain = new Map<number, Map<string, Transfer["asset"]>>();
+      for (const transfer of investigation.transfers) {
+        if (!byChain.has(transfer.chainId))
+          byChain.set(transfer.chainId, new Map());
+        byChain
+          .get(transfer.chainId)!
+          .set(assetKey(transfer.asset), transfer.asset);
+      }
+      const quotes: PriceQuote[] = [];
+      const warnings: string[] = [];
+      for (const [chainId, assets] of [...byChain].slice(0, 4)) {
+        const result = await api<{
+          quotes: PriceQuote[];
+          warnings: string[];
+        }>("/prices", { chainId, assets: [...assets.values()] });
+        quotes.push(...result.quotes);
+        warnings.push(...result.warnings);
+      }
+      setLiveBook(priceBook(quotes));
+      setToast(
+        quotes.length
+          ? `Priced ${quotes.length} asset${quotes.length === 1 ? "" : "s"} at spot${warnings.length ? ` · ${warnings.length} unpriced` : ""}`
+          : "No pool prices were available for these assets",
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Price lookup failed",
+      );
+    } finally {
+      setPricing(false);
+    }
+  }
   const [grouped, setGrouped] = useState(false);
   const [saved, setSaved] = useState<Investigation[]>([]);
   const [provider, setProvider] = useState(false);
@@ -1005,21 +1053,17 @@ export default function App() {
                   <AddressOverview
                     investigation={investigation}
                     address={selectedNode?.address ?? investigation.root}
-                    book={
-                      investigation.mode === "demo"
-                        ? demoPriceBook
-                        : EMPTY_PRICE_BOOK
-                    }
+                    book={activeBook}
                   />
                   <TransferTable
                     investigation={investigation}
                     address={selectedNode?.address ?? investigation.root}
-                    book={
-                      investigation.mode === "demo"
-                        ? demoPriceBook
-                        : EMPTY_PRICE_BOOK
-                    }
+                    book={activeBook}
                     onSelect={selectTransfer}
+                    onLoadPrices={
+                      investigation.mode === "demo" ? undefined : loadPrices
+                    }
+                    pricing={pricing}
                   />
                 </div>
               )}

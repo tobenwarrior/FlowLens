@@ -1,6 +1,7 @@
 import {
   Bell,
   Bookmark,
+  CircleDollarSign,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -125,6 +126,8 @@ export function TransferTable({
   onSelect,
   onRefresh,
   refreshing = false,
+  onLoadPrices,
+  pricing = false,
 }: {
   investigation: Investigation;
   address: string;
@@ -132,6 +135,9 @@ export function TransferTable({
   onSelect: (transfer: Transfer) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** Omitted when quotes come from a fixture and there is nothing to fetch. */
+  onLoadPrices?: () => void;
+  pricing?: boolean;
 }) {
   const [tab, setTab] = useState<TransferTab>("transfers");
   const [sort, setSort] = useState<TableSort>({
@@ -291,6 +297,25 @@ export function TransferTable({
           />{" "}
           loaded evidence only
         </span>
+        {onLoadPrices ? (
+          view.pricing.priced > 0 ? (
+            <span
+              className="price-note"
+              title="Spot price from a single Uniswap V3 pool at the current block. Older transfers are valued at today's price."
+            >
+              USD at today&apos;s spot price
+            </span>
+          ) : (
+            <button
+              className="txchip txchip-add"
+              onClick={onLoadPrices}
+              disabled={pricing}
+            >
+              <CircleDollarSign aria-hidden="true" size={11} />
+              {pricing ? "Pricing…" : "Load USD prices"}
+            </button>
+          )
+        ) : null}
         <span className="txtools-right">
           <button
             className="icon-button"

@@ -135,6 +135,30 @@ const tools = [
       .strict(),
   },
   {
+    operation: "prices",
+    description:
+      "Read spot USD prices for the supplied assets from Uniswap V3 pools over the same public RPC used elsewhere. No new provider, key or account. Each quote is a single-pool spot price at the current block, not a market rate, and naming its pool is part of the result. Applying a quote to an older transfer values that transfer at today's price. Bounded per call; assets without a pool are reported unpriced rather than guessed.",
+    readOnly: true,
+    input: z
+      .object({
+        chainId: positiveInteger,
+        assets: z
+          .array(
+            z
+              .object({
+                chainId: positiveInteger,
+                symbol: z.string().min(1).max(40),
+                decimals: z.number().int().min(0).max(255),
+                contract: address.nullable(),
+              })
+              .strict(),
+          )
+          .max(50),
+        maxAssets: z.number().int().min(1).max(12).optional(),
+      })
+      .strict(),
+  },
+  {
     operation: "label_put",
     description:
       "Remember an entity label for a chain and address in the local label store, so later investigations start with it already applied. Use kind 'ai' for your own attribution: it is a hypothesis and is refused if it claims verified confidence or verified evidence. A label records who claimed what; it never establishes ownership, and funding links never prove common control.",

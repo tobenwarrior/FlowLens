@@ -7,13 +7,25 @@ import type { Asset, Transfer } from "./types.ts";
  * into flow aggregation, cursors or coverage.
  */
 export interface PriceQuote {
-  /** assetKey(asset) — chain-scoped, so the same symbol on two chains stays distinct. */
+  /**
+   * `assetKey(asset)` for a spot quote, or `assetKey(asset)@<block>` for one read at a
+   * particular block. Chain-scoped either way, so the same symbol on two chains stays
+   * distinct.
+   */
   key: string;
   /** Decimal string, USD per whole unit of the asset. */
   usd: string;
   source: string;
   retrievedAt: string;
   confidence: "synthetic" | "reported" | "unverified";
+  /**
+   * What moment the price describes. "spot" is the price now, which values an old
+   * transfer at today's rate; "at-block" was read at that transfer's own block.
+   * Absent on fixtures, which are neither.
+   */
+  basis?: "spot" | "at-block";
+  /** Set when basis is "at-block". */
+  blockNumber?: number;
 }
 
 export interface PriceBook {
@@ -24,6 +36,8 @@ export interface UsdValue {
   /** Decimal string. Derived for display; not evidence. */
   amount: string;
   quote: PriceQuote;
+  /** True when the quote was read at this transfer's own block. */
+  atBlock: boolean;
 }
 
 export const EMPTY_PRICE_BOOK: PriceBook = { quotes: {} };
@@ -44,17 +58,34 @@ export function wholeUnits(rawAmount: string, decimals: number): number {
   return decimalToNumber(formatUnits(rawAmount, decimals));
 }
 
+/** Book key for a price read at one block. */
+export function blockQuoteKey(asset: Asset, blockNumber: number): string {
+  return `${assetKey(asset)}@${blockNumber}`;
+}
+
+/** Spot quote only. Aggregates spanning many blocks have no single historical rate. */
 export function quoteFor(asset: Asset, book: PriceBook): PriceQuote | null {
   return book.quotes[assetKey(asset)] ?? null;
 }
 
+/**
+ * A price for this transfer, preferring one read at its own block over the spot rate.
+ * Falling back is deliberate and visible: `atBlock` tells the interface which it got,
+ * so a historical transfer valued at today's price can say so.
+ */
 export function usdValue(transfer: Transfer, book: PriceBook): UsdValue | null {
-  const quote = quoteFor(transfer.asset, book);
+  const atBlockQuote =
+    book.quotes[blockQuoteKey(transfer.asset, transfer.blockNumber)] ?? null;
+  const quote = atBlockQuote ?? quoteFor(transfer.asset, book);
   if (!quote) return null;
   const units = wholeUnits(transfer.rawAmount, transfer.asset.decimals);
   const amount = units * decimalToNumber(quote.usd);
   if (!Number.isFinite(amount)) return null;
-  return { amount: amount.toString(), quote };
+  return {
+    amount: amount.toString(),
+    quote,
+    atBlock: atBlockQuote !== null,
+  };
 }
 
 function trimZeros(value: string): string {

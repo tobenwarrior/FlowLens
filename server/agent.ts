@@ -31,6 +31,7 @@ import {
 } from "./store.ts";
 import { LabelStore } from "./label-store.ts";
 import { fetchOnChainPrices } from "./price-provider.ts";
+import { distinctLookups, fetchHistoricalPrices } from "./historical-price.ts";
 import { ProviderError } from "./etherscan.ts";
 import { RpcProviderError } from "./rpc.ts";
 import {
@@ -384,6 +385,35 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         scope: "spot-price",
         basis:
           "Spot price at the current block from a single Uniswap V3 pool. Not a market rate, and applying it to an older transfer values that transfer at today's price.",
+      };
+    }
+
+    // Prices read at each transfer's own block, so historical evidence is not valued
+    // at today's rate. Explicit and bounded, like the spot lookup.
+    if (operation === "prices_at_blocks") {
+      const chainId = input.chainId;
+      if (!Number.isSafeInteger(chainId) || (chainId as number) < 1)
+        throw new AgentOperationError(
+          "INVALID_ARGUMENT",
+          "Historical price lookup requires a positive integer chain ID.",
+        );
+      const transfers = Array.isArray(input.transfers) ? input.transfers : [];
+      if (transfers.length > 20_000)
+        throw new AgentOperationError(
+          "INVALID_ARGUMENT",
+          "Historical price lookup accepts at most 20000 transfers per call.",
+        );
+      const result = await fetchHistoricalPrices(
+        chainId as number,
+        transfers as never,
+        { maxLookups: input.maxLookups as number | undefined },
+      );
+      return {
+        ...result,
+        distinctPairs: distinctLookups(chainId as number, transfers as never),
+        scope: "at-block-price",
+        basis:
+          "Each quote is the pool's last swap at or before that transfer's block. Assets left unpriced keep the spot rate, which values them at today's price.",
       };
     }
 

@@ -143,6 +143,53 @@ export default function App() {
   const activeBook = investigation?.mode === "demo" ? demoPriceBook : liveBook;
 
   /**
+   * Fetch prices at each transfer's own block, merging them over the spot book so a
+   * historical transfer stops being valued at today's rate. Anything left unpriced
+   * keeps its spot quote.
+   */
+  async function loadBlockPrices() {
+    if (!investigation || pricing) return;
+    setPricing(true);
+    setError("");
+    try {
+      const byChain = new Map<number, Transfer[]>();
+      for (const transfer of investigation.transfers) {
+        if (!byChain.has(transfer.chainId)) byChain.set(transfer.chainId, []);
+        byChain.get(transfer.chainId)!.push(transfer);
+      }
+      const quotes: PriceQuote[] = [];
+      let unpriced = 0;
+      for (const [chainId, transfers] of [...byChain].slice(0, 4)) {
+        const result = await api<{
+          quotes: PriceQuote[];
+          warnings: string[];
+          distinctPairs: number;
+        }>("/prices-at-blocks", { chainId, transfers });
+        quotes.push(...result.quotes);
+        unpriced += Math.max(0, result.distinctPairs - result.quotes.length);
+      }
+      // Spot quotes stay underneath: a block quote wins per transfer, and anything
+      // without one still has a price rather than a dash.
+      setLiveBook((current) =>
+        priceBook([...Object.values(current.quotes), ...quotes]),
+      );
+      setToast(
+        quotes.length
+          ? `Priced ${quotes.length} asset/block pair${quotes.length === 1 ? "" : "s"} at transfer time${unpriced ? ` · ${unpriced} kept spot` : ""}`
+          : "No transfer-time prices were available; spot prices kept",
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Transfer-time price lookup failed",
+      );
+    } finally {
+      setPricing(false);
+    }
+  }
+
+  /**
    * Fetch spot quotes for the assets already in loaded evidence, one call per chain.
    * Bounded by the chains actually present; nothing recursive, nothing retried.
    */
@@ -1063,6 +1110,11 @@ export default function App() {
                     onSelect={selectTransfer}
                     onLoadPrices={
                       investigation.mode === "demo" ? undefined : loadPrices
+                    }
+                    onLoadBlockPrices={
+                      investigation.mode === "demo"
+                        ? undefined
+                        : loadBlockPrices
                     }
                     pricing={pricing}
                   />

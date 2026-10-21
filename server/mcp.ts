@@ -159,6 +159,36 @@ const tools = [
       .strict(),
   },
   {
+    operation: "prices_at_blocks",
+    description:
+      "Read USD prices at each transfer's own block, so historical evidence is not valued at today's rate. Uses Uniswap Swap logs through Etherscan, which requires the server's existing ETHERSCAN_API_KEY; the public RPC refuses archive requests. Each quote is the pool's last swap at or before that block. Distinct asset/block pairs are deduplicated and the lookup is bounded; anything left unpriced keeps the spot rate and is reported.",
+    readOnly: true,
+    input: z
+      .object({
+        chainId: positiveInteger,
+        transfers: z
+          .array(
+            z
+              .object({
+                chainId: positiveInteger,
+                blockNumber: z.number().int().min(0),
+                asset: z
+                  .object({
+                    chainId: positiveInteger,
+                    symbol: z.string().min(1).max(40),
+                    decimals: z.number().int().min(0).max(255),
+                    contract: address.nullable(),
+                  })
+                  .strict(),
+              })
+              .loose(),
+          )
+          .max(20_000),
+        maxLookups: z.number().int().min(1).max(40).optional(),
+      })
+      .strict(),
+  },
+  {
     operation: "label_put",
     description:
       "Remember an entity label for a chain and address in the local label store, so later investigations start with it already applied. Use kind 'ai' for your own attribution: it is a hypothesis and is refused if it claims verified confidence or verified evidence. A label records who claimed what; it never establishes ownership, and funding links never prove common control.",

@@ -28,7 +28,7 @@ const POOL_ABI = parseAbi([
 const FEE_TIERS = [500, 3000, 10000] as const;
 const ZERO = "0x0000000000000000000000000000000000000000";
 
-interface ChainRoute {
+export interface ChainRoute {
   /** Wrapped native token, used to price the chain's native asset. */
   wrapped: Address;
   /** The USD leg every pool is quoted against. */
@@ -76,6 +76,61 @@ const ROUTES: Record<number, ChainRoute> = {
     },
   },
 };
+
+/** The USD routing table for a chain, or null when none is configured. */
+export function poolRoute(chainId: number): ChainRoute | null {
+  return ROUTES[chainId] ?? null;
+}
+
+/** The wrapped-native stand-in for a native asset, else the token's own address. */
+export function routedToken(route: ChainRoute, asset: Asset): Address {
+  return (
+    asset.contract === null ? route.wrapped : normalizeAddress(asset.contract)
+  ) as Address;
+}
+
+export interface FoundPool {
+  pool: Address;
+  fee: number;
+  calls: number;
+}
+
+/**
+ * First Uniswap V3 pool pairing `token` with the chain's USD leg, cheapest fee tier
+ * first. Current state, so the public RPC serves it; historical pricing reuses the
+ * address it returns.
+ */
+export async function findPool(
+  client: RpcClient,
+  route: ChainRoute,
+  token: Address,
+): Promise<FoundPool | null> {
+  let calls = 0;
+  for (const fee of FEE_TIERS) {
+    calls += 1;
+    const raw = hexResult(
+      await client.request("eth_call", [
+        {
+          to: route.factory,
+          data: encodeFunctionData({
+            abi: FACTORY_ABI,
+            functionName: "getPool",
+            args: [token, route.usd, fee],
+          }),
+        },
+        "latest",
+      ]),
+    );
+    const pool = decodeFunctionResult({
+      abi: FACTORY_ABI,
+      functionName: "getPool",
+      data: raw,
+    }) as string;
+    if (pool && pool.toLowerCase() !== ZERO)
+      return { pool: pool as Address, fee, calls };
+  }
+  return null;
+}
 
 const PRECISION = 10n ** 18n;
 const Q192 = 1n << 192n;

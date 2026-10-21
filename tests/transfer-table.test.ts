@@ -130,6 +130,7 @@ test("compact magnitudes match the reference table's rendering", () => {
     formatUsd({
       amount: "2180000",
       quote: BOOK.quotes["1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      atBlock: false,
     }),
     "$2.18M",
   );
@@ -272,4 +273,59 @@ test("an empty table reports loaded-evidence scope rather than implying no histo
   assert.equal(result.scope, "loaded-evidence");
   assert.equal(result.page.total, 0);
   assert.equal(result.page.pageCount, 1);
+});
+
+test("a quote read at the transfer's own block is preferred over the spot rate", () => {
+  const sent = transfer(1, ROOT, ALICE, "1000000000"); // 1000 USDC
+  const book = priceBook([
+    {
+      key: "1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      usd: "2",
+      source: "Spot",
+      retrievedAt: "2026-10-21T12:00:00.000Z",
+      confidence: "reported",
+      basis: "spot",
+    },
+    {
+      key: `1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@${sent.blockNumber}`,
+      usd: "3",
+      source: "At block",
+      retrievedAt: "2026-10-21T12:00:00.000Z",
+      confidence: "reported",
+      basis: "at-block",
+      blockNumber: sent.blockNumber,
+    },
+  ]);
+  const value = usdValue(sent, book);
+  assert.ok(value);
+  assert.equal(
+    Number(value.amount),
+    3000,
+    "should use the block price, not spot",
+  );
+  assert.equal(value.atBlock, true);
+});
+
+test("without a block quote the spot rate is used and says it was not at-block", () => {
+  const sent = transfer(1, ROOT, ALICE, "1000000000");
+  const value = usdValue(sent, BOOK);
+  assert.ok(value);
+  assert.equal(Number(value.amount), 1000);
+  assert.equal(value.atBlock, false);
+});
+
+test("a block quote for a different block does not leak onto this transfer", () => {
+  const sent = transfer(1, ROOT, ALICE, "1000000000");
+  const book = priceBook([
+    {
+      key: `1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@${sent.blockNumber + 5}`,
+      usd: "99",
+      source: "Another block",
+      retrievedAt: "2026-10-21T12:00:00.000Z",
+      confidence: "reported",
+      basis: "at-block",
+      blockNumber: sent.blockNumber + 5,
+    },
+  ]);
+  assert.equal(usdValue(sent, book), null);
 });

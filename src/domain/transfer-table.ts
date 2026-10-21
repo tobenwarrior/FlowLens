@@ -68,7 +68,12 @@ export interface TransferTableView {
     pageIndex: number;
     pageCount: number;
   };
-  pricing: { priced: number; unpriced: number };
+  pricing: {
+    priced: number;
+    unpriced: number;
+    /** Priced rows whose quote came from the transfer's own block. */
+    atBlock: number;
+  };
 }
 
 export interface TransferTableQuery {
@@ -239,9 +244,14 @@ export function buildTransferTable(
 
   let priced = 0;
   let unpriced = 0;
+  let atBlock = 0;
   for (const row of rows) {
-    if (row.usd) priced += 1;
-    else unpriced += 1;
+    if (!row.usd) {
+      unpriced += 1;
+      continue;
+    }
+    priced += 1;
+    if (row.usd.atBlock) atBlock += 1;
   }
 
   return {
@@ -263,6 +273,6 @@ export function buildTransferTable(
       pageIndex: total === 0 ? 0 : Math.floor(start / pageSize),
       pageCount,
     },
-    pricing: { priced, unpriced },
+    pricing: { priced, unpriced, atBlock },
   };
 }

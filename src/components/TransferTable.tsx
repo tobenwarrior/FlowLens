@@ -2,6 +2,7 @@ import {
   Bell,
   Bookmark,
   CircleDollarSign,
+  History,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -127,6 +128,7 @@ export function TransferTable({
   onRefresh,
   refreshing = false,
   onLoadPrices,
+  onLoadBlockPrices,
   pricing = false,
 }: {
   investigation: Investigation;
@@ -137,6 +139,8 @@ export function TransferTable({
   refreshing?: boolean;
   /** Omitted when quotes come from a fixture and there is nothing to fetch. */
   onLoadPrices?: () => void;
+  /** Re-prices each transfer at its own block, over the spot quotes. */
+  onLoadBlockPrices?: () => void;
   pricing?: boolean;
 }) {
   const [tab, setTab] = useState<TransferTab>("transfers");
@@ -299,12 +303,36 @@ export function TransferTable({
         </span>
         {onLoadPrices ? (
           view.pricing.priced > 0 ? (
-            <span
-              className="price-note"
-              title="Spot price from a single Uniswap V3 pool at the current block. Older transfers are valued at today's price."
-            >
-              USD at today&apos;s spot price
-            </span>
+            <>
+              <span
+                className="price-note"
+                title={
+                  view.pricing.atBlock > 0
+                    ? `${view.pricing.atBlock} of ${view.pricing.priced} priced rows use the pool price at their own block; the rest use today's spot price.`
+                    : "Spot price from a single Uniswap V3 pool at the current block. Older transfers are valued at today's price."
+                }
+              >
+                {view.pricing.atBlock > 0
+                  ? `USD at transfer time${
+                      view.pricing.priced > view.pricing.atBlock
+                        ? ` · ${view.pricing.priced - view.pricing.atBlock} at spot`
+                        : ""
+                    }`
+                  : "USD at today's spot price"}
+              </span>
+              {onLoadBlockPrices &&
+              view.pricing.atBlock < view.pricing.priced ? (
+                <button
+                  className="txchip txchip-add"
+                  onClick={onLoadBlockPrices}
+                  disabled={pricing}
+                  title="Read each transfer's price at its own block instead of today's."
+                >
+                  <History aria-hidden="true" size={11} />
+                  {pricing ? "Pricing…" : "Price at transfer time"}
+                </button>
+              ) : null}
+            </>
           ) : (
             <button
               className="txchip txchip-add"
@@ -491,7 +519,16 @@ function Row({
           {transfer.asset.symbol}
         </span>
       </td>
-      <td className={`txusd ${row.usd ? "" : "unpriced"}`}>
+      <td
+        className={`txusd ${row.usd ? "" : "unpriced"}${row.usd?.atBlock ? " at-block" : ""}`}
+        title={
+          row.usd
+            ? row.usd.atBlock
+              ? `Priced at this transfer's own block · ${row.usd.quote.source}`
+              : `Today's spot price, not the price when this transfer settled · ${row.usd.quote.source}`
+            : undefined
+        }
+      >
         {formatUsd(row.usd)}
       </td>
       <td>

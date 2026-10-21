@@ -1085,6 +1085,14 @@ samp {
 .txusd.unpriced {
   color: var(--text-faint);
 }
+.txusd.at-block {
+  color: var(--text-bright);
+}
+.txusd.at-block::after {
+  content: "·";
+  margin-left: 3px;
+  color: var(--blue-light);
+}
 
 .txtoken {
   display: inline-flex;

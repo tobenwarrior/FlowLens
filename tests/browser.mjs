@@ -414,6 +414,11 @@ try {
   });
   await live.getByRole("button", { name: "Save case", exact: true }).click();
   await expect(live.getByRole("alert")).toContainText("Investigation changed");
+  // A refused save offers to take the newer case and carry local notes and pins onto
+  // it, while reloading without saving stays available as the conservative answer.
+  await expect(
+    live.getByRole("button", { name: "Reload latest & save", exact: true }),
+  ).toBeVisible();
   await live.getByRole("button", { name: "Refresh case", exact: true }).click();
   await expect(live.getByRole("alert")).toHaveCount(0);
   conflict = false;

@@ -160,6 +160,9 @@ export default function App() {
   // FlowLens does not make those in the background.
   const [liveBook, setLiveBook] = useState<PriceBook>(EMPTY_PRICE_BOOK);
   const [pricing, setPricing] = useState(false);
+  // Set when the shared store refused a save because it moved on. Cleared as soon as
+  // the case is replaced or saved, so the offer never outlives the conflict.
+  const [conflict, setConflict] = useState(false);
   // The shared case store behind the CLI, API and MCP tools. Listed on demand so the
   // dialog reflects whatever an agent has created since the page loaded.
   const [agentCases, setAgentCases] = useState<AgentCaseSummary[]>([]);
@@ -558,7 +561,10 @@ export default function App() {
       } catch (failure) {
         // A refusal is the store's answer and must not be written over; not reaching
         // the API at all is different, and should still leave a browser copy.
-        if (failure instanceof ApiError) throw failure;
+        if (failure instanceof ApiError) {
+          if (failure.code === "CASE_CONFLICT") setConflict(true);
+          throw failure;
+        }
         shared = false;
         updated = { ...updated, updatedAt: new Date().toISOString() };
       }
@@ -571,6 +577,7 @@ export default function App() {
       savedSnapshot.current = updated;
       setInvestigation(updated);
       setSavedAt(true);
+      setConflict(false);
       setToast(
         shared
           ? "Saved to this browser and the agent workspace."
@@ -584,6 +591,53 @@ export default function App() {
       );
     }
   }
+  /**
+   * Take the store's version of the case, carry the local notes and pins onto it, and
+   * save that. Evidence, labels and graph visibility come from the store, because the
+   * refusal means something there is newer than anything held here.
+   */
+  async function reloadAndSave() {
+    if (!investigation || busy) return;
+    const caseId = investigation.id;
+    setBusy(true);
+    setError("");
+    try {
+      const latest = parseInvestigation(
+        await api<unknown>(`/investigations/${caseId}`, undefined, "GET"),
+      );
+      const merged = refreshWorkspace(investigation, latest);
+      const stored = await api<Investigation>(
+        `/investigations/${caseId}`,
+        merged,
+        "PUT",
+      );
+      const list = [
+        stored,
+        ...readCases().filter((c) => c.id !== stored.id),
+      ].slice(0, 20);
+      localStorage.setItem(SAVED, JSON.stringify(list));
+      setSaved(list);
+      savedSnapshot.current = stored;
+      setInvestigation(stored);
+      setSavedAt(true);
+      setConflict(false);
+      setDrawer(false);
+      setSelectedNode(null);
+      setSelectedTransfer(null);
+      setToast(
+        "Saved onto the newer case. Your notes and pins were kept; evidence, labels and hidden selections came from the shared store.",
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not reload the latest case. Export JSON to preserve evidence.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function refreshCase() {
     if (!investigation || investigation.mode !== "live" || busy) return;
     const caseId = investigation.id;
@@ -848,6 +902,18 @@ export default function App() {
           <div className="error-banner" role="alert">
             <ShieldAlert size={17} />
             <span>{error}</span>
+            {conflict && (
+              <button
+                className="button subtle"
+                disabled={busy}
+                onClick={() => void reloadAndSave()}
+                title="Keeps your notes and pins. Evidence, labels and hidden selections come from the shared store."
+              >
+                <RotateCcw size={14} /> Reload latest &amp; save
+              </button>
+            )}
+            {/* Reloading without saving stays available: looking at the newer case
+                before deciding is the more conservative answer to a conflict. */}
             {investigation.mode === "live" && (
               <button
                 className="button subtle"

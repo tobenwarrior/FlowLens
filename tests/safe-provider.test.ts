@@ -979,3 +979,85 @@ test("actual provider preflight failure preserves successful history coverage an
   );
   assert.equal(new URL(source.urls[1]).searchParams.get("offset"), "5");
 });
+
+test("actual configuration-only acquisition can add and resume history without changing provenance", async () => {
+  const source = history([
+    {
+      count: 6,
+      next: `https://api.safe.global/tx-service/eth/api/v2/safes/${SAFE}/multisig-transactions/?executed=true&trusted=false&ordering=nonce%2Ccreated&limit=5&offset=5`,
+      results: [txRow()],
+    },
+    {
+      count: 6,
+      next: null,
+      results: [
+        txRow({ nonce: "1", safeTxHash: HASH, transactionHash: SAFE_HASH }),
+      ],
+    },
+  ]);
+  const configuration = await acquireSafeEvidence(
+    { address: SAFE, chainId: 1, blockNumber: 100, includeHistory: false },
+    { rpc: rpc(), fetch: source.fetch },
+  );
+  assert.equal(source.urls.length, 0);
+  const indexed = await acquireSafeEvidence(
+    { address: SAFE, chainId: 1, blockNumber: 100, includeHistory: true },
+    { rpc: rpc(), fetch: source.fetch },
+  );
+  const bundle = (safe: typeof configuration.bundle) => ({
+    version: 1 as const,
+    mode: "private" as const,
+    safe,
+  });
+  const merged = mergeProtocolEvidence(
+    bundle(configuration.bundle),
+    bundle(indexed.bundle),
+  );
+  assert.equal(merged.safe!.configurations.length, 1);
+  assert.equal(merged.safe!.executions.length, 1);
+  const good = indexed.bundle.coverage.find((c) => c.stream === "executions")!;
+  assert.ok(good.cursor);
+  assert.equal(
+    merged.safe!.coverage.find((c) => c.id === good.id)?.cursor,
+    indexed.cursor,
+  );
+  assert.ok(
+    merged.safe!.coverage.some(
+      (c) =>
+        c.stream === "executions" &&
+        c.status === "unsupported" &&
+        c.provenance.source ===
+          "Flowlens acquisition coverage: history not requested",
+    ),
+  );
+  const afterConfigurationOnly = mergeProtocolEvidence(
+    merged,
+    bundle(configuration.bundle),
+  );
+  assert.equal(
+    afterConfigurationOnly.safe!.coverage.find((c) => c.id === good.id)?.cursor,
+    indexed.cursor,
+  );
+  const resumed = await acquireSafeEvidence(
+    {
+      address: SAFE,
+      chainId: 1,
+      cursor: indexed.cursor!,
+      includeHistory: true,
+    },
+    { rpc: rpc(), fetch: source.fetch },
+  );
+  const complete = mergeProtocolEvidence(
+    afterConfigurationOnly,
+    bundle(resumed.bundle),
+  );
+  assert.deepEqual(
+    complete.safe!.executions.map((e) => e.nonce),
+    ["0", "1"],
+  );
+  assert.equal(
+    complete.safe!.coverage.find((c) => c.id === good.id)?.cursor,
+    null,
+  );
+  assert.equal(new URL(source.urls[1]).searchParams.get("offset"), "5");
+});

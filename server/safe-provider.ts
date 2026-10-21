@@ -743,7 +743,7 @@ export async function acquireSafeEvidence(
     status: SafeEvidenceBundle["coverage"][number]["status"],
     from = 0,
     p = rpcP(),
-    scope?: "preflight-error",
+    scope?: "preflight-error" | "not-requested",
   ) {
     bundle.coverage.push({
       id: `safe:${input.chainId}:${a}:coverage:${stream}:${blockNumber}${scope ? `:${scope}` : ""}`,
@@ -1010,6 +1010,7 @@ export async function acquireSafeEvidence(
       : "unsupported",
     0,
     historyP(),
+    includeHistory ? undefined : "not-requested",
   );
   coverage("configuration-events", "unsupported");
   coverage(
@@ -1017,6 +1018,7 @@ export async function acquireSafeEvidence(
     includeHistory ? "partial" : "unsupported",
     0,
     historyP(),
+    includeHistory ? undefined : "not-requested",
   );
 
   if (input.verifySignatures && includeHistory) {

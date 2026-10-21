@@ -1,0 +1,3 @@
+# Application config and reviewed release/legal notices belong at root.
+root_allow_extra = ["index.html", "vite.config.ts", "LICENSE-DECISION.md", "THIRD_PARTY_NOTICES.md", "eslint.config.js"]
+required_gitignore = ["node_modules/", "dist/", ".local/", ".env", "artifacts/"]

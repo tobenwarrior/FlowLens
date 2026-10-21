@@ -1,16 +1,31 @@
-# Project license options — decision pending
+# License decision — AGPL-3.0-only
 
-No license is selected by this document, and no `LICENSE` file has been added. The package remains private. The owner must choose the license and copyright holder before calling FlowLens open source or authorizing redistribution. See [LICENSE-DECISION.md](../LICENSE-DECISION.md).
+FlowLens is licensed under the [GNU Affero General Public License, version 3](../LICENSE), SPDX identifier `AGPL-3.0-only`. The owner selected it on 21 October 2026. Copyright © 2026 tobenwarrior.
 
-Two plausible permissive choices are:
+## Why AGPL rather than a permissive license
 
-| Choice     | Why consider it                                                                                                                                           | Obligations to preserve                                                                                                                                                            |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MIT        | Short, familiar terms for a small reusable application. A reasonable default if the owner values simplicity and does not require an express patent grant. | Preserve the copyright and permission notice in copies or substantial portions. The text disclaims warranty and liability.                                                         |
-| Apache-2.0 | An alternative when an explicit contributor patent grant and its patent-litigation termination condition matter.                                          | Include the license, mark modified files, retain applicable notices, and preserve relevant upstream NOTICE attributions when present. The license does not grant trademark rights. |
+FlowLens is meant to be a free, open replacement for paywalled wallet-tracking tools. Under MIT or Apache-2.0, which this document previously compared, anyone could take the code, add a hosted layer and sell a closed version of it. AGPL-3.0 section 13 closes that path: anyone who runs a modified FlowLens and lets people use it over a network must offer those people the corresponding source. Hosted and paid forks have to stay open.
 
-These summaries follow the official [MIT text](https://opensource.org/license/mit) and [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), especially Apache sections 3, 4 and 6. The recommendation is nonbinding: MIT is the simpler candidate for this scope; Apache-2.0 is the stronger candidate when express patent terms are a requirement. Neither has been applied.
+The cost is real and accepted: some companies will not embed or contribute to AGPL code, and FlowLens cannot be folded into proprietary products.
 
-Before choosing, confirm authorship and rights to application code, synthetic fixtures, documentation, branding and assets. Keep dependency licenses and [required third-party notices](../THIRD_PARTY_NOTICES.md) separate from the project license. A permissive code license does not authorize redistribution of provider responses, proprietary labels, user notes, private investigations or someone else's source. Public availability of a blockchain record does not resolve a provider dataset's terms.
+`-only` fixes the terms to version 3. `AGPL-3.0-or-later` would let downstream users adopt any future version the Free Software Foundation publishes. As copyright holder, the owner can still relicense their own code later.
 
-After an explicit owner decision, add the exact selected license text with the confirmed copyright holder, update package metadata and the pending-license documents, then update the release script's deliberate pending-license guard. Re-run the archive review. Do not infer authorization from this comparison.
+## Dependency compatibility
+
+Checked on 21 October 2026 against `package-lock.json`: all 21 distributed (non-dev) packages are MIT (17), Apache-2.0 (3) or ISC (1). Each can be combined into an AGPL-3.0 work; Apache-2.0 is compatible with version 3 in that direction.
+
+Re-check whenever a production dependency is added. GPL-2.0-only, SSPL, BUSL, non-commercial and proprietary licenses are not compatible. Development-only tooling is not distributed with the application, but bundled builds should be re-audited separately — see [third-party notices](../THIRD_PARTY_NOTICES.md).
+
+## What the code license does not cover
+
+The license covers FlowLens's own code and original synthetic examples. It does not grant rights to provider responses, third-party label sets (including Arkham's), user notes, private investigations, or label packs anyone builds with the tool. Public availability of a blockchain record does not resolve a provider dataset's terms.
+
+## How it is enforced
+
+`scripts/release.mjs` refuses to build a source export unless:
+
+- `package.json` declares exactly `AGPL-3.0-only`;
+- `package.json` keeps `private: true` — publishing to npm is a separate decision that has not been made;
+- `LICENSE` is byte-identical to the canonical text from <https://www.gnu.org/licenses/agpl-3.0.txt> (SHA-256 `0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0`). `.gitattributes` pins it to LF so checkouts on any platform keep that hash.
+
+Tests in `tests/release.test.ts` pin each refusal.

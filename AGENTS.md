@@ -24,6 +24,6 @@ Keep keys server-side or user-local. No telemetry, hosted exposure, credential g
 
 Preserve user work, repository history and remote configuration. Git mutations require task authorization; verify the intended account and remote before an authorized push. Never change global authentication, force-push, change repository visibility or deploy implicitly. Keep .local, .env, artifacts, node_modules and dist out of Git.
 
-No project license is selected. Preserve LICENSE-DECISION.md until the owner chooses the license and copyright holder. Dependency notices do not grant rights to provider data.
+FlowLens is licensed AGPL-3.0-only (see LICENSE and docs/license-options.md); scripts/release.mjs enforces the exact identifier and text. New production dependencies must be AGPL-compatible. The code license does not cover provider data, third-party labels or anyone's investigations, and dependency notices grant no rights to provider data.
 
 Add public files to the reviewed source allowlist in scripts/release.mjs when appropriate. Keep private probe results and working notes excluded. Record actual tests and live-provider limits; mocks do not certify live coverage.

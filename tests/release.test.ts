@@ -16,6 +16,7 @@ import { dirname, join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 
 const releaseScript = resolve("scripts/release.mjs");
+const agplText = await readFile(resolve("LICENSE"));
 
 async function fixture(run: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), "flowlens-release-"));
@@ -25,6 +26,7 @@ async function fixture(run: (root: string) => Promise<void>) {
         name: "flowlens",
         version: "0.1.0",
         private: true,
+        license: "AGPL-3.0-only",
       }),
       "package-lock.json": JSON.stringify({
         name: "flowlens",
@@ -32,7 +34,7 @@ async function fixture(run: (root: string) => Promise<void>) {
         lockfileVersion: 3,
       }),
       "README.md": "# Synthetic release fixture\n",
-      "LICENSE-DECISION.md": "No project license selected.\n",
+      LICENSE: agplText,
       "src/main.tsx": 'export const demo = "synthetic";\n',
       "server/index.ts": 'export const host = "127.0.0.1";\n',
       "tests/engine.test.ts": 'const key = "dummy-key";\n',
@@ -112,7 +114,11 @@ test("source archives have stable bytes, sorted checksums and normalized tar met
       assert.equal(file.mtime, 1792540800);
     }
     const manifest = JSON.parse(await readFile(first.manifest, "utf8"));
-    assert.equal(manifest.projectLicense, "UNSELECTED");
+    assert.equal(manifest.projectLicense, "AGPL-3.0-only");
+    assert.ok(
+      manifest.files.some((file: { path: string }) => file.path === "LICENSE"),
+      "the license text must ship with the source",
+    );
     assert.deepEqual(
       manifest.files.map((file: { path: string }) => file.path),
       [...manifest.files.map((file: { path: string }) => file.path)].sort(),
@@ -305,6 +311,66 @@ test("check mode is read-only and unsupported arguments fail clearly", () =>
     });
     assert.equal(invalid.status, 1);
     assert.match(invalid.stderr, /unknown argument/);
+  }));
+
+function check(root: string) {
+  return spawnSync(
+    process.execPath,
+    [releaseScript, "--root", root, "--check"],
+    {
+      encoding: "utf8",
+    },
+  );
+}
+
+test("a release under any license but the selected one is refused", () =>
+  fixture(async (root) => {
+    for (const license of ["MIT", "AGPL-3.0-or-later", undefined]) {
+      await put(
+        root,
+        "package.json",
+        JSON.stringify({
+          name: "flowlens",
+          version: "0.1.0",
+          private: true,
+          license,
+        }),
+      );
+      const result = check(root);
+      assert.equal(result.status, 1, `${license} should be refused`);
+      assert.match(result.stderr, /license must be AGPL-3\.0-only/);
+    }
+  }));
+
+test("a missing or altered license text is refused", () =>
+  fixture(async (root) => {
+    await put(
+      root,
+      "LICENSE",
+      Buffer.concat([agplText, Buffer.from("\nExtra terms.\n")]),
+    );
+    const altered = check(root);
+    assert.equal(altered.status, 1);
+    assert.match(altered.stderr, /unmodified GNU AGPL version 3 text/);
+
+    await rm(join(root, "LICENSE"));
+    assert.equal(check(root).status, 1, "a release without LICENSE must fail");
+  }));
+
+test("npm publication stays blocked after licensing", () =>
+  fixture(async (root) => {
+    await put(
+      root,
+      "package.json",
+      JSON.stringify({
+        name: "flowlens",
+        version: "0.1.0",
+        license: "AGPL-3.0-only",
+      }),
+    );
+    const result = check(root);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /npm publication is not authorized/);
   }));
 
 // A generated white 1x1 RGB PNG, with only IHDR/IDAT/IEND chunks.

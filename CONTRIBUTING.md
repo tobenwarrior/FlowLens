@@ -2,7 +2,7 @@
 
 FlowLens is an agent-first wallet tracing workspace with a human interface over the same engine. A contribution should make the evidence easier to obtain, resume or assess without weakening its meaning.
 
-The project license and copyright holder are still pending. Read [LICENSE-DECISION.md](LICENSE-DECISION.md) before distributing source or accepting external contributions under assumed terms.
+FlowLens is licensed under [AGPL-3.0-only](LICENSE). Contributions are accepted under the same license: by submitting one, you agree it is licensed under AGPL-3.0-only. Any production dependency you add must be AGPL-compatible — MIT, Apache-2.0, ISC and BSD are; GPL-2.0-only, SSPL, BUSL, non-commercial and proprietary licenses are not. The [license decision](docs/license-options.md) explains why.
 
 ## Run and check a change
 

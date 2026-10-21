@@ -15,8 +15,14 @@ const required = new Set([
   "package.json",
   "package-lock.json",
   "README.md",
-  "LICENSE-DECISION.md",
+  "LICENSE",
 ]);
+// The owner selected AGPL-3.0-only on 2026-10-21. A release must carry exactly that
+// identifier and the unmodified license text, byte for byte; anything else is refused.
+const PROJECT_LICENSE = "AGPL-3.0-only";
+// SHA-256 of https://www.gnu.org/licenses/agpl-3.0.txt (661 lines, 34,523 bytes, LF).
+const LICENSE_SHA256 =
+  "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0";
 // Adding a distributable file is an explicit review decision. Do not replace this with a glob.
 const allowlist = [
   ".env.example",
@@ -27,7 +33,7 @@ const allowlist = [
   ".github/workflows/ci.yml",
   "CHANGELOG.md",
   "CONTRIBUTING.md",
-  "LICENSE-DECISION.md",
+  "LICENSE",
   "README.md",
   "SECURITY.md",
   "THIRD_PARTY_NOTICES.md",
@@ -410,10 +416,16 @@ async function main() {
     throw new Error(
       "package.json: expected flowlens and a safe semantic version",
     );
-  if (pkg.license || pkg.private !== true)
+  if (pkg.license !== PROJECT_LICENSE)
+    throw new Error(`package.json: license must be ${PROJECT_LICENSE}`);
+  // private:true only blocks npm publication, which is a separate, unauthorized step.
+  if (pkg.private !== true)
     throw new Error(
-      "package.json: pending license requires private:true and no license selection",
+      "package.json: private must stay true; npm publication is not authorized",
     );
+  const license = files.find(({ path }) => path === "LICENSE");
+  if (!license || hash(license.data) !== LICENSE_SHA256)
+    throw new Error("LICENSE: expected the unmodified GNU AGPL version 3 text");
   const base = `flowlens-${pkg.version}-source`;
   const manifest = Buffer.from(
     `${JSON.stringify(
@@ -422,7 +434,7 @@ async function main() {
         name: pkg.name,
         version: pkg.version,
         timestamp,
-        projectLicense: "UNSELECTED",
+        projectLicense: PROJECT_LICENSE,
         archive: `${base}.tar.gz`,
         files: files.map(({ path, data }) => ({
           path,
@@ -440,7 +452,7 @@ async function main() {
         audit: "passed",
         files: files.length,
         timestamp,
-        projectLicense: "UNSELECTED",
+        projectLicense: PROJECT_LICENSE,
       }),
     );
     return;
@@ -475,7 +487,7 @@ async function main() {
       ...paths,
       files: files.length,
       audit: "passed",
-      projectLicense: "UNSELECTED",
+      projectLicense: PROJECT_LICENSE,
     }),
   );
 }

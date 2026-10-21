@@ -65,7 +65,7 @@ Extract the archive into a fresh temporary directory and run `npm ci --ignore-sc
 
 ## Owner decisions before public release
 
-- [ ] Select the project license and copyright holder; apply its exact text and package metadata. The current archive intentionally preserves `LICENSE-DECISION.md` and [license options](license-options.md), and remains **unlicensed**.
+- [x] Select the project license and copyright holder; apply its exact text and package metadata. **AGPL-3.0-only**, copyright tobenwarrior, selected 21 October 2026. `LICENSE` carries the unmodified text and the release script refuses anything else; see the [license decision](license-options.md).
 - [ ] Confirm rights to original code, fixtures, docs, name and assets; review external contribution terms if contributions will be accepted.
 - [ ] Review [third-party notices](../THIRD_PARTY_NOTICES.md) against the final lockfile. Source-only packaging excludes installed dependencies. Re-audit bundled distributions and tools separately.
 - [ ] Verify that source, test fixtures, docs and history contain no private cases, credentials, proprietary labels, provider datasets or copied private source.

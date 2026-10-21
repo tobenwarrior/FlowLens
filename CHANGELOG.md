@@ -2,7 +2,7 @@
 
 ## 0.1.0 — local release candidate, 21 October 2026
 
-Unreleased publicly. Development commits are in the private repository; no project license has been selected.
+Unreleased publicly. Development commits are in the private repository. Licensed under AGPL-3.0-only from 21 October 2026.
 
 ### Implemented
 

@@ -155,4 +155,10 @@ Browser QA uses synthetic data and mocked provider contracts. It covers desktop,
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing evidence semantics. The [release checklist](docs/release-checklist.md) explains sanitized source packaging, third-party notices and the public-release decisions.
 
-**Project license and copyright holder are still pending.** No license is selected by this README. Review [LICENSE-DECISION.md](LICENSE-DECISION.md), [license options](docs/license-options.md) and [third-party notices](THIRD_PARTY_NOTICES.md) before describing this as licensed open source or redistributing it. Public hosting, publication and provider data rights are separate decisions.
+## License
+
+FlowLens is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License, version 3](LICENSE) (`AGPL-3.0-only`). Copyright © 2026 tobenwarrior.
+
+If you run a modified FlowLens and let other people use it over a network, AGPL section 13 requires you to offer them the source of your version. That is deliberate: a hosted or paid fork has to stay open.
+
+The code license covers FlowLens itself. It does not grant rights to provider responses, third-party labels (Arkham's included), anyone's investigations or label packs; a public blockchain record does not settle a provider dataset's terms. Dependency licenses and required notices are in [third-party notices](THIRD_PARTY_NOTICES.md), and the reasoning behind the choice is in the [license decision](docs/license-options.md). Public hosting and npm publication remain separate decisions.

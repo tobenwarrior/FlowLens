@@ -1,5 +1,6 @@
 import { createAgentService, AgentOperationError } from "./agent.ts";
 import { analyzeProtocolEvidence } from "../src/domain/protocols.ts";
+import { visibleTransfers } from "../src/domain/wallet-flows.ts";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -198,6 +199,43 @@ export function createApiServer(options: ApiOptions) {
             "INVALID_CASE_ID",
             "Invalid investigation ID",
           );
+        if (parts.length === 4 && parts[3] === "wallet" && method === "GET") {
+          const query: Record<string, unknown> = {
+            caseId: id,
+            address: url.searchParams.get("address"),
+          };
+          for (const key of [
+            "asset",
+            "direction",
+            "from",
+            "to",
+            "expectedRevision",
+          ])
+            if (url.searchParams.has(key))
+              query[key] = url.searchParams.get(key);
+          for (const key of ["chainId", "offset", "pageSize"])
+            if (url.searchParams.has(key))
+              query[key] = Number(url.searchParams.get(key));
+          return send(res, 200, await agentService.call("wallet", query));
+        }
+        if (
+          parts.length === 4 &&
+          ["annotate", "visibility"].includes(parts[3]) &&
+          method === "POST"
+        ) {
+          const input = await body(req);
+          if (!input || typeof input !== "object" || Array.isArray(input))
+            throw new HttpError(
+              400,
+              "INVALID_ARGUMENT",
+              "Workspace request must be an object.",
+            );
+          return send(
+            res,
+            200,
+            await agentService.call(parts[3], { ...input, caseId: id }),
+          );
+        }
         if (parts.length === 4 && parts[3] === "replay" && method === "POST") {
           const input = await body(req);
           if (!input || typeof input !== "object" || Array.isArray(input))
@@ -327,10 +365,18 @@ export function createApiServer(options: ApiOptions) {
             from: url.searchParams.get("from") ?? undefined,
             to: url.searchParams.get("to") ?? undefined,
           });
+          const visible = visibleTransfers(value, transfers);
           return send(res, 200, {
             root: value.root,
             transfers,
-            edges: buildEdges(transfers),
+            edges: buildEdges(visible),
+            visibleTransferIds: visible.map((transfer) => transfer.id),
+            hidden: {
+              nodeKeys: value.hidden,
+              transferIds: value.hiddenTransfers ?? [],
+            },
+            visibilityNote:
+              "Visibility changes graph paths only; transfers and gross/net remain all filtered loaded evidence.",
             flows: aggregateFlows(transfers, value.root),
             coverage: value.coverage,
           });

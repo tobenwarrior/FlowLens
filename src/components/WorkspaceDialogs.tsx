@@ -284,10 +284,11 @@ export function WorkspaceDialogs({
             </div>
             <div className="quiet-note">
               API: {window.location.origin}/api · Loopback only. MCP exposes
-              typed operations including create, expand, graph, acquire and
-              export. Start with flowlens_status and flowlens_schema; inspect
-              coverage and errors after every operation. README.md and
-              docs/mcp.md contain complete setup and resume examples.
+              typed operations including wallet, annotate, visibility, expand,
+              acquire and export. Start with flowlens_status and
+              flowlens_schema; inspect coverage and errors after every
+              operation. README.md and docs/mcp.md contain complete setup and
+              resume examples.
             </div>
           </>
         ) : (
@@ -315,8 +316,10 @@ export function WorkspaceDialogs({
                 <section>
                   <strong>Follow a connection</strong>
                   <p>
-                    Select a wallet to inspect its label provenance. Expand one
-                    page at a time, pin a useful node, or hide a distraction.
+                    Select a wallet for its own inflows, outflows and
+                    counterparties. Use checkboxes to show paths, or edit a
+                    source-bearing label. Expand one page at a time; selections
+                    retain every evidence record.
                   </p>
                 </section>
               </div>

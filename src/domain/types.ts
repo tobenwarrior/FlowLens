@@ -14,6 +14,9 @@ export interface Label {
   confidence: "verified" | "reported" | "unverified" | "synthetic";
   retrievedAt: string;
   sourceUrl?: string;
+  claimType?: "provider-assertion" | "hypothesis" | "verified-evidence";
+  observedAt?: string;
+  evidenceNote?: string;
 }
 export interface WalletNode {
   address: Address;
@@ -67,6 +70,7 @@ export interface Investigation {
   expanded: string[];
   pinned: string[];
   hidden: string[];
+  hiddenTransfers?: string[];
   notes: string;
   protocolEvidence?: ProtocolEvidenceBundle;
 }

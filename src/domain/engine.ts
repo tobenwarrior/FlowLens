@@ -131,7 +131,7 @@ function parseAsset(input: unknown): Asset {
       a.contract === null ? null : normalizeAddress(a.contract as string),
   };
 }
-function parseLabel(input: unknown): Label {
+export function parseLabel(input: unknown): Label {
   const l = object(input, "label");
   const result: Label = {
     text: text(l.text, "label text", 200),
@@ -151,13 +151,39 @@ function parseLabel(input: unknown): Label {
   if (l.sourceUrl !== undefined) {
     const url = text(l.sourceUrl, "label URL", 2048);
     if (!/^https:\/\//.test(url)) throw new Error("Label URL must use HTTPS");
+    let parsed: URL;
     try {
-      new URL(url);
+      parsed = new URL(url);
     } catch {
       throw new Error("Invalid label URL");
     }
+    const credential =
+      /^(?:api[_-]?key|access[_-]?token|token|authorization|password|secret|signature|credential)$/i;
+    const fragment = new URLSearchParams(parsed.hash.slice(1));
+    if (
+      parsed.username ||
+      parsed.password ||
+      [...parsed.searchParams.keys(), ...fragment.keys()].some((key) =>
+        credential.test(key),
+      )
+    )
+      throw new Error("Label URL must not contain credentials");
     result.sourceUrl = url;
   }
+  if (l.claimType !== undefined)
+    result.claimType = oneOf<NonNullable<Label["claimType"]>>(
+      l.claimType,
+      ["provider-assertion", "hypothesis", "verified-evidence"],
+      "label claim type",
+    );
+  if (l.observedAt !== undefined)
+    result.observedAt = timestamp(l.observedAt, "label observation date");
+  if (l.evidenceNote !== undefined)
+    result.evidenceNote = text(l.evidenceNote, "label evidence note", 4000);
+  if (result.claimType === "verified-evidence" && !result.evidenceNote?.trim())
+    throw new Error(
+      "Verified-evidence labels require an evidence note; the claim is not independently authenticated",
+    );
   return result;
 }
 function parseNode(input: unknown): WalletNode {
@@ -287,6 +313,18 @@ export function parseInvestigation(input: unknown): Investigation {
     hidden: strings(c.hidden, "hidden nodes"),
     notes: text(c.notes, "notes", 100_000),
   };
+  if (c.hiddenTransfers !== undefined) {
+    result.hiddenTransfers = strings(
+      c.hiddenTransfers,
+      "hidden transfers",
+      MAX_TRANSFERS,
+    );
+    if (new Set(result.hiddenTransfers).size !== result.hiddenTransfers.length)
+      throw new Error("Duplicate hidden transfer IDs");
+    const known = new Set(result.transfers.map((t) => t.id));
+    if (result.hiddenTransfers.some((id) => !known.has(id)))
+      throw new Error("Hidden transfer must refer to loaded evidence");
+  }
   if (c.protocolEvidence !== undefined)
     result.protocolEvidence = parseProtocolEvidence(
       c.protocolEvidence,
@@ -294,6 +332,16 @@ export function parseInvestigation(input: unknown): Investigation {
     );
   if (result.mode === "live" && result.transfers.some((t) => t.synthetic))
     throw new Error("Synthetic evidence cannot enter a live investigation");
+  if (
+    result.mode === "live" &&
+    result.nodes.some(
+      (node) =>
+        node.label?.confidence === "synthetic" || node.label?.kind === "demo",
+    )
+  )
+    throw new Error(
+      "Synthetic or demo labels cannot enter a live investigation",
+    );
   if (
     new Set(result.transfers.map((t) => t.id)).size !== result.transfers.length
   )

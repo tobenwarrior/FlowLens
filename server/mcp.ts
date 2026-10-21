@@ -26,6 +26,41 @@ const address = z
   .describe("EVM address: 0x plus 40 hexadecimal characters.");
 const positiveInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
 const object = z.record(z.string(), z.unknown());
+const annotationLabel = z
+  .object({
+    text: z.string().trim().min(1).max(200),
+    source: z.string().trim().min(1).max(200),
+    sourceUrl: z
+      .string()
+      .max(2048)
+      .url()
+      .refine((value) => {
+        const parsed = new URL(value);
+        const sensitive =
+          /^(?:api[_-]?key|access[_-]?token|token|authorization|password|secret|signature|credential)$/i;
+        const fragment = new URLSearchParams(parsed.hash.slice(1));
+        return (
+          parsed.protocol === "https:" &&
+          !parsed.username &&
+          !parsed.password &&
+          ![...parsed.searchParams.keys(), ...fragment.keys()].some((key) =>
+            sensitive.test(key),
+          )
+        );
+      }, "Label URL must use HTTPS without credentials")
+      .optional(),
+    kind: z.enum(["service", "entity", "prediction", "user", "demo"]),
+    confidence: z.enum(["verified", "reported", "unverified", "synthetic"]),
+    claimType: z.enum([
+      "provider-assertion",
+      "hypothesis",
+      "verified-evidence",
+    ]),
+    observedAt: z.string().min(1).max(40),
+    retrievedAt: z.string().min(1).max(40),
+    evidenceNote: z.string().max(4000).optional(),
+  })
+  .strict();
 const tools = [
   {
     operation: "status",
@@ -85,6 +120,39 @@ const tools = [
       .strict(),
   },
   {
+    operation: "annotate",
+    description:
+      "Attach, edit or remove a local chain/address-scoped entity label. Preserve source, observed time, confidence and claim type. Verified-evidence is a supplied assertion with justification, not authentication by FlowLens. Funding links never prove ownership. No external label provider is queried.",
+    readOnly: false,
+    input: z
+      .object({
+        caseId,
+        chainId: positiveInteger,
+        address,
+        label: annotationLabel.nullable(),
+        expectedRevision: z.string().min(1).max(40).optional(),
+      })
+      .strict(),
+  },
+  {
+    operation: "visibility",
+    description:
+      "Show or hide explicitly selected loaded wallet nodes or canonical transfer IDs in the graph. Evidence and gross/net accounting stay retained. The focus wallet cannot be hidden. This local mutation does not fetch history or delete observations.",
+    readOnly: false,
+    input: z
+      .object({
+        caseId,
+        nodeKeys: z
+          .array(z.string().regex(/^\d+:0x[0-9a-f]{40}$/))
+          .max(1000)
+          .optional(),
+        transferIds: z.array(z.string().min(1).max(300)).max(20_000).optional(),
+        visible: z.boolean(),
+        expectedRevision: z.string().min(1).max(40).optional(),
+      })
+      .strict(),
+  },
+  {
     operation: "evidence",
     description:
       "Get one canonical transfer by evidence ID, retaining source, chain, event index, integer amount and retrieval time.",
@@ -110,6 +178,36 @@ const tools = [
         cursor: z.string().max(2048).optional(),
       })
       .strict(),
+  },
+  {
+    operation: "wallet",
+    description:
+      "Inspect one loaded wallet with wallet-relative directional transfers, per-asset gross/net flows, counterparties, graph selections and bounded local pagination. Every result includes its caseId and revision; offsets above zero require matching expectedRevision. The query never fetches provider history or changes evidence. Unknown ownership and incomplete source coverage stay explicit.",
+    readOnly: true,
+    input: z
+      .object({
+        caseId,
+        address,
+        chainId: positiveInteger.optional(),
+        asset: z.string().max(100).optional(),
+        direction: z.enum(["all", "in", "out"]).optional(),
+        from: z.string().max(40).optional(),
+        to: z.string().max(40).optional(),
+        offset: z.number().int().min(0).max(20_000).optional(),
+        pageSize: z.number().int().min(1).max(100).optional(),
+        expectedRevision: z.string().min(1).max(40).optional(),
+      })
+      .strict()
+      .refine(
+        (value) =>
+          !(value.offset && value.offset > 0) ||
+          value.expectedRevision !== undefined,
+        {
+          message:
+            "Wallet pages after the first require expectedRevision from the previous result.",
+          path: ["expectedRevision"],
+        },
+      ),
   },
   {
     operation: "export",
@@ -237,9 +335,12 @@ function outputFor(operation: string) {
     },
     create: reference("Investigation"),
     expand: reference("Investigation"),
+    annotate: reference("Investigation"),
+    visibility: reference("Investigation"),
     import: reference("Investigation"),
     export: reference("Investigation"),
     evidence: reference("Transfer"),
+    wallet: reference("WalletResponse"),
     inspect: {
       type: "object",
       properties: {

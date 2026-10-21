@@ -28,7 +28,9 @@ Try the demo:
 
 1. Select a wallet or a directional path, then inspect its individual transaction evidence.
 2. Expand a wallet, switch networks/assets/direction, or narrow the UTC date range. Filters use loaded evidence; they do not fetch missing history.
-3. Pin or hide nodes, add a case note, then save or export JSON. The original focus wallet stays fixed while you expand counterparties.
+3. Open **Wallet flows** or select any wallet. Inspect gross in/out and net per asset, check/uncheck counterparties or individual transfers, and use **Select all / Select none** to control graph paths. Hidden items remain evidence and stay in loaded totals.
+4. Add or edit an entity label with its source, observed time, confidence and claim type. Unknown ownership stays unknown; a provider assertion or analyst hypothesis is not ownership proof.
+5. Pin or hide nodes, add a case note, then save or export JSON. The original focus wallet stays fixed while you expand counterparties.
 
 **Gross inflow, gross outflow and net stay separate**, by chain and asset contract. Transfers are not automatically buys or sells. Shared funders, graph proximity and labels do not prove common ownership.
 
@@ -63,7 +65,7 @@ CLI exit codes are `0` for a completed operation, `1` for validation/unavailable
 
 ### MCP quickstart
 
-Launch `node server/mcp.ts` from your MCP host, or use `npm run --silent mcp`. stdout is JSON-RPC only. FlowLens does not install itself into global agent settings. The [MCP setup guide](docs/mcp.md) provides an illustrative local client entry and all 12 tool contracts.
+Launch `node server/mcp.ts` from your MCP host, or use `npm run --silent mcp`. stdout is JSON-RPC only. FlowLens does not install itself into global agent settings. The [MCP setup guide](docs/mcp.md) provides an illustrative local client entry and all 15 tool contracts.
 
 A keyless workflow starts with these tool calls:
 
@@ -100,9 +102,11 @@ MCP tools and the HTTP API use `.local/cases` by default. Set an absolute `FLOWL
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Human workspace         | Directional graph, expansion, zoom/pan, pin/hide/restore, category arrangement, network/asset/time/direction filters, evidence drawer and case notes | Arbitrary named groups and free node dragging are not implemented                                      |
 | Evidence engine         | Exact integer accounting, canonical event IDs, source/label provenance, validation and mode separation                                               | Import validates structure and consistency, not source truth or ownership                              |
-| Durable agent state     | JSON CLI/API, 12 stdio MCP tools, atomic writes, locks, revision checks and resumable cursors                                                        | Local single-user tool; no public-hosting authentication boundary                                      |
+| Durable agent state     | JSON CLI/API, 15 stdio MCP tools, atomic writes, locks, revision checks and resumable cursors                                                        | Local single-user tool; no public-hosting authentication boundary                                      |
 | Indexed wallet history  | Optional Etherscan V2 native transfers and receipt-confirmed ERC20 logs on Ethereum and Arbitrum One                                                 | Requires existing permitted key; no internal-history/NFT/balance/price coverage                        |
 | Targeted protocol reads | Safe configuration/history and narrow calldata recovery; CCTP V1/V2 known-transaction evidence; transaction-specific internal trace capability       | Separate protocol evidence; does not silently change graph totals or enumerate complete wallet history |
+
+See [wallet controls and attribution](docs/workspace-controls.md) for the matching `wallet`, `annotate` and `visibility` CLI/API/MCP operations, bounded transfer-list pages and revision checks. Permitted local label observations are user data; FlowLens performs no Arkham lookup or label redistribution.
 
 ## Add live providers deliberately
 

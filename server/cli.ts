@@ -31,7 +31,9 @@ import {
 } from "./store.ts";
 import { ProviderError } from "./etherscan.ts";
 import { RpcProviderError } from "./rpc.ts";
-import { createAgentService } from "./agent.ts";
+import { AgentOperationError, createAgentService } from "./agent.ts";
+import { annotateWallet, setVisibility } from "../src/domain/workspace.ts";
+import { visibleTransfers, walletFlows } from "../src/domain/wallet-flows.ts";
 import {
   acquireProtocolEvidence,
   parseAcquisitionInput,
@@ -66,6 +68,13 @@ const allowed = new Set([
   "--max-signatures",
   "--max-logs",
   "--max-traces",
+  "--label-file",
+  "--remove",
+  "--node-keys",
+  "--transfer-ids",
+  "--visible",
+  "--expected-revision",
+  "--offset",
 ]);
 const flags: Record<string, string> = {};
 function print(value: unknown) {
@@ -91,6 +100,12 @@ async function main() {
           "--mode demo|live --file PATH [--address EVM] [--title TEXT] [--history-mode indexed|evidence-only]",
         expand:
           "--file PATH --address EVM --chain 1|8453|42161 [--pages 1..3] [--page-size N]",
+        annotate:
+          "--file PATH --chain N --address EVM (--label-file PATH | --remove true) [--expected-revision ISO_TIMESTAMP]; local attribution assertion, not ownership authentication.",
+        visibility:
+          "--file PATH [--node-keys JSON_ARRAY] [--transfer-ids JSON_ARRAY] --visible true|false [--expected-revision ISO_TIMESTAMP]; changes graph visibility without deleting evidence.",
+        wallet:
+          "--file PATH --address EVM [--chain N] [--asset CONTRACT_KEY] [--direction all|in|out] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--offset N --expected-revision ISO_TIMESTAMP] [--page-size 1..100]; later pages require the previous result revision; loaded wallet-relative inflows/outflows and counterparties, no provider query.",
         inspect: "--file PATH",
         evidence: "--file PATH --id EVIDENCE_ID",
         graph:
@@ -237,9 +252,17 @@ async function main() {
     return;
   }
   if (
-    !["create", "expand", "inspect", "export", "evidence", "graph"].includes(
-      command,
-    )
+    ![
+      "create",
+      "expand",
+      "inspect",
+      "export",
+      "evidence",
+      "graph",
+      "annotate",
+      "visibility",
+      "wallet",
+    ].includes(command)
   )
     throw new Error(
       "Unknown operation. Use help for the machine-readable CLI contract.",
@@ -272,6 +295,74 @@ async function main() {
     });
     print(value);
     if (value.coverage.some((c) => c.status === "error")) process.exitCode = 2;
+    return;
+  }
+  if (command === "annotate" || command === "visibility") {
+    let label: unknown;
+    if (command === "annotate") {
+      if (!flags["--chain"] || !flags["--address"])
+        throw new Error("Annotation requires --chain and --address");
+      if (Boolean(flags["--label-file"]) === Boolean(flags["--remove"]))
+        throw new Error(
+          "Supply exactly one --label-file PATH or --remove true",
+        );
+      if (flags["--remove"] && flags["--remove"] !== "true")
+        throw new Error("--remove must be true");
+      label = flags["--label-file"]
+        ? await readBoundedJsonFile(
+            resolve(flags["--label-file"]),
+            "Wallet label",
+          )
+        : null;
+    } else if (!["true", "false"].includes(flags["--visible"])) {
+      throw new Error("--visible must be true or false");
+    }
+    const selection = (flag: string): string[] | undefined => {
+      if (flags[flag] === undefined) return undefined;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(flags[flag]);
+      } catch {
+        throw new Error(`${flag} must be a JSON array of strings`);
+      }
+      if (
+        !Array.isArray(parsed) ||
+        parsed.length > 20_000 ||
+        parsed.some((item) => typeof item !== "string")
+      )
+        throw new Error(`${flag} must be a bounded JSON array of strings`);
+      return parsed;
+    };
+    const nodeKeys = selection("--node-keys"),
+      transferIds = selection("--transfer-ids");
+    const value = await lock(path, async () => {
+      const current = await readSnapshot(path);
+      if (
+        flags["--expected-revision"] !== undefined &&
+        flags["--expected-revision"] !== current.updatedAt
+      )
+        throw new AgentOperationError(
+          "CASE_CONFLICT",
+          "Investigation changed. Fetch the latest revision before changing workspace controls.",
+          true,
+        );
+      const next =
+        command === "annotate"
+          ? annotateWallet(current, {
+              chainId: Number(flags["--chain"]),
+              address: flags["--address"],
+              label,
+            })
+          : setVisibility(current, {
+              ...(nodeKeys === undefined ? {} : { nodeKeys }),
+              ...(transferIds === undefined ? {} : { transferIds }),
+              visible: flags["--visible"] === "true",
+            });
+      next.updatedAt = nextRevision(current.updatedAt);
+      await writeSnapshot(path, next);
+      return next;
+    });
+    print(value);
     return;
   }
   if (command === "expand") {
@@ -311,6 +402,46 @@ async function main() {
     print(evidence);
     return;
   }
+  if (command === "wallet") {
+    if (!flags["--address"])
+      throw new Error("Wallet inspection requires --address");
+    const offset = Number(flags["--offset"] ?? 0);
+    const expectedRevision = flags["--expected-revision"];
+    if (offset > 0 && expectedRevision === undefined)
+      throw new AgentOperationError(
+        "INVALID_CURSOR",
+        "Wallet pages after the first require --expected-revision from the previous result.",
+      );
+    if (expectedRevision !== undefined && expectedRevision !== value.updatedAt)
+      throw new AgentOperationError(
+        "CURSOR_STALE",
+        "Investigation changed; restart the wallet query at offset 0 to use its current revision.",
+        true,
+      );
+    print({
+      caseId: value.id,
+      revision: value.updatedAt,
+      ...walletFlows(value, {
+        address: flags["--address"],
+        ...(flags["--chain"] ? { chainId: Number(flags["--chain"]) } : {}),
+        filter: {
+          ...(flags["--asset"] ? { asset: flags["--asset"] } : {}),
+          ...(flags["--direction"]
+            ? { direction: flags["--direction"] as "all" | "in" | "out" }
+            : {}),
+          ...(flags["--from"] ? { from: flags["--from"] } : {}),
+          ...(flags["--to"] ? { to: flags["--to"] } : {}),
+        },
+        ...(flags["--offset"] !== undefined
+          ? { offset: Number(flags["--offset"]) }
+          : {}),
+        ...(flags["--page-size"] !== undefined
+          ? { pageSize: Number(flags["--page-size"]) }
+          : {}),
+      }),
+    });
+    return;
+  }
   if (command === "graph") {
     const direction = flags["--direction"] ?? "all";
     if (!["all", "in", "out"].includes(direction))
@@ -325,12 +456,20 @@ async function main() {
       from: flags["--from"],
       to: flags["--to"],
     });
+    const visible = visibleTransfers(value, transfers);
     print({
       root: value.root,
       transfers,
-      edges: buildEdges(transfers),
+      edges: buildEdges(visible),
       flows: aggregateFlows(transfers, value.root),
       coverage: value.coverage,
+      visibleTransferIds: visible.map((t) => t.id),
+      hidden: {
+        nodeKeys: value.hidden,
+        transferIds: value.hiddenTransfers ?? [],
+      },
+      visibilityNote:
+        "Visibility changes graph paths only; transfers and gross/net remain all filtered loaded evidence.",
     });
     return;
   }
@@ -358,12 +497,13 @@ main().catch((error) => {
     error instanceof AcquisitionError ||
     error instanceof CaseBusyError ||
     error instanceof EvidenceConflictError ||
-    error instanceof JsonFileError
+    error instanceof JsonFileError ||
+    error instanceof AgentOperationError
       ? error.code
       : "INVALID_OPERATION";
   const message = error instanceof Error ? error.message : "Operation failed";
   process.stderr.write(
-    `${JSON.stringify({ error: { code, message: message.slice(0, 500), retryable: error instanceof CaseBusyError || ((error instanceof ProviderError || error instanceof RpcProviderError || error instanceof AcquisitionError) && error.retryable) } })}\n`,
+    `${JSON.stringify({ error: { code, message: message.slice(0, 500), retryable: error instanceof CaseBusyError || (error instanceof AgentOperationError && error.retryable) || ((error instanceof ProviderError || error instanceof RpcProviderError || error instanceof AcquisitionError) && error.retryable) } })}\n`,
   );
   process.exitCode = 1;
 });

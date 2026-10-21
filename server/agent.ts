@@ -1,4 +1,6 @@
 import { resolve } from "node:path";
+import { annotateWallet, setVisibility } from "../src/domain/workspace.ts";
+import { walletFlows, visibleTransfers } from "../src/domain/wallet-flows.ts";
 import { createHash } from "node:crypto";
 import {
   aggregateFlows,
@@ -349,8 +351,34 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         };
       });
     }
+    if (operation === "annotate" || operation === "visibility") {
+      const id = caseId(input.caseId);
+      return mutate(id, async () => {
+        const current = await store.read(id);
+        if (
+          input.expectedRevision !== undefined &&
+          text(input.expectedRevision, "expectedRevision", 40) !==
+            current.updatedAt
+        )
+          throw new AgentOperationError(
+            "CASE_CONFLICT",
+            "Investigation changed; inspect the latest revision before updating workspace state.",
+            true,
+            { caseId: id, currentRevision: current.updatedAt },
+          );
+        const next =
+          operation === "annotate"
+            ? annotateWallet(current, input)
+            : setVisibility(current, input);
+        next.updatedAt = nextRevision(current.updatedAt);
+        await store.save(next);
+        return next;
+      });
+    }
     if (
-      !["inspect", "expand", "evidence", "graph", "export"].includes(operation)
+      !["inspect", "expand", "evidence", "graph", "wallet", "export"].includes(
+        operation,
+      )
     )
       throw new AgentOperationError(
         "UNKNOWN_OPERATION",
@@ -367,6 +395,57 @@ export function createAgentService(options: AgentServiceOptions = {}) {
       });
     const value = await store.read(id);
     if (operation === "export") return value;
+    if (operation === "wallet") {
+      if (
+        typeof input.offset === "number" &&
+        input.offset > 0 &&
+        input.expectedRevision === undefined
+      )
+        throw new AgentOperationError(
+          "INVALID_CURSOR",
+          "Wallet pages after offset zero require expectedRevision from the first page.",
+        );
+      if (
+        input.expectedRevision !== undefined &&
+        text(input.expectedRevision, "expectedRevision", 40) !== value.updatedAt
+      )
+        throw new AgentOperationError(
+          "CURSOR_STALE",
+          "Investigation changed; restart the wallet page query at offset zero with the current revision.",
+          true,
+          { caseId: id, currentRevision: value.updatedAt },
+        );
+      const filter: TraceFilter = {};
+      for (const key of ["asset", "from", "to"] as const)
+        if (input[key] !== undefined) filter[key] = text(input[key], key, 300);
+      if (input.direction !== undefined) {
+        if (!["all", "in", "out"].includes(String(input.direction)))
+          throw new AgentOperationError(
+            "INVALID_ARGUMENT",
+            "direction must be all, in or out.",
+          );
+        filter.direction = input.direction as TraceFilter["direction"];
+      }
+      return {
+        ...walletFlows(value, {
+          address: text(input.address, "address", 42),
+          ...(input.chainId === undefined
+            ? {}
+            : { chainId: input.chainId as number }),
+          ...(input.offset === undefined
+            ? {}
+            : { offset: input.offset as number }),
+          ...(input.pageSize === undefined
+            ? {}
+            : { pageSize: input.pageSize as number }),
+          filter,
+        }),
+        caseId: id,
+        revision: value.updatedAt,
+        coverageNote:
+          "Only loaded transfer evidence is summarized. Hidden flows remain included in gross/net totals; pagination never establishes complete wallet history.",
+      };
+    }
     if (operation === "inspect")
       return {
         version: value.version,
@@ -472,7 +551,8 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         "Graph cursor exceeds the loaded result set.",
       );
     const transfers = all.slice(offset, offset + limit),
-      end = offset + transfers.length;
+      end = offset + transfers.length,
+      visible = visibleTransfers(value, transfers);
     const nextCursor =
       end < all.length
         ? Buffer.from(
@@ -487,7 +567,14 @@ export function createAgentService(options: AgentServiceOptions = {}) {
     return {
       root: value.root,
       transfers,
-      edges: buildEdges(transfers),
+      edges: buildEdges(visible),
+      visibleTransferIds: visible.map((transfer) => transfer.id),
+      hidden: {
+        nodeKeys: value.hidden,
+        transferIds: value.hiddenTransfers ?? [],
+      },
+      visibilityNote:
+        "Visibility changes graph paths only; transfers and gross/net remain all filtered loaded evidence.",
       flows: aggregateFlows(all, value.root),
       coverage: value.coverage,
       page: {

@@ -126,6 +126,92 @@ export const jsonSchema = {
       description:
         "Demo uses only the synthetic 0x1111…1111 root. Live indexed mode requires an existing server-side permitted key and initially fetches one Ethereum page. Explicit live evidence-only mode creates an empty case with unsupported history coverage and no provider query. No key field is consumed or retained.",
     },
+    AnnotateRequest: {
+      ...shape(
+        {
+          chainId: integer(1),
+          address: ref("Address"),
+          label: {
+            anyOf: [
+              { type: "null" },
+              {
+                allOf: [
+                  ref("Label"),
+                  { required: ["claimType", "observedAt"] },
+                  {
+                    if: {
+                      properties: { confidence: { const: "verified" } },
+                      required: ["confidence"],
+                    },
+                    then: {
+                      properties: { claimType: { const: "verified-evidence" } },
+                      required: ["claimType", "evidenceNote"],
+                    },
+                  },
+                  {
+                    if: {
+                      properties: { claimType: { const: "verified-evidence" } },
+                      required: ["claimType"],
+                    },
+                    then: {
+                      required: ["evidenceNote"],
+                      properties: {
+                        evidenceNote: { ...text(4000), minLength: 1 },
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          expectedRevision: ref("Timestamp"),
+        },
+        ["chainId", "address", "label"],
+        "ignored",
+      ),
+      description:
+        "Local chain/address attribution assertion. Source and confidence do not authenticate ownership. Verified-evidence requires supplied justification; HTTPS source URLs cannot contain credentials. Unknown node scopes are rejected.",
+    },
+    VisibilityRequest: {
+      ...shape(
+        {
+          nodeKeys,
+          transferIds: array({ ...text(300), minLength: 1 }, 20_000),
+          visible: { type: "boolean" },
+          expectedRevision: ref("Timestamp"),
+        },
+        ["visible"],
+        "ignored",
+      ),
+      anyOf: [{ required: ["nodeKeys"] }, { required: ["transferIds"] }],
+      description:
+        "Show/hide loaded nodes or transfer IDs without deleting evidence. At least one selected ID is required; unknown scopes and hiding the focus wallet are rejected. Totals are retained independently of graph visibility.",
+    },
+    WalletQuery: {
+      ...shape(
+        {
+          address: ref("Address"),
+          chainId: integer(1),
+          asset: text(100),
+          direction: { enum: ["all", "in", "out"] },
+          from: text(40),
+          to: text(40),
+          offset: integer(0, 20_000),
+          pageSize: integer(1, 100),
+          expectedRevision: ref("Timestamp"),
+        },
+        ["address"],
+        "ignored",
+      ),
+      allOf: [
+        {
+          if: { required: ["offset"], properties: { offset: { minimum: 1 } } },
+          then: { required: ["expectedRevision"] },
+        },
+      ],
+      description:
+        "Offsets above zero require the previous result revision. A stale expectedRevision returns CURSOR_STALE rather than silently skipping evidence.",
+    },
     AcquireRequest: {
       type: "object",
       additionalProperties: false,
@@ -259,6 +345,11 @@ export const jsonSchema = {
           enum: ["verified", "reported", "unverified", "synthetic"],
         },
         retrievedAt: ref("Timestamp"),
+        observedAt: ref("Timestamp"),
+        claimType: {
+          enum: ["provider-assertion", "hypothesis", "verified-evidence"],
+        },
+        evidenceNote: text(4000),
         sourceUrl: {
           type: "string",
           maxLength: 2048,
@@ -486,6 +577,7 @@ export const jsonSchema = {
           expanded: nodeKeys,
           pinned: nodeKeys,
           hidden: nodeKeys,
+          hiddenTransfers: array(text(300), 20_000),
           notes: text(100_000),
           protocolEvidence: ref("ProtocolEvidenceBundle"),
         },
@@ -528,6 +620,95 @@ export const jsonSchema = {
         "HTTP persistence requires an id matching PathParameters and an unchanged updatedAt revision; success returns a newer revision",
       ],
     },
+    WalletResponse: shape(
+      {
+        caseId: text(100),
+        revision: ref("Timestamp"),
+        address: ref("Address"),
+        chainId: integer(1),
+        scope: { const: "loaded-evidence" },
+        flows: array(ref("AssetFlow"), 20_000),
+        counterparties: array(
+          shape(
+            {
+              key: text(300),
+              address: ref("Address"),
+              chainId: integer(1),
+              node: ref("WalletNode"),
+              flows: array(ref("AssetFlow"), 20_000),
+              transferIds: array(text(300), 20_000),
+              transferCount: integer(),
+              inflowCount: integer(),
+              outflowCount: integer(),
+              visible: { type: "boolean" },
+              visibility: { enum: ["all", "some", "none"] },
+            },
+            [
+              "key",
+              "address",
+              "chainId",
+              "flows",
+              "transferIds",
+              "transferCount",
+              "inflowCount",
+              "outflowCount",
+              "visible",
+              "visibility",
+            ],
+            "allowed",
+          ),
+          2000,
+        ),
+        transfers: array(
+          shape(
+            {
+              transfer: ref("Transfer"),
+              direction: { enum: ["in", "out", "self"] },
+              counterpartyKey: text(300),
+              visible: { type: "boolean" },
+            },
+            ["transfer", "direction", "counterpartyKey", "visible"],
+            "allowed",
+          ),
+          100,
+        ),
+        coverage: array(ref("Coverage"), 2000),
+        counts: shape(
+          {
+            transfers: integer(),
+            visibleTransfers: integer(),
+            inflows: integer(),
+            outflows: integer(),
+          },
+          ["transfers", "visibleTransfers", "inflows", "outflows"],
+          "allowed",
+        ),
+        page: shape(
+          {
+            offset: integer(0, 20_000),
+            pageSize: integer(1, 100),
+            total: integer(),
+            nextOffset: { anyOf: [integer(0, 20_000), { type: "null" }] },
+            previousOffset: { anyOf: [integer(0, 20_000), { type: "null" }] },
+          },
+          ["offset", "pageSize", "total", "nextOffset", "previousOffset"],
+          "allowed",
+        ),
+      },
+      [
+        "caseId",
+        "revision",
+        "address",
+        "scope",
+        "flows",
+        "counterparties",
+        "transfers",
+        "coverage",
+        "counts",
+        "page",
+      ],
+      "allowed",
+    ),
     FlowEdge: shape(
       {
         id: { type: "string" },
@@ -560,6 +741,16 @@ export const jsonSchema = {
         edges: array(ref("FlowEdge"), 20_000),
         flows: array(ref("AssetFlow"), 20_000),
         coverage: array(ref("Coverage"), 2000),
+        visibleTransferIds: array(text(300), 20_000),
+        hidden: shape(
+          { nodeKeys, transferIds: array(text(300), 20_000) },
+          ["nodeKeys", "transferIds"],
+          "allowed",
+        ),
+        visibilityNote: {
+          const:
+            "Visibility changes graph paths only; transfers and gross/net remain all filtered loaded evidence.",
+        },
       },
       ["root", "transfers", "edges", "flows", "coverage"],
       "allowed",
@@ -596,6 +787,9 @@ export const operationSchema = {
     "export",
     "replay",
     "acquire",
+    "annotate",
+    "visibility",
+    "wallet",
   ],
   limits: {
     chains: [1, 8453, 42161],
@@ -623,6 +817,36 @@ export const operationSchema = {
     "Register jsonSchema under its $id (urn:flowlens:schema:v1), then resolve contracts' bodySchema/querySchema/responseSchema refs. All local refs inside jsonSchema resolve against that document.",
   jsonSchema,
   contracts: {
+    wallet: {
+      method: "GET",
+      path: "/api/investigations/{id}/wallet",
+      pathSchema: contractRef("PathParameters"),
+      querySchema: contractRef("WalletQuery"),
+      responseSchema: contractRef("WalletResponse"),
+      cli: "wallet --file PATH --address EVM [--chain N] [--asset KEY] [--direction all|in|out] [--offset N --expected-revision ISO_TIMESTAMP] [--page-size 1..100]",
+      description:
+        "Wallet-relative loaded counterparties and transfer evidence, token-aware exact gross/net units and local pagination. Does not fetch missing history. Coverage remains provider-scoped and partial where reported.",
+    },
+    annotate: {
+      method: "POST",
+      path: "/api/investigations/{id}/annotate",
+      pathSchema: contractRef("PathParameters"),
+      bodySchema: contractRef("AnnotateRequest"),
+      responseSchema: contractRef("Investigation"),
+      cli: "annotate --file PATH --chain N --address EVM (--label-file PATH | --remove true) [--expected-revision ISO_TIMESTAMP]",
+      description:
+        "Local attribution only. Label source is retained, never queried; a provider assertion or graph link is not ownership proof.",
+    },
+    visibility: {
+      method: "POST",
+      path: "/api/investigations/{id}/visibility",
+      pathSchema: contractRef("PathParameters"),
+      bodySchema: contractRef("VisibilityRequest"),
+      responseSchema: contractRef("Investigation"),
+      cli: "visibility --file PATH [--node-keys JSON_ARRAY] [--transfer-ids JSON_ARRAY] --visible true|false [--expected-revision ISO_TIMESTAMP]",
+      description:
+        "Preserve graph selections in the case. Full transfer evidence, coverage and gross/net amounts remain unchanged.",
+    },
     acquire: {
       method: "POST",
       path: "/api/acquire",

@@ -23,7 +23,12 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import type { Investigation, Transfer, WalletNode } from "./domain/types.ts";
+import type {
+  Investigation,
+  Label,
+  Transfer,
+  WalletNode,
+} from "./domain/types.ts";
 import {
   aggregateFlows,
   assetKey,
@@ -40,6 +45,13 @@ import {
 } from "./domain/demo.ts";
 import { Graph, chainName, displayUnits, short } from "./components/Graph.tsx";
 import { EvidenceDrawer, TransferList } from "./components/Evidence.tsx";
+import type { VisibilityChange } from "./components/WalletFlows.tsx";
+import {
+  annotateWallet,
+  refreshWorkspace,
+  setVisibility,
+} from "./domain/workspace.ts";
+import { visibleTransfers } from "./domain/wallet-flows.ts";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { WorkspaceDialogs } from "./components/WorkspaceDialogs.tsx";
 import type { WorkspaceModal } from "./components/WorkspaceDialogs.tsx";
@@ -139,6 +151,19 @@ export default function App() {
       } catch {
         initial = await createDemoInvestigation();
       }
+      if (initial.mode === "live") {
+        try {
+          const latest = await api<Investigation>(
+            `/investigations/${encodeURIComponent(initial.id)}`,
+          );
+          initial = refreshWorkspace(initial, latest);
+        } catch {
+          if (alive)
+            setError(
+              "Latest local case could not be loaded. This preserved browser snapshot may be stale; export it or use Refresh case before editing shared evidence.",
+            );
+        }
+      }
       if (alive) {
         setInvestigation(initial);
         setMode(initial.mode);
@@ -221,6 +246,10 @@ export default function App() {
           })
         : [],
     [investigation, chain, asset, direction, from, to, dateRangeInvalid],
+  );
+  const graphTransfers = useMemo(
+    () => (investigation ? visibleTransfers(investigation, filtered) : []),
+    [investigation, filtered],
   );
   const allFlows = useMemo(
     () =>
@@ -316,12 +345,7 @@ export default function App() {
                 maxPages: 1,
               },
             );
-      setInvestigation({
-        ...next,
-        notes: investigation.notes,
-        pinned: investigation.pinned,
-        hidden: investigation.hidden,
-      });
+      setInvestigation(refreshWorkspace(investigation, next));
       const failure = next.coverage.find(
         (c) =>
           c.address === n.address &&
@@ -376,21 +400,14 @@ export default function App() {
     try {
       const latest = await api<Investigation>(`/investigations/${caseId}`);
       setInvestigation((current) =>
-        current?.id === caseId
-          ? {
-              ...latest,
-              notes: current.notes,
-              pinned: current.pinned,
-              hidden: current.hidden,
-            }
-          : current,
+        current?.id === caseId ? refreshWorkspace(current, latest) : current,
       );
       setDrawer(false);
       setSelectedNode(null);
       setSelectedTransfer(null);
       setError("");
       setToast(
-        "Source refreshed. Local notes, pins and hidden nodes preserved.",
+        "Case refreshed. Shared labels and graph selections updated; local notes and pins preserved.",
       );
     } catch (e) {
       setError(
@@ -434,13 +451,67 @@ export default function App() {
         : [...investigation.pinned, key],
     });
   };
-  const hide = (n: WalletNode) => {
-    if (!investigation) return;
-    setInvestigation({
-      ...investigation,
-      hidden: [...investigation.hidden, nodeKey(n.chainId, n.address)],
-    });
-    setDrawer(false);
+  async function changeVisibility(change: VisibilityChange) {
+    if (!investigation || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const next =
+        investigation.mode === "demo"
+          ? setVisibility(investigation, change)
+          : await api<Investigation>(
+              `/investigations/${investigation.id}/visibility`,
+              { ...change, expectedRevision: investigation.updatedAt },
+            );
+      setInvestigation(refreshWorkspace(investigation, next));
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not preserve graph selections. Refresh the case before retrying.",
+      );
+      throw failure;
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function annotate(node: WalletNode, label: Label | null) {
+    if (!investigation || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const input = { chainId: node.chainId, address: node.address, label };
+      const next =
+        investigation.mode === "demo"
+          ? annotateWallet(investigation, input)
+          : await api<Investigation>(
+              `/investigations/${investigation.id}/annotate`,
+              { ...input, expectedRevision: investigation.updatedAt },
+            );
+      setInvestigation(refreshWorkspace(investigation, next));
+      setToast(
+        label
+          ? "Label and source preserved for this chain and wallet."
+          : "Label removed. Ownership remains unknown.",
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not preserve the label. Refresh the case before retrying.",
+      );
+      throw failure;
+    } finally {
+      setBusy(false);
+    }
+  }
+  const hide = (node: WalletNode) => {
+    void changeVisibility({
+      nodeKeys: [nodeKey(node.chainId, node.address)],
+      visible: false,
+    })
+      .then(() => setDrawer(false))
+      .catch(() => {});
   };
   if (!investigation)
     return (
@@ -658,6 +729,16 @@ export default function App() {
               </div>
             </div>
             <div className="case-actions">
+              {investigation.mode === "live" && !error && (
+                <button
+                  className="button subtle"
+                  disabled={busy}
+                  onClick={() => void refreshCase()}
+                >
+                  <RotateCcw size={15} />
+                  <span>Refresh case</span>
+                </button>
+              )}
               <button
                 className="button subtle"
                 onClick={() => download(investigation)}
@@ -854,14 +935,35 @@ export default function App() {
               <span className="record-count">{filtered.length} transfers</span>
             </div>
             <div>
-              {investigation.hidden.length > 0 && (
+              <button
+                className="text-button"
+                onClick={() =>
+                  selectNode({
+                    address: investigation.root,
+                    chainId: chain === "all" ? 1 : Number(chain),
+                  })
+                }
+              >
+                Wallet flows <ArrowRight size={13} />
+              </button>
+              {investigation.hidden.length +
+                (investigation.hiddenTransfers?.length || 0) >
+                0 && (
                 <button
                   className="text-button"
+                  disabled={busy}
                   onClick={() =>
-                    setInvestigation({ ...investigation, hidden: [] })
+                    void changeVisibility({
+                      nodeKeys: investigation.hidden,
+                      transferIds: investigation.hiddenTransfers || [],
+                      visible: true,
+                    }).catch(() => {})
                   }
                 >
-                  Restore {investigation.hidden.length} hidden
+                  Restore{" "}
+                  {investigation.hidden.length +
+                    (investigation.hiddenTransfers?.length || 0)}{" "}
+                  hidden
                 </button>
               )}
               <button
@@ -884,7 +986,7 @@ export default function App() {
               {view === "graph" ? (
                 <Graph
                   investigation={investigation}
-                  transfers={filtered}
+                  transfers={graphTransfers}
                   onNode={selectNode}
                   onTransfer={selectTransfer}
                   selected={
@@ -921,6 +1023,14 @@ export default function App() {
                 onExpand={(n) => void expand(n)}
                 onPin={togglePin}
                 onHide={hide}
+                onWallet={selectNode}
+                onVisibility={changeVisibility}
+                onAnnotate={annotate}
+                filter={{
+                  asset: asset === "all" ? undefined : asset,
+                  from: from || undefined,
+                  to: to || undefined,
+                }}
                 busy={busy}
               />
             )}
@@ -982,12 +1092,7 @@ export default function App() {
             );
             setInvestigation((current) =>
               current?.id === latest.id
-                ? {
-                    ...latest,
-                    notes: current.notes,
-                    pinned: current.pinned,
-                    hidden: current.hidden,
-                  }
+                ? refreshWorkspace(current, latest)
                 : current,
             );
             setToast(

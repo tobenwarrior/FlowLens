@@ -37,3 +37,9 @@ The destination and fresh source-archive install passed 224/224 tests, lint, typ
 ### Release limitations
 
 License/copyright ownership and data-use rights remain owner decisions. The source archive contains no private case exports, private/temporary QA artifacts, credentials or installed dependencies; the two reviewed synthetic documentation screenshots are included. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
+
+## Wallet flows and local attribution
+
+- Added chain/address-scoped wallet counterparties, exact per-asset gross/net totals, selected transfer pages and graph visibility controls. Hiding paths preserves evidence and accounting.
+- Added local label editing and shared CLI/API/MCP annotation and visibility operations. Claims retain source, observation time, confidence and evidence notes; ownership is not inferred.
+- Added revision checks for agent wallet paging and local mutation conflicts. Live indexed history still requires an existing permitted Etherscan key and remains unverified on this instance.

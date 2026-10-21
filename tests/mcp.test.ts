@@ -93,6 +93,9 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
         "import",
         "replay",
         "acquire",
+        "annotate",
+        "visibility",
+        "wallet",
       ]
         .map((op) => `flowlens_${op}`)
         .sort(),

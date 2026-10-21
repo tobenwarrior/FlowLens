@@ -91,7 +91,9 @@ Case IDs and evidence IDs are stable identifiers. Creation time, revision time a
 
 ## Tools
 
-The server advertises 12 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
+The server advertises 15 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
+
+`flowlens_wallet`, `flowlens_annotate` and `flowlens_visibility` share the [wallet controls and attribution contracts](workspace-controls.md). They do not fetch history or label providers. Wallet transfer pages after offset zero require the returned revision guard.
 
 Import and replay tools are marked as potentially destructive because they can replace an existing full snapshot or attached protocol evidence bundle. Export a backup before intentionally replacing retained observations. No tool deletes a case or recurses into counterparties automatically.
 
@@ -105,6 +107,9 @@ Import and replay tools are marked as potentially destructive because they can r
 | `flowlens_expand`   | `caseId`, `address`, `chainId`, optional `maxPages`, `pageSize`                     | Resumes one wallet/chain; no automatic recursion                                                           |
 | `flowlens_evidence` | `caseId`, `evidenceId`                                                              | One canonical transfer with provenance                                                                     |
 | `flowlens_graph`    | `caseId`, optional filters, `limit`, `cursor`                                       | Bounded loaded-transfer page and its edges                                                                 |
+| `flowlens_wallet` | `caseId`, `address`, optional chain/asset/time/direction, `offset`, `pageSize`, `expectedRevision` | Loaded counterparty/transfer summary relative to the selected wallet; revision-bound list paging |
+| `flowlens_annotate` | `caseId`, `chainId`, `address`, `label` or null, optional `expectedRevision` | Attach/edit/remove a source-bearing local attribution claim; no provider lookup |
+| `flowlens_visibility` | `caseId`, `visible`, `nodeKeys` and/or `transferIds`, optional `expectedRevision` | Persist graph selections while retaining evidence and loaded totals |
 | `flowlens_export`   | `caseId`                                                                            | Full validated investigation JSON                                                                          |
 | `flowlens_import`   | `investigation`                                                                     | Validates and persists supplied investigation JSON                                                         |
 | `flowlens_replay`   | Exactly one `bundle` or `fixture`; optional `caseId`                                | Analyses supplied protocol observations; optionally attaches them                                          |

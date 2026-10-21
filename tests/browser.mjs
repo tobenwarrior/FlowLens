@@ -27,6 +27,87 @@ try {
   await expect(page.locator(".record-count")).toHaveText("3 transfers");
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   results.push("Desktop chain/direction filters and scoped gross totals");
+  await page.getByRole("button", { name: "Wallet flows", exact: true }).click();
+  const walletPanel = page.getByLabel("Selected wallet flows");
+  await expect(walletPanel).toContainText("8 / 8 enabled for graph");
+  const northstarSelection = page.getByLabel(
+    "Show counterparty 1:0x2222222222222222222222222222222222222222",
+    { exact: true },
+  );
+  await northstarSelection.uncheck();
+  await expect(walletPanel).toContainText("6 / 8 enabled for graph");
+  await expect(page.locator(".flow-summary")).toContainText("31,300");
+  await page
+    .locator(".counterparty-inspect")
+    .filter({ hasText: "Northstar Exchange" })
+    .click();
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await expect(walletPanel).toContainText("2 / 2 enabled for graph");
+  await expect(
+    page
+      .locator(".wallet-card.counterparty")
+      .filter({ hasText: "Northstar Exchange" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Wallet flows", exact: true }).click();
+  await page.getByRole("button", { name: "Select none", exact: true }).click();
+  await expect(walletPanel).toContainText("0 / 8 enabled for graph");
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await page.getByRole("button", { name: "Transfers 8", exact: true }).click();
+  await page
+    .getByLabel(/^Show transfer /)
+    .first()
+    .uncheck();
+  await expect(walletPanel).toContainText("7 / 8 enabled for graph");
+  await page.reload();
+  await page.getByRole("button", { name: "Wallet flows", exact: true }).click();
+  await page.getByRole("button", { name: "Transfers 8", exact: true }).click();
+  await expect(
+    page.locator(".wallet-transfer-row input:not(:checked)"),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await expect(walletPanel).toContainText("8 / 8 enabled for graph");
+  await page
+    .getByRole("button", { name: "Edit entity label", exact: true })
+    .click();
+  await page
+    .getByLabel("Entity label", { exact: true })
+    .fill("Synthetic analyst hypothesis");
+  await page.getByLabel("Label claim type").selectOption("hypothesis");
+  await page.getByLabel("Label confidence").selectOption("unverified");
+  await page
+    .getByLabel("Label source", { exact: true })
+    .fill("Synthetic QA analyst");
+  await page
+    .getByLabel("Label source URL")
+    .fill("https://example.invalid/synthetic-evidence");
+  await page
+    .getByLabel("Label evidence note")
+    .fill("Synthetic UI replay only; no ownership assertion.");
+  await page.getByRole("button", { name: "Save label", exact: true }).click();
+  await expect(page.getByLabel("Evidence drawer")).toContainText(
+    "Synthetic QA analyst",
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Wallet flows", exact: true }).click();
+  await expect(page.getByLabel("Evidence drawer")).toContainText(
+    "Synthetic analyst hypothesis",
+  );
+  await expect(
+    page.getByRole("link", { name: "View label source" }),
+  ).toHaveAttribute("href", "https://example.invalid/synthetic-evidence");
+  await page
+    .getByRole("button", { name: "Edit entity label", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Remove label", exact: true }).click();
+  await expect(page.getByLabel("Evidence drawer")).toContainText(
+    "Ownership is unknown",
+  );
+  await page.getByLabel("Close evidence").click();
+  results.push(
+    "Wallet counterparty/transfer selections, hidden-wallet recovery, unchanged gross totals, refresh persistence, scoped label provenance and removal",
+  );
+
+  await page.getByRole("button", { name: "Wallet flows", exact: true }).click();
   await page.getByRole("button", { name: "All time", exact: true }).click();
   await page.getByLabel("To date").fill("2026-10-10");
   await page.getByLabel("From date").fill("2026-10-19");
@@ -35,7 +116,11 @@ try {
   );
   await expect(page.getByTestId("funding-graph")).toBeVisible();
   await page.getByRole("button", { name: "Reset", exact: true }).click();
-  results.push("Reversed dates stay recoverable without a rendering crash");
+  await expect(page.getByLabel("Selected wallet flows")).toBeVisible();
+  await page.getByLabel("Close evidence").click();
+  results.push(
+    "Reversed dates with open wallet inspector stay recoverable without a rendering crash",
+  );
   await page.getByRole("button", { name: /^FOCUS WALLET/ }).click();
   await page.getByLabel("Expansion network").selectOption("8453");
   await page
@@ -236,6 +321,7 @@ try {
   fixture = {
     ...fixture,
     mode: "live",
+    nodes: fixture.nodes.map(({ label, ...node }) => node),
     transfers: fixture.transfers.map(({ synthetic, ...t }) => t),
   };
   await live.route("**/api/status", (route) =>

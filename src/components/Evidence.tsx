@@ -12,9 +12,17 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Investigation, Transfer, WalletNode } from "../domain/types.ts";
+import type {
+  Investigation,
+  Label,
+  TraceFilter,
+  Transfer,
+  WalletNode,
+} from "../domain/types.ts";
 import { formatUnits, nodeKey } from "../domain/engine.ts";
 import { chainName, displayUnits, explorer, short } from "./Graph.tsx";
+import { WalletFlows, WalletLabelEditor } from "./WalletFlows.tsx";
+import type { VisibilityChange } from "./WalletFlows.tsx";
 
 export function TransferList({
   transfers,
@@ -122,13 +130,17 @@ function CopyButton({ value }: { value: string }) {
 }
 export function EvidenceDrawer({
   investigation,
-  node,
+  node: requestedNode,
   transfer,
   onClose,
   onSelect,
   onExpand,
   onPin,
   onHide,
+  onWallet,
+  onVisibility,
+  onAnnotate,
+  filter,
   busy,
 }: {
   investigation: Investigation;
@@ -139,24 +151,35 @@ export function EvidenceDrawer({
   onExpand: (n: WalletNode) => void;
   onPin: (n: WalletNode) => void;
   onHide: (n: WalletNode) => void;
+  onWallet: (n: WalletNode) => void;
+  onVisibility: (change: VisibilityChange) => Promise<void>;
+  onAnnotate: (n: WalletNode, label: Label | null) => Promise<void>;
+  filter?: TraceFilter;
   busy: boolean;
 }) {
   const root = investigation.root.toLowerCase();
-  const [expansionChain, setExpansionChain] = useState(node?.chainId || 1);
-  useEffect(() => setExpansionChain(node?.chainId || 1), [node]);
-  const focus = node?.address.toLowerCase() === root;
-  const matching = node
-    ? investigation.transfers.filter(
-        (t) =>
-          (focus || t.chainId === node.chainId) &&
-          (t.from === node.address || t.to === node.address),
-      )
-    : investigation.transfers;
+  const [expansionChain, setExpansionChain] = useState(
+    requestedNode?.chainId || 1,
+  );
+  useEffect(
+    () => setExpansionChain(requestedNode?.chainId || 1),
+    [requestedNode?.chainId, requestedNode?.address],
+  );
+  const focus = requestedNode?.address.toLowerCase() === root;
+  const activeChain = focus ? expansionChain : requestedNode?.chainId || 1;
+  const node = requestedNode
+    ? investigation.nodes.find(
+        (item) =>
+          item.address === requestedNode.address &&
+          item.chainId === activeChain,
+      ) || { address: requestedNode.address, chainId: activeChain }
+    : null;
   const coverage = node
     ? investigation.coverage.find(
         (c) => c.address === node.address && c.chainId === expansionChain,
       )
     : undefined;
+  const scopedNode = node;
   return (
     <aside className="evidence-drawer" aria-label="Evidence drawer">
       <div className="drawer-title">
@@ -173,6 +196,19 @@ export function EvidenceDrawer({
       </div>
       {transfer ? (
         <>
+          <button
+            className="text-button back-to-wallet"
+            onClick={() =>
+              onWallet(
+                node || {
+                  address: investigation.root,
+                  chainId: transfer.chainId,
+                },
+              )
+            }
+          >
+            ← Back to wallet flows
+          </button>
           <div className="evidence-hero">
             <span
               className={`transfer-arrow large ${transfer.to === root ? "in" : "out"}`}
@@ -319,9 +355,16 @@ export function EvidenceDrawer({
                 {node.label.kind} · {node.label.confidence}
               </span>
               <p>
-                Retrieved {node.label.retrievedAt.slice(0, 10)}. Labels and
+                {node.label.claimType || "Provider label"} · observed{" "}
+                {node.label.observedAt || node.label.retrievedAt}. Labels and
                 shared funders do not establish ownership.
               </p>
+              {node.label.sourceUrl && (
+                <a href={node.label.sourceUrl} target="_blank" rel="noreferrer">
+                  View label source <ExternalLink size={12} />
+                </a>
+              )}
+              {node.label.evidenceNote && <p>{node.label.evidenceNote}</p>}
             </div>
           ) : (
             <div className="quiet-note">
@@ -330,7 +373,7 @@ export function EvidenceDrawer({
           )}
           {node && focus && (
             <label className="expand-network">
-              NETWORK TO EXPAND
+              NETWORK FOR FLOWS & EXPANSION
               <select
                 aria-label="Expansion network"
                 value={expansionChain}
@@ -406,16 +449,38 @@ export function EvidenceDrawer({
               </span>
             </div>
           )}
-          <div className="drawer-section-heading">
-            <h3>Transfer evidence</h3>
-            <span>{matching.length}</span>
-          </div>
-          <TransferList
-            transfers={matching}
-            root={root}
-            onSelect={onSelect}
-            compact
-          />
+          {scopedNode && (
+            <>
+              <WalletLabelEditor
+                key={`${nodeKey(scopedNode.chainId, scopedNode.address)}:${node?.label?.retrievedAt || "unknown"}:${node?.label?.text || ""}`}
+                node={
+                  investigation.nodes.find(
+                    (item) =>
+                      item.chainId === scopedNode.chainId &&
+                      item.address === scopedNode.address,
+                  ) || scopedNode
+                }
+                busy={busy}
+                onAnnotate={onAnnotate}
+              />
+              {filter?.from && filter.to && filter.from > filter.to ? (
+                <div className="quiet-note" role="status">
+                  Correct the date range above to inspect filtered wallet flows.
+                </div>
+              ) : (
+                <WalletFlows
+                  key={nodeKey(scopedNode.chainId, scopedNode.address)}
+                  investigation={investigation}
+                  node={scopedNode}
+                  filter={filter}
+                  busy={busy}
+                  onVisibility={onVisibility}
+                  onWallet={onWallet}
+                  onTransfer={onSelect}
+                />
+              )}
+            </>
+          )}
         </>
       )}
     </aside>

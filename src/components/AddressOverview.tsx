@@ -1,11 +1,13 @@
 import { useId, useMemo } from "react";
 import { aggregateFlows, normalizeAddress } from "../domain/engine.ts";
 import { netFlowSeries } from "../domain/net-flow.ts";
+import { rankCounterparties } from "../domain/counterparties.ts";
+import { walletFlows } from "../domain/wallet-flows.ts";
 import type { NetFlowSeries } from "../domain/net-flow.ts";
 import { formatCompact, quoteFor, wholeUnits } from "../domain/pricing.ts";
 import type { PriceBook } from "../domain/pricing.ts";
 import type { Address, Investigation } from "../domain/types.ts";
-import { chainName } from "./Graph.tsx";
+import { chainName, short } from "./Graph.tsx";
 
 const CHART_WIDTH = 560;
 const CHART_HEIGHT = 150;
@@ -216,14 +218,126 @@ function AssetsPanel({
   );
 }
 
+function usdCell(value: number | null): string {
+  return value === null ? "—" : `$${formatCompact(value, 2)}`;
+}
+
+/**
+ * Who this wallet actually deals with, ordered by how much moved.
+ *
+ * Ranked on gross volume in both directions rather than net, so a wallet that cycled
+ * funds through stays visible instead of cancelling itself out. A counterparty whose
+ * assets carry no price cannot join that ordering and shows a dash, not a zero.
+ */
+function CounterpartiesPanel({
+  investigation,
+  address,
+  book,
+  onSelectWallet,
+}: {
+  investigation: Investigation;
+  address: Address;
+  book: PriceBook;
+  onSelectWallet?: (node: { address: Address; chainId: number }) => void;
+}) {
+  const ranking = useMemo(() => {
+    const view = walletFlows(investigation, { address, pageSize: 1 });
+    return rankCounterparties(view.counterparties, book, 8);
+  }, [investigation, address, book]);
+
+  if (!ranking.rows.length)
+    return (
+      <div className="chart-empty">No counterparties in loaded evidence.</div>
+    );
+
+  return (
+    <>
+      <div className="txscroll">
+        <table className="txtable counterparty-table">
+          <thead>
+            <tr>
+              <th scope="col">Counterparty</th>
+              <th scope="col" style={{ textAlign: "right" }}>
+                Transfers
+              </th>
+              <th scope="col" style={{ textAlign: "right" }}>
+                In
+              </th>
+              <th scope="col" style={{ textAlign: "right" }}>
+                Out
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {ranking.rows.map((row) => {
+              const { counterparty } = row;
+              const label = counterparty.node?.label;
+              return (
+                <tr
+                  key={counterparty.key}
+                  onClick={() =>
+                    onSelectWallet?.({
+                      address: counterparty.address,
+                      chainId: counterparty.chainId,
+                    })
+                  }
+                >
+                  <td>
+                    <span className="txparty">
+                      {label ? (
+                        <>
+                          <span className="txparty-name" title={label.source}>
+                            {label.text}
+                          </span>
+                          <span className={`labelchip ${label.kind}`}>
+                            {label.kind}
+                          </span>
+                        </>
+                      ) : null}
+                      <span
+                        className="txparty-addr"
+                        title={`${counterparty.address} on ${chainName(counterparty.chainId)}`}
+                      >
+                        ({short(counterparty.address)})
+                      </span>
+                    </span>
+                  </td>
+                  <td className="txvalue self">{counterparty.transferCount}</td>
+                  <td className="txvalue in">{usdCell(row.usdIn)}</td>
+                  <td className="txvalue out">{usdCell(row.usdOut)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="txfoot">
+        <span>
+          {ranking.basis === "usd-volume"
+            ? "Ranked by USD moved in and out"
+            : "Ranked by transfer count — no prices loaded"}
+        </span>
+        {ranking.unpriced > 0 ? (
+          <span>· {ranking.unpriced} unpriced</span>
+        ) : null}
+        {ranking.omitted > 0 ? (
+          <span className="txfoot-right">{ranking.omitted} more not shown</span>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
 export function AddressOverview({
   investigation,
   address,
   book,
+  onSelectWallet,
 }: {
   investigation: Investigation;
   address: string;
   book: PriceBook;
+  onSelectWallet?: (node: { address: Address; chainId: number }) => void;
 }) {
   const focus = normalizeAddress(address);
   const series = useMemo(
@@ -269,6 +383,22 @@ export function AddressOverview({
             <span className="txfoot-right">{series.excluded} excluded</span>
           ) : null}
         </div>
+      </section>
+
+      <section
+        className="txpanel overview-counterparties"
+        aria-label="Top counterparties"
+      >
+        <div className="panel-head">
+          <h2>Counterparties</h2>
+          <span className="panel-note">gross volume, both directions</span>
+        </div>
+        <CounterpartiesPanel
+          investigation={investigation}
+          address={focus}
+          book={book}
+          onSelectWallet={onSelectWallet}
+        />
       </section>
     </div>
   );

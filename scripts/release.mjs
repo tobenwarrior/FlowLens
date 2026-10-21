@@ -97,6 +97,7 @@ const allowlist = [
   "src/domain/swaps.ts",
   "src/domain/transfer-table.ts",
   "src/domain/net-flow.ts",
+  "src/domain/counterparties.ts",
   "tests/agent.test.ts",
   "tests/bridges.test.ts",
   "tests/browser.mjs",
@@ -121,6 +122,7 @@ const allowlist = [
   "tests/label-memory.test.ts",
   "tests/net-flow.test.ts",
   "tests/price-provider.test.ts",
+  "tests/counterparties.test.ts",
   "tests/protocols.test.ts",
   "tests/acquisition-workflow.test.ts",
 ].sort();

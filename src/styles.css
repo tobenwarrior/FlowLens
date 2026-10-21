@@ -1700,6 +1700,17 @@ samp {
 .assets-table {
   min-width: 330px;
 }
+.counterparty-table {
+  min-width: 340px;
+}
+/* Counterparties carry a label plus three numeric columns, so they get their own row
+   rather than being squeezed into a third of the width. */
+.overview-counterparties {
+  grid-column: 1 / -1;
+}
+.counterparty-table tbody tr {
+  cursor: pointer;
+}
 
 .chart-wrap {
   padding: 11px 6px 4px;

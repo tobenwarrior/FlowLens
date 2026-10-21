@@ -1054,6 +1054,7 @@ export default function App() {
                     investigation={investigation}
                     address={selectedNode?.address ?? investigation.root}
                     book={activeBook}
+                    onSelectWallet={selectNode}
                   />
                   <TransferTable
                     investigation={investigation}

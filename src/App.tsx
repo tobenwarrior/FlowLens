@@ -507,11 +507,16 @@ export default function App() {
         </header>
         <div className="page-heading">
           <div>
-            <span className="eyebrow">FOLLOW THE FLOW. KEEP THE EVIDENCE.</span>
+            <span className="eyebrow">
+              AGENT-FIRST TRACING. BUILT FOR HUMANS TOO.
+            </span>
             <h1>
               Every connection has a story<span>.</span>
             </h1>
-            <p>Trace the funds. Inspect the source. Build a clearer picture.</p>
+            <p>
+              Explore funding paths. Inspect the evidence. Keep the full
+              investigation.
+            </p>
           </div>
           <button
             className="button new-trace"

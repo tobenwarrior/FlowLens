@@ -461,7 +461,7 @@ export function createMcpServer(
     if (!tool)
       return failure(
         "UNKNOWN_TOOL",
-        "Unknown Flowlens tool. Discover available operations with tools/list.",
+        "Unknown FlowLens tool. Discover available operations with tools/list.",
       );
     const args = request.params.arguments ?? {};
     if (!boundedInput(args))
@@ -532,7 +532,7 @@ function main() {
     }),
     onerror: () => {
       process.stderr.write(
-        "Flowlens MCP transport error; no request payload was logged.\n",
+        "FlowLens MCP transport error; no request payload was logged.\n",
       );
     },
   });

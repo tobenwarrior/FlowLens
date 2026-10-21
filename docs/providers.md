@@ -32,6 +32,8 @@ Amounts stay integer strings with per-contract decimals. Token symbols are provi
 
 The provider commits no page until all required requests have succeeded. Missing receipts, network failures and throttling produce a retryable error; the engine retains the prior committed cursor and evidence. Failed transactions are excluded. Malformed rows/logs may be omitted with a permanent coverage warning, so terminal pagination never implies every transaction was ingested. Reaching a terminal stream means only that the provider returned no further rows inside the frozen window. Newer blocks require a new investigation in this version. There is no historical refresh/reorg rollback implementation.
 
+Each Etherscan response is capped at **2,000,000 bytes while streaming**, including when `Content-Length` is absent or incorrect. Exceeding the cap produces non-retryable `PROVIDER_RESPONSE_TOO_LARGE` and does not advance the committed history cursor. Exact duplicate normalized events deduplicate; contradictory material facts under the same stable event identity fail with `INVALID_PROVIDER_DATA` rather than silently choosing one response.
+
 ## Budgets and rate limits
 
 The server shares a provider queue paced at one request per second. A first page makes at most 13 requests (block anchor, two history streams, up to ten receipts); later pages make at most 12. An expansion is explicitly bounded to one wallet, at most three pages and 80 total graph nodes. The engine rejects an over-budget page atomically. Receipt parsing is bounded to 2,000 logs per receipt. There are no automatic recursive requests or network retries.

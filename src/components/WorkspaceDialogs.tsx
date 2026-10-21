@@ -40,6 +40,9 @@ export function WorkspaceDialogs({
   onSave,
 }: WorkspaceDialogsProps) {
   const dialogRef = useRef<HTMLElement>(null);
+  const evidenceOnly =
+    investigation.transfers.length === 0 &&
+    investigation.coverage.some((item) => item.provider === "evidence-only");
   useEffect(() => {
     if (!modal) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -171,7 +174,9 @@ export function WorkspaceDialogs({
                 <strong>
                   {investigation.mode === "demo"
                     ? "Synthetic fixture provider"
-                    : "Etherscan V2"}
+                    : evidenceOnly
+                      ? "Evidence-only investigation"
+                      : "Indexed transfer ledger"}
                 </strong>
                 <span className="case-badge">
                   {investigation.mode === "demo" ? "DEMO" : "LIVE"}
@@ -180,7 +185,9 @@ export function WorkspaceDialogs({
               <p>
                 {investigation.mode === "demo"
                   ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
-                  : "User-supplied server key. Native transfers and verified ERC-20 transfer logs only. Chain access depends on your provider plan."}
+                  : evidenceOnly
+                    ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
+                    : "Loaded native transfers and receipt-confirmed ERC-20 logs. Etherscan history requires your permitted server-side key; chain access depends on your provider plan."}
               </p>
             </div>
             <div className="coverage-list">
@@ -212,9 +219,19 @@ export function WorkspaceDialogs({
             <div className="warning-box">
               <ShieldAlert size={18} />
               <p>
-                Internal calls, NFTs, bridge joins, fees, historical ownership
-                and unlabeled networks may be missing. Gross flow is not unique
-                capital, profit, or assets under management.
+                The indexed graph does not include internal calls, NFTs, fees or
+                complete cross-chain history. Gross flow is not unique capital,
+                profit, or assets under management.
+              </p>
+            </div>
+            <div className="coverage-source">
+              <strong>
+                Protocol observations · separate from graph totals
+              </strong>
+              <p>
+                {investigation.mode === "demo"
+                  ? "Protocol evidence offers a clearly marked synthetic replay of Safe, bridge and internal-trace observations. No public provider is queried."
+                  : "Protocol evidence can explicitly query Safe configuration/history or a known CCTP transaction and call trace. Public endpoint support and coverage are checked per request. No wallet-history discovery is implied."}
               </p>
             </div>
             <div className="coverage-source">
@@ -235,8 +252,8 @@ export function WorkspaceDialogs({
             <h2>A tracer your agents can use.</h2>
             <p>
               Typed evidence, bounded expansion and resumable cursors are shared
-              by the visual workspace, local API and CLI. Agents never need to
-              click the graph.
+              by the visual workspace, local API, CLI and MCP tools. Agents can
+              trace, inspect and preserve evidence without clicking the graph.
             </p>
             <div className="code-example">
               <span>CREATE A REPRODUCIBLE DEMO CASE</span>
@@ -251,6 +268,8 @@ export function WorkspaceDialogs({
               </code>
               <span>INSPECT EVIDENCE & COVERAGE</span>
               <code>node server/cli.ts inspect --file .local/case.json</code>
+              <span>LAUNCH THE STDIO MCP SERVER</span>
+              <code>node server/mcp.ts</code>
             </div>
             <div className="agent-features">
               <span>
@@ -264,8 +283,11 @@ export function WorkspaceDialogs({
               </span>
             </div>
             <div className="quiet-note">
-              API: 127.0.0.1:4319/api · Loopback only · No MCP wrapper in this
-              slice
+              API: {window.location.origin}/api · Loopback only. MCP exposes
+              typed operations including create, expand, graph, acquire and
+              export. Start with flowlens_status and flowlens_schema; inspect
+              coverage and errors after every operation. README.md and
+              docs/mcp.md contain complete setup and resume examples.
             </div>
           </>
         ) : (
@@ -281,8 +303,10 @@ export function WorkspaceDialogs({
                 <section>
                   <strong>Start with a wallet</strong>
                   <p>
-                    Use the synthetic demo, or choose Live with your own
-                    permitted Etherscan key. Each chain has separate coverage.
+                    The synthetic demo needs no key. Select Cedar wallet or a
+                    funding path to inspect it. Live indexed history requires a
+                    permitted Etherscan key; evidence-only cases start without
+                    an index. Each chain has separate coverage.
                   </p>
                 </section>
               </div>

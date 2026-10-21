@@ -1,6 +1,6 @@
 # Local security and private evidence
 
-Flowlens is a local investigation tool. Keep its API bound to loopback. It does not provide a multi-user authentication or public hosting boundary; do not expose its port to an untrusted network.
+FlowLens is a local investigation tool. Keep its API bound to loopback. It does not provide a multi-user authentication or public hosting boundary; do not expose its port to an untrusted network.
 
 Provider keys belong in the server process environment. Do not prefix them with `VITE_`, put them in frontend code, paste them into case notes, or commit `.env` files. The supplied `.env.example` contains variable names only. The local application should not return key values in status responses or exported investigations.
 

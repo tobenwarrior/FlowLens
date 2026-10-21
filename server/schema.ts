@@ -52,7 +52,7 @@ const nodeKeys = array(
 export const jsonSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: SCHEMA_ID,
-  title: "Flowlens v1 requests and investigation evidence",
+  title: "FlowLens v1 requests and investigation evidence",
   $comment:
     "Known-field schemas match the importer and API. Unknown request fields are ignored; unknown snapshot fields are stripped recursively. Runtime also enforces cross-field invariants declared with x-invariants. JSON Schema format assertions depend on the validator. Budgets are per explicit operation, not an account quota.",
   $defs: {

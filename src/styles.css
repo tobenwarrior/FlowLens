@@ -2312,6 +2312,9 @@ select {
     font-size: 8px;
   }
   .topbar-right > .icon-button {
+    display: inline-flex;
+  }
+  .topbar-right > .user-avatar {
     display: none;
   }
   .page-heading {

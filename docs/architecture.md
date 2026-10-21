@@ -1,6 +1,6 @@
 # Engine and investigation boundaries
 
-Flowlens has one evidence engine and four callers: browser, CLI, HTTP API and stdio MCP. Domain code has no provider credentials, filesystem imports or UI dependencies. Transport receives unknown data, validates it, and commits a page only after its evidence and cursor are consistent.
+FlowLens has one evidence engine and four callers: browser, CLI, HTTP API and stdio MCP. Domain code has no provider credentials, filesystem imports or UI dependencies. Transport receives unknown data, validates it, and commits a page only after its evidence and cursor are consistent.
 
 ## Data and state
 

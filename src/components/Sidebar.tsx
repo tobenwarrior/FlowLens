@@ -32,12 +32,12 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside className="side-rail">
-      <a className="brand" href="#" aria-label="Flowlens home">
+      <a className="brand" href="#" aria-label="FlowLens home">
         <span className="brand-mark">
           f<span>·</span>
         </span>
         <span>
-          flowlens<span className="brand-period">.</span>
+          FlowLens<span className="brand-period">.</span>
         </span>
       </a>
       <div className="workspace-label">
@@ -107,7 +107,7 @@ export function Sidebar({
           <strong>Built for your agents</strong>
           <span>Same engine. Every interface.</span>
           <span className="agent-link">
-            Explore the CLI & API <ArrowRight size={13} />
+            Explore CLI, API & MCP <ArrowRight size={13} />
           </span>
         </button>
         <button className="nav-item" onClick={onHelp} aria-label="Field guide">
@@ -116,7 +116,7 @@ export function Sidebar({
           <span className="keycap">?</span>
         </button>
         <div className="local-footer">
-          <span className="status-dot" /> Local & private <span>v0.1</span>
+          <span className="status-dot" /> Local workspace <span>v0.1</span>
         </div>
       </div>
     </aside>

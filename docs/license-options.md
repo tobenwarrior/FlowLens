@@ -1,6 +1,6 @@
 # Project license options — decision pending
 
-No license is selected by this document, and no `LICENSE` file has been added. The package remains private. The owner must choose the license and copyright holder before calling Flowlens open source or authorizing redistribution. See [LICENSE-DECISION.md](../LICENSE-DECISION.md).
+No license is selected by this document, and no `LICENSE` file has been added. The package remains private. The owner must choose the license and copyright holder before calling FlowLens open source or authorizing redistribution. See [LICENSE-DECISION.md](../LICENSE-DECISION.md).
 
 Two plausible permissive choices are:
 

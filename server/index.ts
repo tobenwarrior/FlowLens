@@ -9,7 +9,7 @@ const server = createApiServer({
 });
 server.listen(port, "127.0.0.1", () =>
   process.stdout.write(
-    `Flowlens local API and built app: http://127.0.0.1:${port}\n`,
+    `FlowLens local API and built app: http://127.0.0.1:${port}\n`,
   ),
 );
 server.on("error", () => {

@@ -69,6 +69,21 @@ const SAVED = "flowlens.saved.v1";
 const hasEvidenceOnlyCoverage = (value: Investigation) =>
   value.mode === "live" &&
   value.coverage.some((item) => item.provider === "evidence-only");
+/**
+ * A refusal the local API actually returned, as opposed to not reaching it at all.
+ * Callers that can carry on without the API need to tell those two apart.
+ */
+class ApiError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function api<T>(
   url: string,
   body?: unknown,
@@ -86,10 +101,12 @@ async function api<T>(
   );
   const data = await response.json();
   if (!response.ok)
-    throw new Error(
+    throw new ApiError(
       data.error?.message ||
         data.error ||
         "The local provider could not complete this request.",
+      response.status,
+      typeof data.error?.code === "string" ? data.error.code : undefined,
     );
   return data;
 }
@@ -529,13 +546,22 @@ export default function App() {
     if (!investigation) return;
     try {
       let updated = investigation;
-      if (updated.mode === "live") {
+      let shared = true;
+      try {
+        // The shared store is what the CLI and MCP tools read, so a saved case should
+        // reach it whatever mode it is in.
         updated = await api<Investigation>(
           `/investigations/${updated.id}`,
           updated,
           "PUT",
         );
-      } else updated = { ...updated, updatedAt: new Date().toISOString() };
+      } catch (failure) {
+        // A refusal is the store's answer and must not be written over; not reaching
+        // the API at all is different, and should still leave a browser copy.
+        if (failure instanceof ApiError) throw failure;
+        shared = false;
+        updated = { ...updated, updatedAt: new Date().toISOString() };
+      }
       const list = [
         updated,
         ...readCases().filter((c) => c.id !== updated.id),
@@ -545,7 +571,11 @@ export default function App() {
       savedSnapshot.current = updated;
       setInvestigation(updated);
       setSavedAt(true);
-      setToast("Investigation saved on this device.");
+      setToast(
+        shared
+          ? "Saved to this browser and the agent workspace."
+          : "Saved on this browser. The agent workspace was not reachable.",
+      );
     } catch (e) {
       setError(
         e instanceof Error

@@ -7,6 +7,10 @@ import { gzipSync } from "node:zlib";
 // Reviewed release metadata, deliberately independent of shell environment and file mtimes.
 const timestamp = "2026-10-21T00:00:00.000Z";
 const epoch = Date.parse(timestamp) / 1000;
+const screenshots = new Set([
+  "docs/images/demo-desktop.png",
+  "docs/images/demo-mobile.png",
+]);
 const required = new Set([
   "package.json",
   "package-lock.json",
@@ -16,6 +20,7 @@ const required = new Set([
 // Adding a distributable file is an explicit review decision. Do not replace this with a glob.
 const allowlist = [
   ".env.example",
+  "AGENTS.md",
   ".gitattributes",
   ".gitignore",
   ".repo-audit.toml",
@@ -34,6 +39,7 @@ const allowlist = [
   "vite.config.ts",
   "public/favicon.svg",
   "scripts/release.mjs",
+  ...screenshots,
   "docs/architecture.md",
   "docs/bridge-internal-evidence.md",
   "docs/mcp.md",
@@ -140,12 +146,78 @@ async function sourceFile(root, path) {
     if (index < parts.length - 1 && !stat.isDirectory())
       throw new Error(`${path}: parent is not a directory`);
     if (index === parts.length - 1 && (!stat.isFile() || stat.size > 2_000_000))
-      throw new Error(`${path}: expected a regular text file below 2 MB`);
+      throw new Error(`${path}: expected a regular reviewed file below 2 MB`);
   }
   return readFile(current);
 }
 
+function crc32(data) {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++)
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// Only explicitly reviewed browser screenshots are distributable binary assets.
+// Restrict them to image chunks; text, EXIF, profiles and trailing payloads stay out.
+function auditScreenshot(path, data) {
+  const reject = () => [
+    `${path}:1: PNG screenshot invalid or contains metadata`,
+  ];
+  if (
+    !data.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  )
+    return reject();
+  let offset = 8,
+    header = false,
+    pixels = false,
+    ended = false;
+  while (offset + 12 <= data.length) {
+    const length = data.readUInt32BE(offset);
+    const end = offset + length + 12;
+    if (end > data.length) return reject();
+    const type = data.subarray(offset + 4, offset + 8).toString("ascii");
+    const payload = data.subarray(offset + 8, end - 4);
+    if (!["IHDR", "IDAT", "IEND"].includes(type)) return reject();
+    if (
+      crc32(data.subarray(offset + 4, end - 4)) !== data.readUInt32BE(end - 4)
+    )
+      return reject();
+    if (type === "IHDR") {
+      if (header || offset !== 8 || length !== 13) return reject();
+      const width = payload.readUInt32BE(0),
+        height = payload.readUInt32BE(4);
+      if (
+        !width ||
+        !height ||
+        width > 4096 ||
+        height > 8192 ||
+        width * height > 16777216 ||
+        payload[8] !== 8 ||
+        ![2, 6].includes(payload[9]) ||
+        payload[10] ||
+        payload[11] ||
+        payload[12]
+      )
+        return reject();
+      header = true;
+    } else if (type === "IDAT") {
+      if (!header || !length || ended) return reject();
+      pixels = true;
+    } else {
+      if (!header || !pixels || length || end !== data.length) return reject();
+      ended = true;
+    }
+    offset = end;
+  }
+  return ended && offset === data.length ? [] : reject();
+}
+
 function audit(path, data) {
+  if (screenshots.has(path)) return auditScreenshot(path, data);
   const text = data.toString("utf8");
   if (text.includes("\0") || !Buffer.from(text).equals(data))
     return [`${path}:1: binary or invalid UTF-8 content`];
@@ -294,6 +366,12 @@ async function main() {
     throw new Error(
       `release audit failed (values redacted):\n${findings.join("\n")}`,
     );
+  const readme = files
+    .find((file) => file.path === "README.md")
+    .data.toString("utf8");
+  for (const path of screenshots)
+    if (readme.includes(path) && !files.some((file) => file.path === path))
+      throw new Error(`${path}: referenced screenshot missing`);
   let pkg;
   try {
     pkg = JSON.parse(files.find((file) => file.path === "package.json").data);

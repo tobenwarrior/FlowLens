@@ -46,7 +46,7 @@ async function fixture(run: (root: string) => Promise<void>) {
   }
 }
 
-async function put(root: string, path: string, value: string) {
+async function put(root: string, path: string, value: string | Uint8Array) {
   await mkdir(dirname(join(root, path)), { recursive: true });
   await writeFile(join(root, path), value);
 }
@@ -305,4 +305,100 @@ test("check mode is read-only and unsupported arguments fail clearly", () =>
     });
     assert.equal(invalid.status, 1);
     assert.match(invalid.stderr, /unknown argument/);
+  }));
+
+// A generated white 1x1 RGB PNG, with only IHDR/IDAT/IEND chunks.
+const screenshotPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC",
+  "base64",
+);
+
+test("reviewed synthetic screenshots are included as exact PNG bytes with manifest checksums", () =>
+  fixture(async (root) => {
+    await put(
+      root,
+      "README.md",
+      "![Synthetic desktop](docs/images/demo-desktop.png)\n![Synthetic phone](docs/images/demo-mobile.png)\n",
+    );
+    for (const path of [
+      "docs/images/demo-desktop.png",
+      "docs/images/demo-mobile.png",
+    ])
+      await put(root, path, screenshotPng);
+    await put(root, "docs/images/unreviewed.png", screenshotPng);
+    const result = release(root);
+    const files = entries(await readFile(result.archive));
+    const included = files.filter((f) => f.name.endsWith(".png"));
+    assert.equal(included.length, 2);
+    for (const file of included) assert.deepEqual(file.data, screenshotPng);
+    const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
+    assert.equal(
+      manifest.files.filter((f: { path: string }) => f.path.endsWith(".png"))
+        .length,
+      2,
+    );
+  }));
+
+test("screenshot metadata, appended bytes and checksum corruption are refused", () =>
+  fixture(async (root) => {
+    const metadata = Buffer.concat([
+      screenshotPng.subarray(0, -12),
+      Buffer.from([0, 0, 0, 0, 116, 69, 88, 116, 0, 0, 0, 0]),
+      screenshotPng.subarray(-12),
+    ]);
+    const corrupt = Buffer.from(screenshotPng);
+    corrupt[32] ^= 1;
+    for (const png of [
+      metadata,
+      Buffer.concat([screenshotPng, Buffer.from("private notes")]),
+      corrupt,
+    ]) {
+      await put(root, "docs/images/demo-desktop.png", png);
+      const result = spawnSync(
+        process.execPath,
+        [releaseScript, "--root", root, "--check"],
+        { encoding: "utf8" },
+      );
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /docs\/images\/demo-desktop\.png.*PNG/);
+      assert.ok(!result.stderr.includes("private notes"));
+    }
+  }));
+
+test("a public screenshot referenced by README must be present in the source export", () =>
+  fixture(async (root) => {
+    await put(
+      root,
+      "README.md",
+      "![Synthetic demo](docs/images/demo-desktop.png)\n",
+    );
+    const result = spawnSync(
+      process.execPath,
+      [releaseScript, "--root", root, "--check"],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /demo-desktop\.png.*referenced screenshot missing/,
+    );
+  }));
+
+test("HTML screenshot references must also exist in the exported source", () =>
+  fixture(async (root) => {
+    await put(
+      root,
+      "README.md",
+      '<img src="docs/images/demo-mobile.png" alt="Synthetic phone">\n',
+    );
+    const result = spawnSync(
+      process.execPath,
+      [releaseScript, "--root", root, "--check"],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /demo-mobile\.png.*referenced screenshot missing/,
+    );
   }));

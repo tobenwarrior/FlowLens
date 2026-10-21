@@ -1,39 +1,39 @@
 # Third-party notices
 
-This file records the installed runtime dependency notices for Flowlens's declared production dependencies and their required transitive dependencies. The sanitized source archive excludes `node_modules`, `dist`, downloaded browsers, and other generated dependencies. These copied license texts are provided as a courtesy and as a starting point for downstream build distribution; they are not a complete legal audit or a declaration that every possible distribution is covered.
+This file records the installed runtime dependency notices for FlowLens's declared production dependencies and their required transitive dependencies. The sanitized source archive excludes `node_modules`, `dist`, downloaded browsers, and other generated dependencies. These copied license texts are provided as a courtesy and as a starting point for downstream build distribution; they are not a complete legal audit or a declaration that every possible distribution is covered.
 
-No license for Flowlens itself has been selected. See [LICENSE-DECISION.md](LICENSE-DECISION.md) and [license options](docs/license-options.md). Dependency licenses do not grant rights to provider responses, imported investigation data, trademarks, or other third-party content. Review those rights separately before redistribution.
+No license for FlowLens itself has been selected. See [LICENSE-DECISION.md](LICENSE-DECISION.md) and [license options](docs/license-options.md). Dependency licenses do not grant rights to provider responses, imported investigation data, trademarks, or other third-party content. Review those rights separately before redistribution.
 
 ## Installed runtime versions
 
 These versions and texts were read from the local installation corresponding to `package-lock.json` on 2026-10-21. Recheck this file whenever the dependency lock changes. Optional compiler peers and development tools are outside this runtime collection.
 
-| Dependency | Version | License information | Local license source |
-| --- | --- | --- | --- |
-| @adraffy/ens-normalize | 1.11.1 | MIT | `node_modules/@adraffy/ens-normalize/LICENSE` |
-| @modelcontextprotocol/core | 2.3.1 | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/core/LICENSE` |
-| @modelcontextprotocol/server | 2.3.1 | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/server/LICENSE` |
-| @noble/ciphers | 1.3.0 | MIT | `node_modules/@noble/ciphers/LICENSE` |
-| @noble/curves | 1.9.1 | MIT | `node_modules/@noble/curves/LICENSE` |
-| @noble/hashes | 1.8.0 | MIT | `node_modules/@noble/hashes/LICENSE` |
-| @scure/base | 1.2.6 | MIT | `node_modules/@scure/base/LICENSE` |
-| @scure/bip32 | 1.7.0 | MIT | `node_modules/@scure/bip32/LICENSE` |
-| @scure/bip39 | 1.6.0 | MIT | `node_modules/@scure/bip39/LICENSE` |
-| abitype | 1.2.3 | MIT | `node_modules/abitype/LICENSE` |
-| eventemitter3 | 5.0.1 | MIT | `node_modules/eventemitter3/LICENSE` |
-| isows | 1.0.7 | MIT | `node_modules/isows/LICENSE` |
-| lucide-react | 0.468.0 | ISC; includes attribution for Feather portions | `node_modules/lucide-react/LICENSE` |
-| ox | 0.14.56 | MIT | `node_modules/ox/LICENSE` |
-| react | 19.3.1 | MIT | `node_modules/react/LICENSE` |
-| react-dom | 19.3.1 | MIT | `node_modules/react-dom/LICENSE` |
-| scheduler | 0.28.0 | MIT | `node_modules/scheduler/LICENSE` |
-| viem | 2.57.7 | MIT | `node_modules/viem/LICENSE` |
-| ws | 8.21.0 | MIT | `node_modules/ws/LICENSE` |
-| zod | 4.6.7 | MIT | `node_modules/zod/LICENSE` |
+| Dependency                   | Version | License information                                          | Local license source                                |
+| ---------------------------- | ------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| @adraffy/ens-normalize       | 1.11.1  | MIT                                                          | `node_modules/@adraffy/ens-normalize/LICENSE`       |
+| @modelcontextprotocol/core   | 2.3.1   | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/core/LICENSE`   |
+| @modelcontextprotocol/server | 2.3.1   | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/server/LICENSE` |
+| @noble/ciphers               | 1.3.0   | MIT                                                          | `node_modules/@noble/ciphers/LICENSE`               |
+| @noble/curves                | 1.9.1   | MIT                                                          | `node_modules/@noble/curves/LICENSE`                |
+| @noble/hashes                | 1.8.0   | MIT                                                          | `node_modules/@noble/hashes/LICENSE`                |
+| @scure/base                  | 1.2.6   | MIT                                                          | `node_modules/@scure/base/LICENSE`                  |
+| @scure/bip32                 | 1.7.0   | MIT                                                          | `node_modules/@scure/bip32/LICENSE`                 |
+| @scure/bip39                 | 1.6.0   | MIT                                                          | `node_modules/@scure/bip39/LICENSE`                 |
+| abitype                      | 1.2.3   | MIT                                                          | `node_modules/abitype/LICENSE`                      |
+| eventemitter3                | 5.0.1   | MIT                                                          | `node_modules/eventemitter3/LICENSE`                |
+| isows                        | 1.0.7   | MIT                                                          | `node_modules/isows/LICENSE`                        |
+| lucide-react                 | 0.468.0 | ISC; includes attribution for Feather portions               | `node_modules/lucide-react/LICENSE`                 |
+| ox                           | 0.14.56 | MIT                                                          | `node_modules/ox/LICENSE`                           |
+| react                        | 19.3.1  | MIT                                                          | `node_modules/react/LICENSE`                        |
+| react-dom                    | 19.3.1  | MIT                                                          | `node_modules/react-dom/LICENSE`                    |
+| scheduler                    | 0.28.0  | MIT                                                          | `node_modules/scheduler/LICENSE`                    |
+| viem                         | 2.57.7  | MIT                                                          | `node_modules/viem/LICENSE`                         |
+| ws                           | 8.21.0  | MIT                                                          | `node_modules/ws/LICENSE`                           |
+| zod                          | 4.6.7   | MIT                                                          | `node_modules/zod/LICENSE`                          |
 
 ## Scope of further review
 
-A later distribution of compiled UI assets, server bundles, copied dependencies, development tools, container images, or downloaded browser binaries needs its own dependency and notice review. In particular, Vite and Rollup include additional bundled-component notices, and Playwright packages include `NOTICE` files with Microsoft and Puppeteer attribution. Those tools and their license texts are not included in this source-only notice collection. TypeScript is an optional compiler peer of Viem, ABIType, and Ox and is also a Flowlens development dependency; its compiler is outside this runtime collection. Platform-specific optional packages were not all installed on this machine.
+A later distribution of compiled UI assets, server bundles, copied dependencies, development tools, container images, or downloaded browser binaries needs its own dependency and notice review. In particular, Vite and Rollup include additional bundled-component notices, and Playwright packages include `NOTICE` files with Microsoft and Puppeteer attribution. Those tools and their license texts are not included in this source-only notice collection. TypeScript is an optional compiler peer of Viem, ABIType, and Ox and is also a FlowLens development dependency; its compiler is outside this runtime collection. Platform-specific optional packages were not all installed on this machine.
 
 The MCP license below contains its own transition statement, full Apache and MIT terms, and a separate statement about upstream documentation under CC-BY-4.0. Preserve that statement when copying MCP components; do not treat the package metadata alone as a substitute for the full upstream license. This source archive does not copy MCP documentation.
 
@@ -52,6 +52,7 @@ Source bytes: 1088
 SHA-256: `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93`
 
 <!-- BEGIN UPSTREAM LICENSE react -->
+
 ```text
 MIT License
 
@@ -75,6 +76,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE react -->
 
 ### Lucide React — ISC, with upstream Feather attribution
@@ -88,6 +90,7 @@ Source bytes: 880
 SHA-256: `1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc`
 
 <!-- BEGIN UPSTREAM LICENSE lucide -->
+
 ```text
 ISC License
 
@@ -105,6 +108,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE lucide -->
 
 ### Zod — MIT
@@ -118,6 +122,7 @@ Source bytes: 1072
 SHA-256: `3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8`
 
 <!-- BEGIN UPSTREAM LICENSE zod -->
+
 ```text
 MIT License
 
@@ -141,6 +146,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE zod -->
 
 ### Model Context Protocol Server and Core — upstream licensing transition
@@ -154,6 +160,7 @@ Source bytes: 12227
 SHA-256: `0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a`
 
 <!-- BEGIN UPSTREAM LICENSE mcp -->
+
 ```text
 The MCP project is undergoing a licensing transition from the MIT License to the Apache License, Version 2.0 ("Apache-2.0"). All new code and specification contributions to the project are licensed under Apache-2.0. Documentation contributions (excluding specifications) are licensed under CC-BY-4.0.
 
@@ -372,6 +379,7 @@ Documentation in this project (excluding specifications) is licensed under
 CC-BY-4.0. See https://creativecommons.org/licenses/by/4.0/legalcode for
 the full license text.
 ```
+
 <!-- END UPSTREAM LICENSE mcp -->
 
 ### Viem and Isows — MIT
@@ -385,6 +393,7 @@ Source bytes: 1074
 SHA-256: `091d17ae5f625ffeb381e7109daaf6c492dd32502d612d8ecd24e2ddf6d16b74`
 
 <!-- BEGIN UPSTREAM LICENSE viem-isows -->
+
 ```text
 MIT License
 
@@ -408,6 +417,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE viem-isows -->
 
 ### ENS Normalize — MIT
@@ -421,6 +431,7 @@ Source bytes: 1077
 SHA-256: `3b458813ab3316b16bf004c4201d4a0583cf615514422dabf4d7c025988d613d`
 
 <!-- BEGIN UPSTREAM LICENSE ens-normalize -->
+
 ```text
 MIT License
 
@@ -444,6 +455,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE ens-normalize -->
 
 ### Noble Ciphers — MIT
@@ -457,6 +469,7 @@ Source bytes: 1161
 SHA-256: `f36671a5487c9c5050efacb58011c37c24c55a889803cb036cf9d9a6347c1e2d`
 
 <!-- BEGIN UPSTREAM LICENSE noble-ciphers -->
+
 ```text
 The MIT License (MIT)
 
@@ -481,6 +494,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE noble-ciphers -->
 
 ### Noble Curves and Noble Hashes — MIT
@@ -494,6 +508,7 @@ Source bytes: 1109
 SHA-256: `4f221aee6e072336700c408c68ab3b96a3fc09f6aebe6f48f1bd99e5ef13faec`
 
 <!-- BEGIN UPSTREAM LICENSE noble-curves-hashes -->
+
 ```text
 The MIT License (MIT)
 
@@ -517,6 +532,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE noble-curves-hashes -->
 
 ### Scure Base — MIT
@@ -530,6 +546,7 @@ Source bytes: 1110
 SHA-256: `3239e134eb6e6d64538ca76498c7fcb08a395249dd9d4af9927bf6d0169ee429`
 
 <!-- BEGIN UPSTREAM LICENSE scure-base -->
+
 ```text
 The MIT License (MIT)
 
@@ -553,6 +570,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE scure-base -->
 
 ### Scure BIP32 and BIP39 — MIT
@@ -566,6 +584,7 @@ Source bytes: 1122
 SHA-256: `1565efd0ec4580bfaa96c7eeaaa9af3791baa1cc562c3bde62d0a055910b9ec7`
 
 <!-- BEGIN UPSTREAM LICENSE scure-bip32-bip39 -->
+
 ```text
 The MIT License (MIT)
 
@@ -589,6 +608,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE scure-bip32-bip39 -->
 
 ### ABIType — MIT
@@ -602,6 +622,7 @@ Source bytes: 1074
 SHA-256: `e7f5360a60628940fee8653802d7221d2b9575e26268be2a3a2fdbc04aa84321`
 
 <!-- BEGIN UPSTREAM LICENSE abitype -->
+
 ```text
 MIT License
 
@@ -625,6 +646,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE abitype -->
 
 ### EventEmitter3 — MIT
@@ -638,6 +660,7 @@ Source bytes: 1082
 SHA-256: `3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf`
 
 <!-- BEGIN UPSTREAM LICENSE eventemitter3 -->
+
 ```text
 The MIT License (MIT)
 
@@ -661,6 +684,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE eventemitter3 -->
 
 ### Ox — MIT
@@ -674,6 +698,7 @@ Source bytes: 1068
 SHA-256: `84ecb61c470de66e88a79c7d0ee8ce068e743693a4c249017545b4c8d4f9984d`
 
 <!-- BEGIN UPSTREAM LICENSE ox -->
+
 ```text
 MIT License
 
@@ -697,6 +722,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE ox -->
 
 ### ws — MIT
@@ -710,6 +736,7 @@ Source bytes: 1183
 SHA-256: `2b29dcfe0d6471f7e8c92c5fb38c9f93edee10330937055440192f1832b1ecef`
 
 <!-- BEGIN UPSTREAM LICENSE ws -->
+
 ```text
 Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
 Copyright (c) 2013 Arnout Kazemier and contributors
@@ -732,4 +759,5 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
+
 <!-- END UPSTREAM LICENSE ws -->

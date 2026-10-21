@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Local, evidence-first EVM tracing for agents and investigators",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.12.0"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4318 --strictPort",
@@ -20,7 +20,8 @@
     "mcp": "node server/mcp.ts",
     "lint": "eslint . --max-warnings 0",
     "release:check": "node scripts/release.mjs --check",
-    "release:source": "node scripts/release.mjs"
+    "release:source": "node scripts/release.mjs",
+    "start": "node server/index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.3.1",

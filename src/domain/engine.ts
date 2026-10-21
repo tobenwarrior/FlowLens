@@ -138,7 +138,7 @@ export function parseLabel(input: unknown): Label {
     source: text(l.source, "label source", 200),
     kind: oneOf(
       l.kind,
-      ["service", "entity", "prediction", "user", "demo"],
+      ["service", "entity", "prediction", "user", "demo", "ai"],
       "label kind",
     ),
     confidence: oneOf(
@@ -183,6 +183,16 @@ export function parseLabel(input: unknown): Label {
   if (result.claimType === "verified-evidence" && !result.evidenceNote?.trim())
     throw new Error(
       "Verified-evidence labels require an evidence note; the claim is not independently authenticated",
+    );
+  // A model's attribution is a hypothesis. It may never present itself as established
+  // ownership, however confident the generating agent sounded.
+  if (
+    result.kind === "ai" &&
+    (result.confidence === "verified" ||
+      result.claimType === "verified-evidence")
+  )
+    throw new Error(
+      "AI-generated labels are hypotheses; they cannot claim verified confidence or verified evidence",
     );
   return result;
 }

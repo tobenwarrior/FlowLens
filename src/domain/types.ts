@@ -10,7 +10,7 @@ export interface Asset {
 export interface Label {
   text: string;
   source: string;
-  kind: "service" | "entity" | "prediction" | "user" | "demo";
+  kind: "service" | "entity" | "prediction" | "user" | "demo" | "ai";
   confidence: "verified" | "reported" | "unverified" | "synthetic";
   retrievedAt: string;
   sourceUrl?: string;

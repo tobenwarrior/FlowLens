@@ -1,9 +1,12 @@
 import {
+  assetKey,
   createInvestigation,
   expandInvestigation,
   normalizeAddress,
   transferId,
 } from "./engine.ts";
+import { priceBook } from "./pricing.ts";
+import type { PriceBook } from "./pricing.ts";
 import type {
   Address,
   Asset,
@@ -102,6 +105,26 @@ function evidence(
   transfer.id = transferId(transfer);
   return transfer;
 }
+/**
+ * Two legs settled under one hash, so the swaps view has something to show. The pair is
+ * still only two transfers: FlowLens reports that both moved in one transaction, never
+ * that a trade was intended or a price agreed.
+ */
+function swapLeg(
+  index: number,
+  asset: Asset,
+  from: Address,
+  to: Address,
+  rawAmount: string,
+  day: number,
+  eventIndex: string,
+): Transfer {
+  const transfer = evidence(index, asset, from, to, rawAmount, day);
+  transfer.eventIndex = eventIndex;
+  transfer.id = transferId(transfer);
+  return transfer;
+}
+
 // Root history: 14 Ethereum and 12 Base transfers. Four second-hop transfers are revealed on expansion.
 const FIXTURE: Transfer[] = [
   evidence(1, USDC, NORTHSTAR, DEMO_ROOT, "25000000000", 2),
@@ -134,6 +157,13 @@ const FIXTURE: Transfer[] = [
   evidence(28, USDC, RIVER, CEDAR, "900000000", 17),
   evidence(29, USDC, ORBIT, RIVER, "330000000", 18),
   evidence(30, BASE_USDC, CYPRESS, PINE, "1700000000", 19),
+  // One transaction, both directions, two assets: the shape the swaps view reports.
+  // Dated before the rest of the fixture so they sit on a later page and the first
+  // page of the documented Northstar story stays exactly as it was.
+  swapLeg(31, USDC, DEMO_ROOT, ORBIT, "9000000000", 1, "0"),
+  swapLeg(31, ETH, ORBIT, DEMO_ROOT, "3700000000000000000", 1, "1"),
+  swapLeg(32, BASE_USDC, DEMO_ROOT, CYPRESS, "2400000000", 1, "0"),
+  swapLeg(32, BASE_ETH, CYPRESS, DEMO_ROOT, "980000000000000000", 1, "1"),
 ];
 
 function encodeCursor(
@@ -232,3 +262,39 @@ export async function createDemoInvestigation() {
     pageSize: 8,
   });
 }
+
+/**
+ * Invented prices for the synthetic fixture, so the USD column has something to render
+ * without reaching a live price source. Marked `synthetic` so the interface can say so:
+ * these are not quotes, and nothing here was observed on a market.
+ */
+export const demoPriceBook: PriceBook = priceBook([
+  {
+    key: assetKey(ETH),
+    usd: "2400",
+    source: SOURCE,
+    retrievedAt: RETRIEVED,
+    confidence: "synthetic",
+  },
+  {
+    key: assetKey(USDC),
+    usd: "1",
+    source: SOURCE,
+    retrievedAt: RETRIEVED,
+    confidence: "synthetic",
+  },
+  {
+    key: assetKey(BASE_ETH),
+    usd: "2400",
+    source: SOURCE,
+    retrievedAt: RETRIEVED,
+    confidence: "synthetic",
+  },
+  {
+    key: assetKey(BASE_USDC),
+    usd: "1",
+    source: SOURCE,
+    retrievedAt: RETRIEVED,
+    confidence: "synthetic",
+  },
+]);

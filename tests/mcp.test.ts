@@ -94,6 +94,9 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
         "replay",
         "acquire",
         "annotate",
+        "label_put",
+        "label_search",
+        "label_forget",
         "visibility",
         "wallet",
       ]
@@ -177,8 +180,8 @@ test("MCP workflow creates, resumes, inspects and exports the same durable evide
         arguments: { caseId: created.id },
       }),
     );
-    assert.equal(exported.transfers.length, 22);
-    assert.equal(new Set(exported.transfers.map((t) => t.id)).size, 22);
+    assert.equal(exported.transfers.length, 24);
+    assert.equal(new Set(exported.transfers.map((t) => t.id)).size, 24);
     assert.equal(exported.root, DEMO_ROOT);
     assert.ok(
       exported.coverage.every((c) =>
@@ -212,7 +215,7 @@ test("MCP workflow creates, resumes, inspects and exports the same durable evide
         arguments: { investigation: { ...exported, id: "mcp-roundtrip" } },
       }),
     );
-    assert.equal(imported.transfers.length, 22);
+    assert.equal(imported.transfers.length, 24);
     assert.equal(imported.coverage[0].cursor, exported.coverage[0].cursor);
     const cases = successful<unknown[]>(
       await client.callTool({ name: "flowlens_list", arguments: {} }),
@@ -451,8 +454,8 @@ test("MCP process restart resumes the durable cursor without losing or duplicati
           },
         }),
       );
-      assert.equal(next.transfers.length, 20);
-      assert.equal(new Set(next.transfers.map((t) => t.id)).size, 20);
+      assert.equal(next.transfers.length, 22);
+      assert.equal(new Set(next.transfers.map((t) => t.id)).size, 22);
       assert.equal(next.root, created.root);
     } finally {
       await resumed.close();

@@ -29,6 +29,7 @@ import {
   validCaseId,
   withFileLock,
 } from "./store.ts";
+import { LabelStore } from "./label-store.ts";
 import { ProviderError } from "./etherscan.ts";
 import { RpcProviderError } from "./rpc.ts";
 import {
@@ -133,6 +134,7 @@ function errorFor(error: unknown): AgentOperationError {
 }
 export interface AgentServiceOptions {
   dataDir?: string;
+  labelFile?: string;
   providers?: Providers;
   acquirer?: Acquirer;
 }
@@ -140,6 +142,11 @@ export interface AgentServiceOptions {
 export function createAgentService(options: AgentServiceOptions = {}) {
   const store = new CaseStore(
     options.dataDir ?? resolve(process.env.FLOWLENS_DATA_DIR ?? ".local/cases"),
+  );
+  // Attribution outlives any one case, so it lives beside them rather than inside them.
+  const labels = new LabelStore(
+    options.labelFile ??
+      resolve(process.env.FLOWLENS_LABEL_FILE ?? ".local/labels.json"),
   );
   const providers = options.providers ?? providersFromEnvironment();
   const acquirer = options.acquirer ?? acquireProtocolEvidence;
@@ -351,6 +358,39 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         };
       });
     }
+    // Attribution the user or an agent can reuse in every later trace.
+    if (operation === "label_put") {
+      const entry = await labels.put({
+        chainId: input.chainId as number,
+        address: input.address as string,
+        label: input.label,
+      });
+      return {
+        entry,
+        scope: "label-store",
+        note: "Stored attribution. A label records who claimed what, not established ownership.",
+      };
+    }
+    if (operation === "label_search")
+      return {
+        labels: await labels.search({
+          query: input.query as string | undefined,
+          chainId: input.chainId as number | undefined,
+          address: input.address as string | undefined,
+          kind: input.kind as never,
+          limit: input.limit as number | undefined,
+        }),
+        scope: "label-store",
+      };
+    if (operation === "label_forget")
+      return {
+        removed: await labels.remove(
+          input.chainId as number,
+          input.address as string,
+        ),
+        scope: "label-store",
+      };
+
     if (operation === "annotate" || operation === "visibility") {
       const id = caseId(input.caseId);
       return mutate(id, async () => {
@@ -372,6 +412,16 @@ export function createAgentService(options: AgentServiceOptions = {}) {
             : setVisibility(current, input);
         next.updatedAt = nextRevision(current.updatedAt);
         await store.save(next);
+        // Remember it outside the case too, so the next trace starts already knowing.
+        if (operation === "annotate" && input.label)
+          await labels
+            .put({
+              chainId: input.chainId as number,
+              address: input.address as string,
+              label: input.label,
+            })
+            // The case is already saved; failing to remember must not undo that.
+            .catch(() => undefined);
         return next;
       });
     }
@@ -389,6 +439,9 @@ export function createAgentService(options: AgentServiceOptions = {}) {
       return mutate(id, async () => {
         const current = await store.read(id);
         const next = await expandCase(current, input, providers);
+        // Wallets named in an earlier investigation arrive already labelled, which is
+        // the point of remembering them. A label the case already holds always wins.
+        next.nodes = await labels.resolve(next.nodes).catch(() => next.nodes);
         next.updatedAt = nextRevision(current.updatedAt);
         await store.save(next);
         return next;

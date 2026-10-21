@@ -91,7 +91,7 @@ Case IDs and evidence IDs are stable identifiers. Creation time, revision time a
 
 ## Tools
 
-The server advertises 15 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
+The server advertises 18 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
 
 `flowlens_wallet`, `flowlens_annotate` and `flowlens_visibility` share the [wallet controls and attribution contracts](workspace-controls.md). They do not fetch history or label providers. Wallet transfer pages after offset zero require the returned revision guard.
 

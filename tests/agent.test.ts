@@ -48,14 +48,14 @@ test("agent workflow creates, resumes, inspects and exports the same durable evi
       maxPages: 1,
       pageSize: 8,
     })) as any;
-    assert.equal(expanded.transfers.length, 22);
+    assert.equal(expanded.transfers.length, 24);
     assert.equal(
       ((await service.call("inspect", { caseId: created.id })) as any)
         .evidenceCount,
-      22,
+      24,
     );
     const exported = await service.call("export", { caseId: created.id });
-    assert.equal(parseInvestigation(exported).transfers.length, 22);
+    assert.equal(parseInvestigation(exported).transfers.length, 24);
     assert.equal(
       (
         (await service.call("evidence", {

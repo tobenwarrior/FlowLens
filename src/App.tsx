@@ -41,10 +41,13 @@ import {
 import {
   createDemoInvestigation,
   DEMO_ROOT,
+  demoPriceBook,
   demoProvider,
 } from "./domain/demo.ts";
+import { EMPTY_PRICE_BOOK } from "./domain/pricing.ts";
+import { TransferTable } from "./components/TransferTable.tsx";
 import { Graph, chainName, displayUnits, short } from "./components/Graph.tsx";
-import { EvidenceDrawer, TransferList } from "./components/Evidence.tsx";
+import { EvidenceDrawer } from "./components/Evidence.tsx";
 import type { VisibilityChange } from "./components/WalletFlows.tsx";
 import {
   annotateWallet,
@@ -578,16 +581,8 @@ export default function App() {
         </header>
         <div className="page-heading">
           <div>
-            <span className="eyebrow">
-              AGENT-FIRST TRACING. BUILT FOR HUMANS TOO.
-            </span>
-            <h1>
-              Every connection has a story<span>.</span>
-            </h1>
-            <p>
-              Explore funding paths. Inspect the evidence. Keep the full
-              investigation.
-            </p>
+            <h1>Trace</h1>
+            <p>Loaded evidence only. Filters never fetch missing history.</p>
           </div>
           <button
             className="button new-trace"
@@ -930,9 +925,13 @@ export default function App() {
           <div className="canvas-heading">
             <div>
               <span className="eyebrow">
-                {view === "graph" ? "FUNDING GRAPH" : "TRANSFER EVIDENCE"}
+                {view === "graph" ? "FUNDING GRAPH" : "TRANSACTION HISTORY"}
               </span>
-              <span className="record-count">{filtered.length} transfers</span>
+              {view === "graph" && (
+                <span className="record-count">
+                  {filtered.length} transfers
+                </span>
+              )}
             </div>
             <div>
               <button
@@ -966,21 +965,23 @@ export default function App() {
                   hidden
                 </button>
               )}
-              <button
-                className={`text-button ${grouped ? "active" : ""}`}
-                onClick={() => setGrouped((g) => !g)}
-                title="Arrange counterparties by service category"
-              >
-                <Layers size={13} />
-                {grouped ? "Grouped by type" : "Group by type"}
-              </button>
+              {view === "graph" && (
+                <button
+                  className={`text-button ${grouped ? "active" : ""}`}
+                  onClick={() => setGrouped((g) => !g)}
+                  title="Arrange counterparties by service category"
+                >
+                  <Layers size={13} />
+                  {grouped ? "Grouped by type" : "Group by type"}
+                </button>
+              )}
             </div>
           </div>
-          <div className="mobile-graph-hint">
-            {view === "graph"
-              ? "Drag to follow paths · select a wallet to inspect"
-              : "Select a transfer to inspect its evidence"}
-          </div>
+          {view === "graph" && (
+            <div className="mobile-graph-hint">
+              Drag to follow paths · select a wallet to inspect
+            </div>
+          )}
           <div className={`canvas-and-drawer ${drawer ? "drawer-open" : ""}`}>
             <div className="canvas-main" ref={canvasRef}>
               {view === "graph" ? (
@@ -999,18 +1000,16 @@ export default function App() {
                   grouped={grouped}
                 />
               ) : (
-                <div className="evidence-table">
-                  <div className="table-heading">
-                    <span>ASSET & DIRECTION</span>
-                    <span>NETWORK / UTC DATE</span>
-                    <span>TYPE</span>
-                  </div>
-                  <TransferList
-                    transfers={filtered}
-                    root={investigation.root}
-                    onSelect={selectTransfer}
-                  />
-                </div>
+                <TransferTable
+                  investigation={investigation}
+                  address={selectedNode?.address ?? investigation.root}
+                  book={
+                    investigation.mode === "demo"
+                      ? demoPriceBook
+                      : EMPTY_PRICE_BOOK
+                  }
+                  onSelect={selectTransfer}
+                />
               )}
             </div>
             {drawer && (

@@ -127,7 +127,7 @@ try {
     .getByRole("button", { name: "Load next page", exact: true })
     .click();
   await expect(page.locator(".rail-case p")).toContainText(
-    "20 evidence records",
+    "22 evidence records",
   );
   await page.getByLabel("Close evidence").click();
   const cedar = page.getByRole("button", { name: /Cedar wallet.*Ethereum/ });
@@ -150,7 +150,7 @@ try {
     "Root other-chain cursor resume, counterparty expansion, pin/hide/restore",
   );
   await page.getByLabel("List view").click();
-  await page.locator(".evidence-table .transfer-row").first().click();
+  await page.locator(".txtable tbody tr").first().click();
   await expect(page.getByLabel("Evidence drawer")).toContainText(
     "EXACT RAW AMOUNT",
   );
@@ -191,7 +191,7 @@ try {
     .getByLabel("Import investigation JSON")
     .setInputFiles("artifacts/demo-export.json");
   await expect(page.locator(".rail-case p")).toContainText(
-    "24 evidence records",
+    "26 evidence records",
   );
   await page.getByLabel("Import investigation JSON").setInputFiles({
     name: "invalid.json",
@@ -230,7 +230,7 @@ try {
   ).toBeDisabled();
   await page.getByRole("button", { name: "Close protocol evidence" }).click();
   await expect(page.locator(".rail-case p")).toContainText(
-    "24 evidence records",
+    "26 evidence records",
   );
   await page.reload();
   await page
@@ -266,7 +266,7 @@ try {
       fullPage: true,
     });
     await p.getByLabel("List view").click();
-    await p.locator(".evidence-table .transfer-row").first().click();
+    await p.locator(".txtable tbody tr").first().click();
     await expect(p.getByLabel("Evidence drawer")).toContainText(
       "UTC TIMESTAMP",
     );

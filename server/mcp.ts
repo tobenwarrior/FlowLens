@@ -49,7 +49,7 @@ const annotationLabel = z
         );
       }, "Label URL must use HTTPS without credentials")
       .optional(),
-    kind: z.enum(["service", "entity", "prediction", "user", "demo"]),
+    kind: z.enum(["service", "entity", "prediction", "user", "demo", "ai"]),
     confidence: z.enum(["verified", "reported", "unverified", "synthetic"]),
     claimType: z.enum([
       "provider-assertion",
@@ -133,6 +133,39 @@ const tools = [
         expectedRevision: z.string().min(1).max(40).optional(),
       })
       .strict(),
+  },
+  {
+    operation: "label_put",
+    description:
+      "Remember an entity label for a chain and address in the local label store, so later investigations start with it already applied. Use kind 'ai' for your own attribution: it is a hypothesis and is refused if it claims verified confidence or verified evidence. A label records who claimed what; it never establishes ownership, and funding links never prove common control.",
+    readOnly: false,
+    input: z
+      .object({ chainId: positiveInteger, address, label: annotationLabel })
+      .strict(),
+  },
+  {
+    operation: "label_search",
+    description:
+      "Search remembered entity labels by text, chain, address or kind. Returns stored local attributions with their provenance and confidence; no external label provider is queried.",
+    readOnly: true,
+    input: z
+      .object({
+        query: z.string().max(200).optional(),
+        chainId: positiveInteger.optional(),
+        address: address.optional(),
+        kind: z
+          .enum(["service", "entity", "prediction", "user", "demo", "ai"])
+          .optional(),
+        limit: z.number().int().min(1).max(1000).optional(),
+      })
+      .strict(),
+  },
+  {
+    operation: "label_forget",
+    description:
+      "Remove one remembered entity label for a chain and address from the local label store. Investigations that already recorded it keep their own copy.",
+    readOnly: false,
+    input: z.object({ chainId: positiveInteger, address }).strict(),
   },
   {
     operation: "visibility",

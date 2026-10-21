@@ -65,7 +65,7 @@ CLI exit codes are `0` for a completed operation, `1` for validation/unavailable
 
 ### MCP quickstart
 
-Launch `node server/mcp.ts` from your MCP host, or use `npm run --silent mcp`. stdout is JSON-RPC only. FlowLens does not install itself into global agent settings. The [MCP setup guide](docs/mcp.md) provides an illustrative local client entry and all 15 tool contracts.
+Launch `node server/mcp.ts` from your MCP host, or use `npm run --silent mcp`. stdout is JSON-RPC only. FlowLens does not install itself into global agent settings. The [MCP setup guide](docs/mcp.md) provides an illustrative local client entry and all 18 tool contracts.
 
 A keyless workflow starts with these tool calls:
 

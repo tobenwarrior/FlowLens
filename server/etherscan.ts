@@ -5,29 +5,28 @@ import type {
   Transfer,
   TransferPage,
 } from "../src/domain/types.ts";
+import {
+  address,
+  boundedJson,
+  integer,
+  ProviderError,
+  row,
+  tokenSymbol,
+  uint,
+  type Row,
+} from "./history-provider.ts";
 
-export class ProviderError extends Error {
-  code: string;
-  retryable: boolean;
-  constructor(code: string, message: string, retryable = false) {
-    super(message);
-    this.name = "ProviderError";
-    this.code = code;
-    this.retryable = retryable;
-  }
-}
+export { ProviderError };
 const ENDPOINT = "https://api.etherscan.io/v2/api";
 const MAX_RESPONSE_BYTES = 2_000_000;
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const WARNINGS = [
   "Internal transfers, NFTs, fees, bridge matches and labels are not covered by this adapter.",
   "Results are indexed provider evidence, not independent chain verification. Reorganizations and indexing gaps remain possible.",
   "Gross transfer flows are not buys, sells, profit, unique capital or proof of ownership.",
 ];
-type Row = Record<string, unknown>;
 interface Cursor {
   v: 1;
   chain: number;
@@ -39,35 +38,6 @@ interface Cursor {
   nativeDone: boolean;
   tokenDone: boolean;
 }
-const row = (value: unknown): Row =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Row)
-    : {};
-const address = (value: unknown): Address => {
-  if (typeof value !== "string" || !ADDRESS.test(value))
-    throw new ProviderError(
-      "INVALID_PROVIDER_DATA",
-      "Provider returned a malformed address.",
-    );
-  return value.toLowerCase() as Address;
-};
-const uint = (value: unknown): string => {
-  if (typeof value !== "string" || !/^\d+$/.test(value) || value.length > 80)
-    throw new ProviderError(
-      "INVALID_PROVIDER_DATA",
-      "Provider returned a malformed integer amount.",
-    );
-  return BigInt(value).toString();
-};
-const integer = (value: unknown, max = Number.MAX_SAFE_INTEGER): number => {
-  const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < 0 || result > max)
-    throw new ProviderError(
-      "INVALID_PROVIDER_DATA",
-      "Provider returned a malformed numeric field.",
-    );
-  return result;
-};
 function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
   try {
     if (value.length > 1024) throw new Error();
@@ -99,49 +69,6 @@ function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
     );
   }
 }
-async function boundedJson(response: Response): Promise<unknown> {
-  const oversized = () =>
-    new ProviderError(
-      "PROVIDER_RESPONSE_TOO_LARGE",
-      "Provider response exceeds the 2 MB byte budget; no page was committed.",
-    );
-  const declared = response.headers.get("content-length");
-  if (declared && Number(declared) > MAX_RESPONSE_BYTES) {
-    await response.body?.cancel().catch(() => undefined);
-    throw oversized();
-  }
-  if (!response.body)
-    throw new ProviderError(
-      "INVALID_PROVIDER_DATA",
-      "Provider returned an empty response body; no page was committed.",
-    );
-  const reader = response.body.getReader(),
-    chunks: Uint8Array[] = [];
-  let bytes = 0;
-  try {
-    for (;;) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      bytes += chunk.value.byteLength;
-      if (bytes > MAX_RESPONSE_BYTES) {
-        await reader.cancel().catch(() => undefined);
-        throw oversized();
-      }
-      chunks.push(chunk.value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  try {
-    return JSON.parse(Buffer.concat(chunks, bytes).toString("utf8"));
-  } catch {
-    throw new ProviderError(
-      "INVALID_PROVIDER_DATA",
-      "Provider returned malformed JSON; no page was committed.",
-    );
-  }
-}
-
 /** Allowlisted V2 history. Credentials never enter the evidence contract. */
 export function createEtherscanProvider(
   options: { key?: string; fetch?: typeof fetch; intervalMs?: number } = {},
@@ -182,7 +109,7 @@ export function createEtherscanProvider(
             `Provider returned HTTP ${response.status}; no page was committed.`,
             response.status >= 500,
           );
-        const body = row(await boundedJson(response));
+        const body = row(await boundedJson(response, MAX_RESPONSE_BYTES));
         if (body.error || body.status === "0") {
           const detail =
             `${body.message ?? ""} ${body.result ?? ""}`.toLowerCase();
@@ -496,16 +423,6 @@ export function createEtherscanProvider(
               !/^0x[0-9a-f]+$/i.test(log.logIndex)
             )
               throw new Error();
-            const symbol =
-              typeof meta.tokenSymbol === "string"
-                ? meta.tokenSymbol
-                    .replace(
-                      // eslint-disable-next-line no-control-regex -- Untrusted symbols must not retain control or bidi characters.
-                      /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,
-                      "",
-                    )
-                    .slice(0, 24)
-                : "TOKEN";
             transfers.push(
               make(
                 meta,
@@ -514,7 +431,7 @@ export function createEtherscanProvider(
                 BigInt(log.data).toString(),
                 contract,
                 integer(meta.tokenDecimal, 255),
-                symbol || "TOKEN",
+                tokenSymbol(meta.tokenSymbol),
                 from,
                 to,
               ),

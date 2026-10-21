@@ -24,8 +24,7 @@ async function withService(
         dataDir: directory,
         providers: {
           demo: demoProvider,
-          live: demoProvider,
-          liveEnabled: false,
+          live: new Map(),
         },
       }),
     );

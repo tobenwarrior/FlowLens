@@ -9,21 +9,45 @@ import {
   demoProvider,
 } from "../src/domain/demo.ts";
 import type { Investigation, TraceProvider } from "../src/domain/types.ts";
+import { BLOCKSCOUT_CHAINS, createBlockscoutProvider } from "./blockscout.ts";
 import { createEtherscanProvider, ProviderError } from "./etherscan.ts";
+import { operationSchema } from "./schema.ts";
 
 export interface Providers {
   demo: TraceProvider;
-  live: TraceProvider;
-  liveEnabled: boolean;
+  /** Live history provider for each chain it serves; a chain without one has no live history. */
+  live: ReadonlyMap<number, TraceProvider>;
 }
 export function providersFromEnvironment(): Providers {
-  return {
-    demo: demoProvider,
-    live: createEtherscanProvider(),
-    liveEnabled: Boolean(process.env.ETHERSCAN_API_KEY),
-  };
+  const switchValue = process.env.FLOWLENS_BLOCKSCOUT ?? "";
+  if (!["", "on", "off"].includes(switchValue))
+    throw new Error("FLOWLENS_BLOCKSCOUT must be empty, on or off");
+  const etherscan = process.env.ETHERSCAN_API_KEY
+    ? createEtherscanProvider()
+    : undefined;
+  const blockscout =
+    switchValue === "off" ? undefined : createBlockscoutProvider();
+  const live = new Map<number, TraceProvider>();
+  for (const chainId of operationSchema.limits.liveChains) {
+    // A configured key keeps Etherscan the default; keyless Blockscout serves only chains it is confirmed for.
+    const provider =
+      etherscan ??
+      (BLOCKSCOUT_CHAINS.includes(chainId) ? blockscout : undefined);
+    if (provider) live.set(chainId, provider);
+  }
+  return { demo: demoProvider, live };
 }
-export { operationSchema } from "./schema.ts";
+function liveProvider(providers: Providers, chainId: number): TraceProvider {
+  const provider = providers.live.get(chainId);
+  if (provider) return provider;
+  throw new ProviderError(
+    "KEY_REQUIRED",
+    providers.live.size
+      ? `Live history for chain ${chainId} needs ETHERSCAN_API_KEY in the local server environment; keyless Blockscout history does not cover it.`
+      : "Live tracing is unavailable. Set ETHERSCAN_API_KEY in the local server environment, or leave FLOWLENS_BLOCKSCOUT unset for keyless Ethereum history.",
+  );
+}
+export { operationSchema };
 export async function startInvestigation(
   rootValue: unknown,
   modeValue: unknown,
@@ -75,15 +99,11 @@ export async function startInvestigation(
     ];
     return value;
   }
-  if (!providers.liveEnabled)
-    throw new ProviderError(
-      "KEY_REQUIRED",
-      "Live tracing is unavailable. Set ETHERSCAN_API_KEY in the local server environment.",
-    );
+  const provider = liveProvider(providers, 1);
   const value = createInvestigation(root, "live", title as string | undefined);
   return expandInvestigation(
     value,
-    providers.live,
+    provider,
     { address: root, chainId: 1, pageSize: 10 },
     { maxPages: 1, maxNodes: 80 },
   );
@@ -122,14 +142,11 @@ export async function expandCase(
     throw new Error(
       `Page size must be an integer from 1 to ${value.mode === "live" ? 10 : 100}`,
     );
-  if (value.mode === "live" && !providers.liveEnabled)
-    throw new ProviderError(
-      "KEY_REQUIRED",
-      "Live tracing is unavailable. Set ETHERSCAN_API_KEY in the local server environment.",
-    );
   return expandInvestigation(
     value,
-    providers[value.mode],
+    value.mode === "live"
+      ? liveProvider(providers, query.chainId)
+      : providers.demo,
     { address, chainId: query.chainId, pageSize: size },
     { maxPages: pages, maxNodes: 80 },
   );

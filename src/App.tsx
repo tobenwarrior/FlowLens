@@ -314,7 +314,7 @@ export default function App() {
   }
   const [grouped, setGrouped] = useState(false);
   const [saved, setSaved] = useState<Investigation[]>([]);
-  const [provider, setProvider] = useState(false);
+  const [provider, setProvider] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState(false);
   const savedSnapshot = useRef<Investigation | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -358,18 +358,25 @@ export default function App() {
     fetch("/api/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => {
-        if (alive)
-          setProvider(
-            Boolean(
-              s?.providers?.etherscan?.available ||
-              s?.liveAvailable ||
-              s?.etherscan?.available ||
-              s?.providers?.some?.(
-                (p: { id: string; available: boolean }) =>
-                  p.id.includes("etherscan") && p.available,
-              ),
-            ),
-          );
+        if (!alive) return;
+        // New cases load Ethereum first, so name the provider serving it.
+        const ethereum = s?.providers?.live?.routes?.find?.(
+          (r: { chainId: number }) => r.chainId === 1,
+        )?.provider;
+        setProvider(
+          ethereum === "blockscout-v2"
+            ? "Blockscout"
+            : ethereum ||
+                s?.providers?.etherscan?.available ||
+                s?.liveAvailable ||
+                s?.etherscan?.available ||
+                s?.providers?.some?.(
+                  (p: { id: string; available: boolean }) =>
+                    p.id.includes("etherscan") && p.available,
+                )
+              ? "Etherscan"
+              : null,
+        );
       })
       .catch(() => {});
     return () => {
@@ -878,7 +885,7 @@ export default function App() {
               >
                 <option value="demo">Demo data</option>
                 <option value="live">
-                  {provider ? "Live · Etherscan" : "Live · key required"}
+                  {provider ? `Live · ${provider}` : "Live · key required"}
                 </option>
                 <option value="live-evidence">Live · evidence only</option>
               </select>

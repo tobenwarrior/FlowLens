@@ -25,8 +25,7 @@ const A = DEMO_ROOT,
   BLOCK = `0x${"b".repeat(64)}`;
 const providers = {
   demo: demoProvider,
-  live: demoProvider,
-  liveEnabled: false,
+  live: new Map(),
 };
 function contracts() {
   let calls = 0,
@@ -125,7 +124,11 @@ test("CLI evidence-only setup and malformed Safe cursors need no provider call",
     const run = (args: string[]) =>
       spawnSync(process.execPath, ["server/cli.ts", ...args], {
         encoding: "utf8",
-        env: { PATH: process.env.PATH, ETHERSCAN_API_KEY: "" },
+        env: {
+          PATH: process.env.PATH,
+          ETHERSCAN_API_KEY: "",
+          FLOWLENS_BLOCKSCOUT: "off",
+        },
       });
     const created = run([
       "create",
@@ -393,7 +396,11 @@ test("CLI protocol imports reject directories and devices with a structured file
         {
           encoding: "utf8",
           timeout: 2000,
-          env: { PATH: process.env.PATH, ETHERSCAN_API_KEY: "" },
+          env: {
+            PATH: process.env.PATH,
+            ETHERSCAN_API_KEY: "",
+            FLOWLENS_BLOCKSCOUT: "off",
+          },
         },
       );
       assert.equal(result.status, 1, result.stderr);

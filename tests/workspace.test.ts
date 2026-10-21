@@ -217,7 +217,7 @@ test("durable agent annotation and visibility enforce revisions and preserve non
   const dir = await mkdtemp(join(tmpdir(), "flowlens-workspace-"));
   const options = {
     dataDir: dir,
-    providers: { demo: demoProvider, live: demoProvider, liveEnabled: false },
+    providers: { demo: demoProvider, live: new Map() },
   };
   try {
     const service = createAgentService(options);
@@ -278,7 +278,7 @@ test("local HTTP workspace mutations share the agent boundary and report conflic
   const dir = await mkdtemp(join(tmpdir(), "flowlens-workspace-api-"));
   const server = createApiServer({
     dataDir: dir,
-    providers: { demo: demoProvider, live: demoProvider, liveEnabled: false },
+    providers: { demo: demoProvider, live: new Map() },
   });
   try {
     await new Promise<void>((resolve) =>
@@ -373,7 +373,7 @@ test("agent wallet view exposes selected-address flow totals and stable loaded-e
   try {
     const service = createAgentService({
       dataDir: dir,
-      providers: { demo: demoProvider, live: demoProvider, liveEnabled: false },
+      providers: { demo: demoProvider, live: new Map() },
     });
     const c = (await service.call("create", {
       root: DEMO_ROOT,

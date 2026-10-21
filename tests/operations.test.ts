@@ -6,8 +6,7 @@ import { parseInvestigation } from "../src/domain/engine.ts";
 
 const providers = {
   demo: demoProvider,
-  live: demoProvider,
-  liveEnabled: false,
+  live: new Map(),
 };
 test("explicit evidence-only cases need no index key and never imply wallet coverage", async () => {
   const value = await startInvestigation(

@@ -105,15 +105,12 @@ export interface ApiOptions {
   dataDir: string;
   distDir?: string;
   providers?: Providers;
-  liveEnabled?: boolean;
   acquirer?: Acquirer;
 }
 /** Local only; caller must bind to 127.0.0.1. Browser mutations are same-local-origin JSON. */
 export function createApiServer(options: ApiOptions) {
   const store = new CaseStore(options.dataDir);
   const providers = options.providers ?? providersFromEnvironment();
-  if (options.liveEnabled !== undefined)
-    providers.liveEnabled = options.liveEnabled;
   const agentService = createAgentService({
     dataDir: options.dataDir,
     providers,
@@ -152,7 +149,7 @@ export function createApiServer(options: ApiOptions) {
           >),
           version: 1,
           bind: "127.0.0.1",
-          liveAvailable: providers.liveEnabled,
+          liveAvailable: providers.live.size > 0,
           arkham: {
             available: false,
             reason:

@@ -164,13 +164,17 @@ export function createAgentService(options: AgentServiceOptions = {}) {
     if (operation === "status")
       return {
         version: 1,
-        liveAvailable: providers.liveEnabled,
+        liveAvailable: providers.live.size > 0,
         providers: {
           demo: { available: true, synthetic: true },
           live: {
-            available: providers.liveEnabled,
-            id: providers.live.id,
-            chains: [1, 42161],
+            available: providers.live.size > 0,
+            chains: [...providers.live.keys()],
+            // Which indexed-history provider answers each served chain; keys never appear here.
+            routes: [...providers.live].map(([chainId, provider]) => ({
+              chainId,
+              provider: provider.id,
+            })),
           },
           internal: {
             available: true,

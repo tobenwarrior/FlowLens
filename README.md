@@ -100,31 +100,33 @@ MCP tools and the HTTP API use `.local/cases` by default. Set an absolute `FLOWL
 
 ## What is implemented
 
-| Area                    | Current behavior                                                                                                                                     | Important boundary                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Human workspace         | Directional graph, expansion, zoom/pan, pin/hide/restore, category arrangement, network/asset/time/direction filters, evidence drawer and case notes | Arbitrary named groups and free node dragging are not implemented                                      |
-| Evidence engine         | Exact integer accounting, canonical event IDs, source/label provenance, validation and mode separation                                               | Import validates structure and consistency, not source truth or ownership                              |
-| Durable agent state     | JSON CLI/API, 15 stdio MCP tools, atomic writes, locks, revision checks and resumable cursors                                                        | Local single-user tool; no public-hosting authentication boundary                                      |
-| Indexed wallet history  | Optional Etherscan V2 native transfers and receipt-confirmed ERC20 logs on Ethereum and Arbitrum One                                                 | Requires existing permitted key; no internal-history/NFT/balance/price coverage                        |
-| Targeted protocol reads | Safe configuration/history and narrow calldata recovery; CCTP V1/V2 known-transaction evidence; transaction-specific internal trace capability       | Separate protocol evidence; does not silently change graph totals or enumerate complete wallet history |
+| Area                    | Current behavior                                                                                                                                          | Important boundary                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Human workspace         | Directional graph, expansion, zoom/pan, pin/hide/restore, category arrangement, network/asset/time/direction filters, evidence drawer and case notes      | Arbitrary named groups and free node dragging are not implemented                                      |
+| Evidence engine         | Exact integer accounting, canonical event IDs, source/label provenance, validation and mode separation                                                    | Import validates structure and consistency, not source truth or ownership                              |
+| Durable agent state     | JSON CLI/API, 15 stdio MCP tools, atomic writes, locks, revision checks and resumable cursors                                                             | Local single-user tool; no public-hosting authentication boundary                                      |
+| Indexed wallet history  | Keyless Blockscout native, ERC20 and trace-checked internal transfers on Ethereum; with your own Etherscan key, Etherscan V2 on Ethereum and Arbitrum One | Arbitrum needs the key; no NFT/balance coverage; Etherscan adds no internal history                    |
+| Targeted protocol reads | Safe configuration/history and narrow calldata recovery; CCTP V1/V2 known-transaction evidence; transaction-specific internal trace capability            | Separate protocol evidence; does not silently change graph totals or enumerate complete wallet history |
 
 See [wallet controls and attribution](docs/workspace-controls.md) for the matching `wallet`, `annotate` and `visibility` CLI/API/MCP operations, bounded transfer-list pages and revision checks. Permitted local label observations are user data; FlowLens performs no Arkham lookup or label redistribution.
 
 ## Add live providers deliberately
 
-The demo needs no setup. For indexed history, copy `.env.example` to an ignored `.env`, add your own existing permitted Etherscan V2 key privately, and launch:
+The demo needs no setup. Live Ethereum history needs no key either: with no `ETHERSCAN_API_KEY`, a live case reads native, ERC20 and internal transfers from Blockscout's public explorer at `eth.blockscout.com`. That sends the wallet you trace to Blockscout. Set `FLOWLENS_BLOCKSCOUT=off` to keep wallet queries away from it.
+
+To use Etherscan instead, or to trace Arbitrum One, copy `.env.example` to an ignored `.env`, add your own existing permitted Etherscan V2 key privately, and launch:
 
 ```sh
 node --env-file=.env server/index.ts
 ```
 
-Keep secrets server-side and never use a `VITE_` prefix. A key is not proof that a provider's plan or data-use terms permit your intended use. Ethereum and Arbitrum are enabled for indexed REST history; Base supports the demo and targeted RPC acquisition, not that index.
+With a key, Etherscan serves every live chain and Blockscout stays unused. `status` lists which provider serves each chain. Keep secrets server-side and never use a `VITE_` prefix. A key is not proof that a provider's plan or data-use terms permit your intended use, and keyless access does not grant rights to redistribute what Blockscout returns. Base supports the demo and targeted RPC acquisition, not indexed history: its Blockscout explorer answers server requests with a browser check, and Etherscan Base history is not enabled.
 
 For known protocol evidence without an index/key, explicitly create a live `historyMode: "evidence-only"` case. Creation performs no external request and marks wallet-history coverage unsupported. A subsequent `acquire` sends only the chosen address or transaction to fixed public RPC/Safe services. No alternate endpoint or credential fallback is automatic.
 
 [Acquisition workflows](docs/acquisition.md) covers CLI/API/MCP requests, per-kind budgets, Safe cursors and error recovery. [Provider coverage](docs/providers.md) describes streams, rate limits and missing history.
 
-**Live verification is limited.** The public Safe documentation example returned empty bytecode and an HTTP 200 empty history page; it did not establish successful Safe configuration or signature retrieval. The tested public trace method was unsupported. Indexed Etherscan history and positive live CCTP normalization remain unverified. Read the [verification record](docs/live-verification.md) before interpreting fixtures or boundary tests as live acceptance.
+**Live verification is limited.** The public Safe documentation example returned empty bytecode and an HTTP 200 empty history page; it did not establish successful Safe configuration or signature retrieval. The tested public trace method was unsupported. One keyless Blockscout run loaded four pages of a public Ethereum address without errors; it does not establish complete history for that or any wallet. Indexed Etherscan history and positive live CCTP normalization remain unverified. Read the [verification record](docs/live-verification.md) before interpreting fixtures or boundary tests as live acceptance.
 
 Arkham integration is deferred pending suitable access and reuse rights. No scraping, paywall circumvention or proprietary label dataset is included. The generic provenance-aware label model remains available for permitted evidence.
 

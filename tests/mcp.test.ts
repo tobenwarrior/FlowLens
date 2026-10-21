@@ -57,6 +57,7 @@ async function withClient(
       PATH: process.env.PATH ?? "",
       FLOWLENS_DATA_DIR: directory,
       ETHERSCAN_API_KEY: "",
+      FLOWLENS_BLOCKSCOUT: "off",
     },
     stderr: "pipe",
   });
@@ -431,6 +432,7 @@ test("MCP process restart resumes the durable cursor without losing or duplicati
         PATH: process.env.PATH ?? "",
         FLOWLENS_DATA_DIR: directory,
         ETHERSCAN_API_KEY: "",
+        FLOWLENS_BLOCKSCOUT: "off",
       },
       stderr: "pipe",
     });

@@ -9,11 +9,25 @@ This record contains generic capability facts only. It includes no wallet identi
 | Approved public Safe example               | Four keyless Ethereum RPC reads returned no contract bytecode at the frozen canonical block; configuration reported `SAFE_NOT_CONTRACT`. One Safe API request returned HTTP 200 with an empty history page.             | Narrow live RPC/service access and honest negative/empty states worked. Positive Safe configuration and execution-signature acquisition remain unverified; execution coverage stays partial. |
 | Live CCTP acquisition                      | Not performed against a known live bridge transaction.                                                                                                                                                                  | Receipt/calldata normalization and matching are contract-tested, without a successful live bridge acceptance claim.                                                                          |
 | Etherscan indexed history                  | Not performed: no key was configured.                                                                                                                                                                                   | No claim about live indexed-wallet completeness, plan eligibility or successful real-wallet history retrieval.                                                                               |
+| Keyless Blockscout indexed history         | See [Blockscout keyless history](#blockscout-keyless-history): four pages of one public Ethereum address loaded through the CLI with no key and no coverage error.                                                      | The adapter works end to end against `eth.blockscout.com` as it answered that day. It does not establish complete history for that or any wallet.                                            |
 | Base and Arbitrum acquisition              | Boundary-tested with injected responses; no live acquisition established here.                                                                                                                                          | The supported-chain configuration and mock behavior do not prove endpoint capabilities or historical coverage.                                                                               |
 
 The fixed transport is described in [rpc-provider.md](rpc-provider.md). The trace adapter's checks and capability model are in [trace-provider.md](trace-provider.md), and Safe-specific boundaries are in [safe-provider.md](safe-provider.md). The public endpoint reference is [PublicNode Ethereum](https://ethereum.publicnode.com/).
 
 Synthetic unit tests and browser mocks verify normalization, contradictions, error handling and UI contracts. They are distinct from successful live provider checks.
+
+## Blockscout keyless history
+
+On 21 October 2026 the owner authorized one live run against a public Ethereum address they chose. With `ETHERSCAN_API_KEY` and `FLOWLENS_BLOCKSCOUT` unset, CLI `create --mode live` and one `expand --chain 1 --pages 3` loaded four pages (ten rows per stream) from `eth.blockscout.com` (backend v11.3.3):
+
+- 84 transfers: 22 native, 40 ERC20 and 22 internal. Every internal transfer the explorer listed for the address was matched to its transaction's call trace and kept; none sat under a reverted call.
+- Coverage `partial` with `blockscout-v2` as the provider and native, ERC20 and internal streams; no error code, no omitted rows and no throttling. The create took about 15 seconds and the three-page expansion about 33 seconds at the 500 ms pacing.
+- Three native and three ERC20 transfers were cross-checked against PublicNode receipts: status, sender, recipient, amount, block and log index all matched.
+- The ERC20 stream included unsolicited tokens, one with a lookalike `ETH` symbol. Symbols remain provider metadata.
+
+Host checks the same day: `base.blockscout.com` and `arbitrum.blockscout.com` answered plain server requests with HTTP 403 and a Cloudflare browser check, so neither chain is enabled. `optimism.blockscout.com` redirects to another host; Optimism and Derive Chain are not in FlowLens's chain registry and were not enabled. The keyless v2 limit header read 180 per minute.
+
+Limits: one address, one day, one explorer version. The run stopped at a partial cursor, so older history was not read. Agreement on six sampled transfers is not an audit of the other 78. Explorer v12 changes pagination echoes; the adapter does not depend on them, but no v12 explorer was exercised with a wallet. The private run notes, including the address, stay outside the repository.
 
 ## Local release verification
 

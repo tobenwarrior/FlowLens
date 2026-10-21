@@ -11,13 +11,13 @@ No provider credential is required for these bounded public reads. Availability,
 | Learn the interface or test an agent               | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                          |
 | Preserve chosen evidence without indexing a wallet | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                           |
 | Fetch a known Safe or transaction scope            | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter |
-| Enumerate supported wallet history                 | Indexed live case and expansion              | Uses existing permitted Etherscan access; only configured streams/chains                  |
+| Enumerate supported wallet history                 | Indexed live case and expansion              | Keyless Blockscout on Ethereum, or your own Etherscan key; only configured streams/chains |
 
 “No key” does not mean “offline” for public acquisition. `mode: "private"` describes retained non-demo investigation evidence; it does not certify a provider's truth, grant redistribution rights or make a public identifier confidential.
 
 ## Create a case without an index
 
-`historyMode: "evidence-only"` is an explicit option for live cases. Creating it performs no external request and needs no Etherscan key. Its graph starts with the focus wallet and no transfers. Coverage says that wallet history is not enumerated. Omit this option, or use `indexed`, for the existing key-backed Ethereum history workflow.
+`historyMode: "evidence-only"` is an explicit option for live cases. Creating it performs no external request and needs no Etherscan key. Its graph starts with the focus wallet and no transfers. Coverage says that wallet history is not enumerated. Omit this option, or use `indexed`, for indexed Ethereum history: keyless through Blockscout, or through Etherscan when a key is set.
 
 Set `CASE_WALLET` locally to an address you have chosen to investigate, then:
 

@@ -22,7 +22,7 @@ const label = {
 function cli(args: string[]) {
   return spawnSync(process.execPath, [resolve("server/cli.ts"), ...args], {
     encoding: "utf8",
-    env: { ...process.env, ETHERSCAN_API_KEY: "" },
+    env: { ...process.env, ETHERSCAN_API_KEY: "", FLOWLENS_BLOCKSCOUT: "off" },
   });
 }
 function result(value: { isError?: boolean; structuredContent?: unknown }) {
@@ -235,6 +235,7 @@ test("official MCP client discovers and uses typed local annotation and visibili
       PATH: process.env.PATH ?? "",
       FLOWLENS_DATA_DIR: dir,
       ETHERSCAN_API_KEY: "",
+      FLOWLENS_BLOCKSCOUT: "off",
     },
     stderr: "pipe",
   });

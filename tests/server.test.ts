@@ -234,11 +234,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
 import { createApiServer } from "../server/api.ts";
+import { demoProvider } from "../src/domain/demo.ts";
 import type { AddressInfo } from "node:net";
 
 async function withApi(fn: (base: string, dir: string) => Promise<void>) {
   const dir = await mkdtemp(join(tmpdir(), "flowlens-test-"));
-  const server = createApiServer({ dataDir: dir, liveEnabled: false });
+  const server = createApiServer({
+    dataDir: dir,
+    providers: { demo: demoProvider, live: new Map() },
+  });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   try {

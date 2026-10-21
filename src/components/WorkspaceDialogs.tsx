@@ -250,7 +250,7 @@ export function WorkspaceDialogs({
                   ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
                   : evidenceOnly
                     ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
-                    : "Loaded native transfers and receipt-confirmed ERC-20 logs. Etherscan history requires your permitted server-side key; chain access depends on your provider plan."}
+                    : "Loaded indexed transfers; each coverage row below names its provider and page state. Blockscout serves Ethereum without a key. Etherscan history uses your permitted server-side key, and chain access depends on your provider plan."}
               </p>
             </div>
             <div className="coverage-list">
@@ -368,9 +368,11 @@ export function WorkspaceDialogs({
                   <strong>Start with a wallet</strong>
                   <p>
                     The synthetic demo needs no key. Select Cedar wallet or a
-                    funding path to inspect it. Live indexed history requires a
-                    permitted Etherscan key; evidence-only cases start without
-                    an index. Each chain has separate coverage.
+                    funding path to inspect it. Live Ethereum history needs no
+                    key: Blockscout serves it and receives the wallet you trace.
+                    Arbitrum needs a permitted Etherscan key; evidence-only
+                    cases start without an index. Each chain has separate
+                    coverage.
                   </p>
                 </section>
               </div>

@@ -11,6 +11,7 @@ Unreleased publicly. Development commits are in the private repository. Licensed
 - Durable local case storage with writer locks, stale-save protection and immutable investigation identity.
 - Supplied Safe, bridge and internal-trace evidence replay, including ambiguity/conflict states and clear separation from independent verification.
 - Optional Etherscan V2 native/ERC20 history with receipt validation, bounded pagination and coded provider errors.
+- Keyless Blockscout API v2 history on Ethereum when no Etherscan key is set: native, ERC20 and trace-checked internal transfers, durable cursors over `next_page_params`, and per-chain provider routes in `status`.
 
 - Shared targeted acquisition through CLI, HTTP API, browser and the twelfth MCP tool, `flowlens_acquire`; private observations merge into live cases without changing indexed transfer totals.
 - Explicit evidence-only live cases that need no Etherscan key or indexed-history request at creation.

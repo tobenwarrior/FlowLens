@@ -1605,6 +1605,84 @@ samp {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+/* A <label> wrapping its own textarea: stack them, or the field renders beside the
+   caption and the placeholder overlaps it. */
+.notes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 14px;
+}
+.notes-label textarea {
+  width: 100%;
+  min-height: 60px;
+}
+
+/* Case lists in the Investigations dialog: browser saves and the shared store. */
+.case-group-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 6px;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.case-group-note {
+  margin-left: auto;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.saved-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* A reserved height so the dialog does not resize under the pointer when the
+     shared store finishes loading. */
+  min-height: 72px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.saved-case {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.saved-case:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+}
+.saved-case > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.saved-case strong {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+}
+.saved-case span span,
+.saved-case > span > span {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.saved-case svg:first-child {
+  flex: none;
+  color: var(--text-muted);
+}
+.saved-case svg:last-child {
+  margin-left: auto;
+  flex: none;
+  color: var(--text-faint);
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

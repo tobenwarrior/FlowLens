@@ -81,11 +81,7 @@ export function Sidebar({
       </nav>
       <div className="rail-case">
         <span className="eyebrow">CURRENT INVESTIGATION</span>
-        <strong>
-          {investigation.mode === "demo"
-            ? "The Northstar trail"
-            : investigation.title}
-        </strong>
+        <strong>{investigation.title}</strong>
         <span>
           <i className="status-dot" />
           {investigation.mode === "demo"

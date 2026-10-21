@@ -18,12 +18,27 @@ import { DEMO_ROOT } from "../domain/demo.ts";
 import { chainName, short } from "./Graph.tsx";
 
 export type WorkspaceModal = "cases" | "coverage" | "agents" | "help" | null;
+
+/** Summary of a case in the shared store, as the local API lists it. */
+export interface AgentCaseSummary {
+  id: string;
+  title: string;
+  root: string;
+  mode: "demo" | "live";
+  updatedAt: string;
+  transferCount: number;
+}
+
 interface WorkspaceDialogsProps {
   modal: Exclude<WorkspaceModal, null>;
   investigation: Investigation;
   saved: Investigation[];
+  /** Cases the CLI, API and MCP share through the local case store. */
+  agentCases: AgentCaseSummary[];
+  agentCasesState: "idle" | "loading" | "error";
   onClose: () => void;
   onSelectCase: (value: Investigation) => void;
+  onSelectAgentCase: (id: string) => void;
   onNotesChange: (notes: string) => void;
   onImport: () => void;
   onSave: () => void;
@@ -33,8 +48,11 @@ export function WorkspaceDialogs({
   modal,
   investigation,
   saved,
+  agentCases,
+  agentCasesState,
   onClose,
   onSelectCase,
+  onSelectAgentCase,
   onNotesChange,
   onImport,
   onSave,
@@ -107,9 +125,11 @@ export function WorkspaceDialogs({
             <span className="eyebrow">YOUR LOCAL WORKSPACE</span>
             <h2>Investigations</h2>
             <p>
-              Saved on this browser. Export JSON for durable backups and agent
-              workflows.
+              Browser saves stay in this browser. The agent workspace is the
+              case store the local API and MCP tools share; the CLI opens the
+              same files by path.
             </p>
+            <span className="case-group-heading">On this browser</span>
             <div className="saved-cases">
               {saved.length === 0 ? (
                 <div className="empty-state">
@@ -133,6 +153,49 @@ export function WorkspaceDialogs({
                       <span>
                         {short(c.root)} · {c.transfers.length} records ·{" "}
                         {c.mode}
+                      </span>
+                    </span>
+                    <ArrowRight size={16} />
+                  </button>
+                ))
+              )}
+            </div>
+            <span className="case-group-heading">
+              Agent workspace
+              <span className="case-group-note">
+                shared with MCP and the API
+              </span>
+            </span>
+            <div className="saved-cases">
+              {agentCasesState === "loading" ? (
+                <div className="empty-state">
+                  Reading the shared case store…
+                </div>
+              ) : agentCasesState === "error" ? (
+                <div className="empty-state">
+                  The local API is not reachable, so the shared store cannot be
+                  listed. Browser saves above are unaffected.
+                </div>
+              ) : agentCases.length === 0 ? (
+                <div className="empty-state">
+                  <span>
+                    No cases here yet. Anything an MCP agent or the local API
+                    creates appears in this list.
+                  </span>
+                </div>
+              ) : (
+                agentCases.map((c) => (
+                  <button
+                    className="saved-case"
+                    key={c.id}
+                    onClick={() => onSelectAgentCase(c.id)}
+                  >
+                    <Terminal size={23} />
+                    <span>
+                      <strong>{c.title}</strong>
+                      <span>
+                        {short(c.root)} · {c.transferCount} records · {c.mode} ·{" "}
+                        {c.updatedAt.slice(0, 10)}
                       </span>
                     </span>
                     <ArrowRight size={16} />

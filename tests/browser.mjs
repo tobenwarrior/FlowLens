@@ -178,6 +178,12 @@ try {
   await expect(page.getByLabel("Investigation notes")).toHaveValue(
     "Synthetic QA: shared funders do not establish ownership.",
   );
+  // Browser saves and the shared agent case store are listed as separate groups, so a
+  // case created by an MCP agent or the local API is reachable from here.
+  const casesDialog = page.getByRole("dialog");
+  await expect(casesDialog).toContainText("On this browser");
+  await expect(casesDialog).toContainText("Agent workspace");
+  await expect(casesDialog).toContainText("shared with MCP and the API");
   await page.getByLabel("Close dialog").click();
   await page.keyboard.press("Meta+k");
   await expect(page.getByLabel("Wallet address")).toBeFocused();
@@ -328,7 +334,21 @@ try {
     route.fulfill({ json: { liveAvailable: true } }),
   );
   await live.route("**/api/investigations", (route) =>
-    route.fulfill({ json: fixture }),
+    route.fulfill({
+      json:
+        route.request().method() === "GET"
+          ? [
+              {
+                id: fixture.id,
+                title: fixture.title,
+                root: fixture.root,
+                mode: fixture.mode,
+                updatedAt: fixture.updatedAt,
+                transferCount: fixture.transfers.length,
+              },
+            ]
+          : fixture,
+    }),
   );
   let expansionBody;
   await live.route(`**/api/investigations/${fixture.id}/expand`, (route) => {

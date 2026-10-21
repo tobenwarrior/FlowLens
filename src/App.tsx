@@ -59,7 +59,10 @@ import {
 import { visibleTransfers } from "./domain/wallet-flows.ts";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { WorkspaceDialogs } from "./components/WorkspaceDialogs.tsx";
-import type { WorkspaceModal } from "./components/WorkspaceDialogs.tsx";
+import type {
+  AgentCaseSummary,
+  WorkspaceModal,
+} from "./components/WorkspaceDialogs.tsx";
 
 const CURRENT = "flowlens.current.v1";
 const SAVED = "flowlens.saved.v1";
@@ -140,6 +143,65 @@ export default function App() {
   // FlowLens does not make those in the background.
   const [liveBook, setLiveBook] = useState<PriceBook>(EMPTY_PRICE_BOOK);
   const [pricing, setPricing] = useState(false);
+  // The shared case store behind the CLI, API and MCP tools. Listed on demand so the
+  // dialog reflects whatever an agent has created since the page loaded.
+  const [agentCases, setAgentCases] = useState<AgentCaseSummary[]>([]);
+  const [agentCasesState, setAgentCasesState] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+
+  async function refreshAgentCases() {
+    setAgentCasesState("loading");
+    try {
+      const value = await api<unknown>("/investigations", undefined, "GET");
+      // A response is data, not a promise of its own shape: anything that is not a
+      // list of summaries is reported rather than rendered.
+      if (!Array.isArray(value)) throw new Error("Unexpected case list shape");
+      setAgentCases(
+        value.filter(
+          (entry): entry is AgentCaseSummary =>
+            !!entry &&
+            typeof entry === "object" &&
+            typeof (entry as AgentCaseSummary).id === "string" &&
+            typeof (entry as AgentCaseSummary).title === "string" &&
+            typeof (entry as AgentCaseSummary).root === "string",
+        ),
+      );
+      setAgentCasesState("idle");
+    } catch {
+      // The UI still works without the API; browser saves are unaffected.
+      setAgentCases([]);
+      setAgentCasesState("error");
+    }
+  }
+
+  async function openAgentCase(id: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const value = parseInvestigation(
+        await api<unknown>(`/investigations/${id}/export`, undefined, "GET"),
+      );
+      setInvestigation(value);
+      setInput(value.root);
+      setMode(value.mode);
+      setHistoryMode(
+        hasEvidenceOnlyCoverage(value) ? "evidence-only" : "indexed",
+      );
+      resetFilters();
+      setDrawer(false);
+      setModal(null);
+      setToast(`Opened "${value.title}" from the agent workspace`);
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "That case could not be opened",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const activeBook = investigation?.mode === "demo" ? demoPriceBook : liveBook;
 
   /**
@@ -645,6 +707,7 @@ export default function App() {
         onCases={() => {
           setSaved(readCases());
           setModal("cases");
+          void refreshAgentCases();
         }}
         onProtocol={() => {
           setModal(null);
@@ -805,9 +868,9 @@ export default function App() {
               </span>
               <div>
                 <h2>
-                  {investigation.mode === "demo"
-                    ? "The Northstar trail"
-                    : investigation.title}
+                  {/* The built-in fixture already carries its own title, and an agent
+                      can create demo-mode cases with names of their own. */}
+                  {investigation.title}
                   <span className="case-badge">
                     {investigation.mode === "demo" ? "DEMO" : "LOCAL"}
                   </span>
@@ -1234,6 +1297,9 @@ export default function App() {
           modal={modal}
           investigation={investigation}
           saved={saved}
+          agentCases={agentCases}
+          agentCasesState={agentCasesState}
+          onSelectAgentCase={(id) => void openAgentCase(id)}
           onClose={() => setModal(null)}
           onSelectCase={(value) => {
             setInvestigation(value);

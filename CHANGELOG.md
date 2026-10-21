@@ -2,7 +2,7 @@
 
 ## 0.1.0 — local release candidate, 21 October 2026
 
-This source has not been published. No project license has been selected.
+Unreleased publicly. Development commits are in the private repository; no project license has been selected.
 
 ### Implemented
 
@@ -19,14 +19,21 @@ This source has not been published. No project license has been selected.
 - Known-transaction CCTP V1/V2 acquisition with exact official identities, conservative V2 joins and unverified independent credit.
 - Transaction-scoped internal `callTracer` acquisition with explicit unsupported/unavailable capability and partial coverage.
 
+### Readiness hardening
+
+- Consistent FlowLens branding, separate human/agent quickstarts, mobile agent help and two reviewed synthetic screenshots.
+- Hook-free lockfile installation, `npm start`, a Node 24.12+ requirement and immutable CI action references.
+- A 2 MB Etherscan response cap, atomic rejection of conflicting event identities and bounded regular-file JSON imports.
+- Configuration-only Safe reads can add and resume history while preserving earlier evidence and provenance.
+
 ### Release preparation
 
 - Meaningful ESLint checks, a Node 24/26 CI workflow, deterministic source archive and sorted SHA-256 manifest.
 - Explicit archive allowlist, redacted credential scan, empty environment-template check and symlink rejection.
 - Release checklist, nonbinding license comparison and preserved selected dependency notices.
 
-Final integration test totals and clean-room build results must be recorded from the completed source snapshot. This changelog does not substitute historical baseline counts for current verification. The [public live verification record](docs/live-verification.md) documents observed provider capability separately from fixture tests.
+The destination and fresh source-archive install passed 224/224 tests, lint, typecheck, formatting and build. Both Node 24 and Node 26 CI jobs passed. Chrome QA passed 9 regression scenarios plus 15 human/agent usability checks across desktop, tablet and phone. The [public live verification record](docs/live-verification.md) documents observed provider capability separately from fixture tests.
 
 ### Release limitations
 
-License/copyright ownership and data-use rights remain owner decisions. The source archive contains no private case exports, local screenshots, credentials or installed dependencies. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
+License/copyright ownership and data-use rights remain owner decisions. The source archive contains no private case exports, private/temporary QA artifacts, credentials or installed dependencies; the two reviewed synthetic documentation screenshots are included. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.

@@ -19,14 +19,15 @@ Synthetic unit tests and browser mocks verify normalization, contradictions, err
 
 Verified on macOS with Node **26.8.1** and npm **11.19.0**:
 
-- **213/213 tests passed**, including actual MCP-client workflows, HTTP/CLI persistence, Safe provider-to-merge pagination and recovery, bridge replacements, trace capability failures and near-limit case-file roundtrips.
-- Typecheck, ESLint, Prettier and production build passed.
-- Chrome production QA: **9 scenarios passed** at 1440, 834 and 390 pixels, with no page errors. Additional acquisition-form contract QA covered 7 scenarios at the same three sizes, with no overflow or console errors. All browser provider responses were sanitized mocks.
-- A fresh extracted source archive installed with `npm ci --offline --no-audit --no-fund`; lint, formatting, build and **213/213 tests passed** there too.
+- **224/224 tests passed**, including actual MCP-client workflows, HTTP/CLI persistence, Safe provider-to-merge pagination and recovery, bridge replacements, trace capability failures and near-limit case-file roundtrips.
+- Typecheck, ESLint, Prettier and production build passed. The actual destination installed from the lockfile with lifecycle hooks disabled.
+- Node **24.22.0** / npm **11.19.1** passed local compatibility checks. The current code also passed both Node 24 and Node 26 Linux jobs in the repository's [CI workflow](https://github.com/tobenwarrior/FlowLens/actions/workflows/ci.yml).
+- Chrome production QA: **9 scenarios passed** at 1440, 834 and 390 pixels, with no page errors. An additional human/agent usability review passed 15 checks across those sizes, including mobile agent help, precise source coverage, transaction drilldown and no-key evidence-only onboarding. No page errors or external provider requests occurred; provider-specific browser responses were sanitized mocks.
+- A fresh extracted source archive installed with `npm ci --offline --ignore-scripts --no-audit --no-fund`; lint, formatting, build and **224/224 tests passed** there too.
 - Runtime dependency advisory audit reported **0 vulnerabilities** at verification time. This is an advisory observation, not a guarantee of security.
 - Source allowlist/credential audit passed; repeated source packaging produced byte-identical archives and manifests. Checksums accompany the local archive.
 - Independent code review found no remaining must-fix issues within its bounded review after the documented fixes.
 
-These local results establish the tested release behavior. They do not certify live providers, public hosting, a hosted CI run, Node 24 execution or data redistribution rights. Use the [release checklist](release-checklist.md) when preparing a later source snapshot.
+These local and CI results establish the tested source behavior on the recorded platforms. They do not certify live providers, public hosting, other platform/version combinations or data redistribution rights. Use the [release checklist](release-checklist.md) when preparing a later source snapshot.
 
 Wallet and transaction queries disclose the selected identifiers to external services. Use fixtures until that disclosure is explicitly authorized. A completed request also does not establish provider authenticity, consensus finality, historical completeness, ownership attribution or permission to redistribute the returned data. No private investigation was queried or added to public fixtures.

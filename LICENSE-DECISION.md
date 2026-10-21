@@ -1,6 +1,6 @@
 # License decision pending
 
-No project license has been selected. This is deliberate: the request to prepare an open-source-ready project did not authorize selecting a legally consequential license or publishing the source.
+No project license has been selected. The private development repository and source export are prepared for review; they are not yet licensed open source.
 
 Before a public release, the owner should choose a license, confirm rights to all included code and assets, review dependency licenses and required notices, and add the appropriate license text and package metadata. Until then, do not describe this project as already licensed open source or assume permission to redistribute it.
 

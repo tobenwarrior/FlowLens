@@ -150,7 +150,7 @@ try {
     "Root other-chain cursor resume, counterparty expansion, pin/hide/restore",
   );
   await page.getByLabel("List view").click();
-  await page.locator(".txtable tbody tr").first().click();
+  await page.locator(".transfers-table tbody tr").first().click();
   await expect(page.getByLabel("Evidence drawer")).toContainText(
     "EXACT RAW AMOUNT",
   );
@@ -266,7 +266,7 @@ try {
       fullPage: true,
     });
     await p.getByLabel("List view").click();
-    await p.locator(".txtable tbody tr").first().click();
+    await p.locator(".transfers-table tbody tr").first().click();
     await expect(p.getByLabel("Evidence drawer")).toContainText(
       "UTC TIMESTAMP",
     );

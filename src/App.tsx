@@ -46,6 +46,7 @@ import {
 } from "./domain/demo.ts";
 import { EMPTY_PRICE_BOOK } from "./domain/pricing.ts";
 import { TransferTable } from "./components/TransferTable.tsx";
+import { AddressOverview } from "./components/AddressOverview.tsx";
 import { Graph, chainName, displayUnits, short } from "./components/Graph.tsx";
 import { EvidenceDrawer } from "./components/Evidence.tsx";
 import type { VisibilityChange } from "./components/WalletFlows.tsx";
@@ -1000,16 +1001,27 @@ export default function App() {
                   grouped={grouped}
                 />
               ) : (
-                <TransferTable
-                  investigation={investigation}
-                  address={selectedNode?.address ?? investigation.root}
-                  book={
-                    investigation.mode === "demo"
-                      ? demoPriceBook
-                      : EMPTY_PRICE_BOOK
-                  }
-                  onSelect={selectTransfer}
-                />
+                <div className="address-page">
+                  <AddressOverview
+                    investigation={investigation}
+                    address={selectedNode?.address ?? investigation.root}
+                    book={
+                      investigation.mode === "demo"
+                        ? demoPriceBook
+                        : EMPTY_PRICE_BOOK
+                    }
+                  />
+                  <TransferTable
+                    investigation={investigation}
+                    address={selectedNode?.address ?? investigation.root}
+                    book={
+                      investigation.mode === "demo"
+                        ? demoPriceBook
+                        : EMPTY_PRICE_BOOK
+                    }
+                    onSelect={selectTransfer}
+                  />
+                </div>
               )}
             </div>
             {drawer && (

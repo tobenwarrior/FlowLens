@@ -82,6 +82,7 @@ const allowlist = [
   "src/components/Sidebar.tsx",
   "src/components/WorkspaceDialogs.tsx",
   "src/components/TransferTable.tsx",
+  "src/components/AddressOverview.tsx",
   "src/domain/bridges.ts",
   "src/domain/demo.ts",
   "src/domain/engine.ts",
@@ -94,6 +95,7 @@ const allowlist = [
   "src/domain/pricing.ts",
   "src/domain/swaps.ts",
   "src/domain/transfer-table.ts",
+  "src/domain/net-flow.ts",
   "tests/agent.test.ts",
   "tests/bridges.test.ts",
   "tests/browser.mjs",
@@ -116,6 +118,7 @@ const allowlist = [
   "tests/transfer-table.test.ts",
   "tests/label-store.test.ts",
   "tests/label-memory.test.ts",
+  "tests/net-flow.test.ts",
   "tests/protocols.test.ts",
   "tests/acquisition-workflow.test.ts",
 ].sort();

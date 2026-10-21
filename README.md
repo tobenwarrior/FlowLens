@@ -6,7 +6,7 @@ FlowLens is a local EVM transfer-evidence workspace. Agents use typed MCP tools 
 
 The keyless demo is useful immediately. Live tracing is opt-in, bounded and provider-dependent. FlowLens does not connect a wallet, sign transactions or custody funds.
 
-![FlowLens synthetic investigation: directional graph, separate gross flows and evidence controls](docs/images/demo-desktop.png)
+![FlowLens synthetic investigation: per-asset gross and net flows, cumulative net-flow chart, transaction history across transfers/inflow/outflow/swaps, and a transfer's exact evidence](docs/images/demo-desktop.png)
 
 _The Northstar investigation is entirely synthetic: invented wallets, transactions, labels and amounts. It is not a live trace._
 

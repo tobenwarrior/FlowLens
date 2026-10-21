@@ -369,7 +369,7 @@ function TransferRows({
 }) {
   if (!view.rows.length) return <Empty tab={view.tab} />;
   return (
-    <table className="txtable">
+    <table className="txtable transfers-table">
       <thead>
         <tr>
           <th scope="col" aria-label="Chain" style={{ width: 26 }} />
@@ -499,7 +499,7 @@ function SwapRows({
 }) {
   if (!view.swaps.length) return <Empty tab="swaps" />;
   return (
-    <table className="txtable">
+    <table className="txtable transfers-table">
       <thead>
         <tr>
           <th scope="col" aria-label="Chain" style={{ width: 26 }} />

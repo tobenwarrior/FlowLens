@@ -1329,22 +1329,99 @@ samp {
   padding: 13px;
   border-bottom: 1px solid var(--border);
 }
-.evidence-fields,
-.field-pair {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 5px 10px;
-  padding: 11px 13px;
+/*
+ * The drawer's fields are `div > label + code|span` (plus an optional copy button),
+ * not a definition list. Each row stacks its label over its value, and the copy button
+ * sits beside the value rather than wrapping under it.
+ */
+.evidence-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 12px 13px;
   font-size: 11px;
 }
-.evidence-fields dt,
-.field-pair dt {
-  color: var(--text-faint);
+.evidence-fields > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 8px;
+  row-gap: 3px;
 }
-.evidence-fields dd,
-.field-pair dd {
-  margin: 0;
+.evidence-fields label {
+  grid-column: 1 / -1;
+  display: block;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.evidence-fields code,
+.evidence-fields > div > span {
+  min-width: 0;
   color: var(--text);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.evidence-fields > div > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Two fields sharing one row. */
+.field-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 11px;
+}
+.field-pair section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* provenance-box: icon beside a stack of strong / p / span / label / code. */
+.provenance-box {
+  display: flex;
+  gap: 9px;
+  padding: 11px 13px;
+  margin: 0 13px 12px;
+  font-size: 11px;
+}
+.provenance-box > svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--green);
+}
+.provenance-box > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.provenance-box strong {
+  color: var(--text-bright);
+  font-weight: 500;
+}
+.provenance-box p {
+  margin: 0;
+  color: var(--text-dim);
+}
+.provenance-box span {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.provenance-box label {
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.provenance-box code {
+  color: var(--text-dim);
   overflow-wrap: anywhere;
 }
 
@@ -1570,6 +1647,89 @@ samp {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.address-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ----------------------------------------------------- address overview */
+
+/*
+ * Columns follow the space actually available, not the viewport: the evidence drawer
+ * narrows this container without changing window width, and a viewport-based rule
+ * would leave the panels clipped behind it.
+ */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr));
+  gap: 14px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 11px;
+  height: var(--tab);
+  border-bottom: 1px solid var(--border);
+}
+.panel-head h2 {
+  color: var(--text-bright);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.panel-note {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.assets-table {
+  min-width: 330px;
+}
+
+.chart-wrap {
+  padding: 11px 6px 4px;
+}
+.netflow-chart {
+  display: block;
+  width: 100%;
+  height: 150px;
+  overflow: visible;
+}
+.chart-line {
+  fill: none;
+  stroke: var(--blue-light);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.chart-zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.chart-tick {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.chart-empty {
+  padding: 34px 16px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
 }
 
 /* -------------------------------------------------------------- responsive */

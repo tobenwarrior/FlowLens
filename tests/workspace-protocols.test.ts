@@ -251,7 +251,11 @@ test("official MCP client discovers and uses typed local annotation and visibili
       const tool = tools.find((t) => t.name === name);
       assert.ok(tool);
       assert.equal(tool.annotations?.readOnlyHint, false);
-      assert.equal(tool.annotations?.destructiveHint, false);
+      // Annotate can overwrite or forget a remembered label; visibility only hides.
+      assert.equal(
+        tool.annotations?.destructiveHint,
+        name === "flowlens_annotate",
+      );
       assert.ok(tool.outputSchema);
     }
     const created = result(

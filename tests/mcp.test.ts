@@ -137,6 +137,13 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
       "#/$defs/Transfer",
     );
     assert.equal(expand.annotations?.destructiveHint, false);
+    for (const name of ["flowlens_label_put", "flowlens_label_forget"])
+      assert.equal(
+        list.tools.find((tool) => tool.name === name)?.annotations
+          ?.destructiveHint,
+        true,
+        name,
+      );
     assert.equal(expand.annotations?.readOnlyHint, false);
     assert.equal(
       list.tools.find((tool) => tool.name === "flowlens_evidence")?.annotations

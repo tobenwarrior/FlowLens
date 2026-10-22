@@ -161,15 +161,21 @@ export class LabelStore {
    * Apply stored attributions to nodes that carry none.
    *
    * A label already on the node wins: whatever the current investigation recorded is
-   * closer to the evidence in hand than a remembered guess.
+   * closer to the evidence in hand than a remembered guess. `accept` can turn a stored
+   * label away, as a live case does with synthetic or demo ones.
    */
-  async resolve(nodes: WalletNode[]): Promise<WalletNode[]> {
+  async resolve(
+    nodes: WalletNode[],
+    accept: (label: Label) => boolean = () => true,
+  ): Promise<WalletNode[]> {
     const entries = await this.read();
     if (!entries.size) return nodes;
     return nodes.map((node) => {
       if (node.label) return node;
       const entry = entries.get(entryKey(node.chainId, node.address));
-      return entry ? { ...node, label: entry.label } : node;
+      return entry && accept(entry.label)
+        ? { ...node, label: entry.label }
+        : node;
     });
   }
 }

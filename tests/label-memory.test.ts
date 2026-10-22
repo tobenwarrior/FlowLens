@@ -1,11 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgentService } from "../server/agent.ts";
-import { DEMO_ROOT } from "../src/domain/demo.ts";
-import type { Investigation } from "../src/domain/types.ts";
+import { createApiServer } from "../server/api.ts";
+import { LabelStore } from "../server/label-store.ts";
+import { demoProvider, DEMO_ROOT } from "../src/domain/demo.ts";
+import type { Investigation, TraceProvider } from "../src/domain/types.ts";
 
 const NORTHSTAR = `0x${"2".repeat(40)}`;
 
@@ -191,6 +195,183 @@ test("forgetting a label stops it reaching later investigations", async () => {
       maxPages: 1,
     })) as Investigation;
     assert.equal(northstar(expanded)?.label, undefined);
+  } finally {
+    await cleanup();
+  }
+});
+
+const CEDAR = `0x${"3".repeat(40)}`;
+
+/** The synthetic history served as a live provider serves it: no labels, no synthetic flag. */
+const liveHistory: TraceProvider = {
+  id: "synthetic-live-replay",
+  mode: "live",
+  async fetchPage(query) {
+    const page = await demoProvider.fetchPage(query);
+    return {
+      ...page,
+      nodes: page.nodes.map((node) => ({ ...node, label: undefined })),
+      transfers: page.transfers.map((transfer) => ({
+        ...transfer,
+        synthetic: undefined,
+        source: "Synthetic live replay",
+      })),
+    };
+  },
+};
+const liveProviders = {
+  demo: demoProvider,
+  live: new Map([[1, liveHistory]]),
+};
+
+async function liveWorkspace() {
+  const directory = await mkdtemp(join(tmpdir(), "flowlens-memory-live-"));
+  const labelFile = join(directory, "labels.json");
+  return {
+    directory,
+    labelFile,
+    service: createAgentService({
+      dataDir: join(directory, "cases"),
+      labelFile,
+      providers: liveProviders,
+    }),
+    cleanup: () => rm(directory, { recursive: true, force: true }),
+  };
+}
+
+test("a remembered label reaches a new investigation from its first page", async () => {
+  const { service, cleanup } = await liveWorkspace();
+  try {
+    await service.call("label_put", {
+      chainId: 1,
+      address: NORTHSTAR,
+      label: aiLabel("Northstar Exchange · hot wallet"),
+    });
+    const created = (await service.call("create", {
+      root: DEMO_ROOT,
+      mode: "live",
+    })) as Investigation;
+    assert.equal(
+      northstar(created)?.label?.text,
+      "Northstar Exchange · hot wallet",
+    );
+  } finally {
+    await cleanup();
+  }
+});
+
+test("a live investigation never takes a remembered demo label", async () => {
+  const { service, cleanup } = await liveWorkspace();
+  try {
+    await service.call("label_put", {
+      chainId: 1,
+      address: NORTHSTAR,
+      label: {
+        ...aiLabel("Synthetic demo name"),
+        kind: "demo",
+        confidence: "synthetic",
+      },
+    });
+    // Taking it would make the case invalid; the trace must still start.
+    const created = (await service.call("create", {
+      root: DEMO_ROOT,
+      mode: "live",
+    })) as Investigation;
+    assert.ok(northstar(created), "the wallet is still loaded");
+    assert.equal(northstar(created)?.label, undefined);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("the web API applies remembered labels when it creates and expands a case", async () => {
+  const { directory, labelFile, cleanup } = await liveWorkspace();
+  const server = createApiServer({
+    dataDir: join(directory, "cases"),
+    labelFile,
+    providers: liveProviders,
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
+  const post = async (path: string, body: unknown) => {
+    const response = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    assert.ok(response.ok, `${path}: HTTP ${response.status}`);
+    return (await response.json()) as Investigation;
+  };
+  try {
+    const store = new LabelStore(labelFile);
+    await store.put({
+      chainId: 1,
+      address: NORTHSTAR,
+      label: aiLabel("Northstar Exchange · hot wallet"),
+    });
+    const created = await post("/investigations", {
+      root: DEMO_ROOT,
+      mode: "live",
+    });
+    assert.equal(
+      northstar(created)?.label?.text,
+      "Northstar Exchange · hot wallet",
+    );
+
+    // A wallet the case already loaded unlabelled takes a label remembered since.
+    await store.put({
+      chainId: 1,
+      address: CEDAR,
+      label: aiLabel("Cedar · treasury"),
+    });
+    const expanded = await post(`/investigations/${created.id}/expand`, {
+      address: DEMO_ROOT,
+      chainId: 1,
+      maxPages: 1,
+      pageSize: 10,
+    });
+    const cedar = expanded.nodes.find(
+      (node) => node.address.toLowerCase() === CEDAR && node.chainId === 1,
+    );
+    assert.equal(cedar?.label?.text, "Cedar · treasury");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await cleanup();
+  }
+});
+
+test("removing a label in a case forgets it, so an expansion does not bring it back", async () => {
+  const { service, cleanup } = await liveWorkspace();
+  try {
+    const created = (await service.call("create", {
+      root: DEMO_ROOT,
+      mode: "live",
+    })) as Investigation;
+    await service.call("annotate", {
+      caseId: created.id,
+      chainId: 1,
+      address: NORTHSTAR,
+      label: aiLabel("Wrong guess"),
+    });
+    await service.call("annotate", {
+      caseId: created.id,
+      chainId: 1,
+      address: NORTHSTAR,
+      label: null,
+    });
+    const expanded = (await service.call("expand", {
+      caseId: created.id,
+      address: DEMO_ROOT,
+      chainId: 1,
+      maxPages: 1,
+      pageSize: 10,
+    })) as Investigation;
+    assert.equal(northstar(expanded)?.label, undefined);
+    const stored = (await service.call("label_search", {
+      address: NORTHSTAR,
+    })) as { labels: unknown[] };
+    assert.deepEqual(stored.labels, []);
   } finally {
     await cleanup();
   }

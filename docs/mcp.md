@@ -95,7 +95,7 @@ The server advertises 18 tools, with JSON Schema inputs, per-tool result schemas
 
 `flowlens_wallet`, `flowlens_annotate` and `flowlens_visibility` share the [wallet controls and attribution contracts](workspace-controls.md). They do not fetch history or label providers. Wallet transfer pages after offset zero require the returned revision guard.
 
-Import and replay tools are marked as potentially destructive because they can replace an existing full snapshot or attached protocol evidence bundle. Export a backup before intentionally replacing retained observations. No tool deletes a case or recurses into counterparties automatically.
+Import and replay tools are marked as potentially destructive because they can replace an existing full snapshot or attached protocol evidence bundle; export a backup before intentionally replacing retained observations. `flowlens_annotate`, `flowlens_label_put` and `flowlens_label_forget` are marked the same way because they can overwrite or forget a remembered label that later traces rely on. No tool deletes a case or recurses into counterparties automatically.
 
 | Tool                | Arguments                                                                           | Behavior                                                                                                   |
 | ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |

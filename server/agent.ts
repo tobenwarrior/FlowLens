@@ -14,7 +14,7 @@ import {
   parseProtocolEvidence,
   mergeProtocolEvidence,
 } from "../src/domain/protocols.ts";
-import type { TraceFilter } from "../src/domain/types.ts";
+import type { Investigation, TraceFilter } from "../src/domain/types.ts";
 import {
   expandCase,
   operationSchema,
@@ -150,6 +150,18 @@ export function createAgentService(options: AgentServiceOptions = {}) {
     options.labelFile ??
       resolve(process.env.FLOWLENS_LABEL_FILE ?? ".local/labels.json"),
   );
+  // Wallets named in an earlier investigation arrive already labelled, which is the point
+  // of remembering them. A label the case already holds always wins, a live case never
+  // takes a synthetic or demo one, and a store that cannot be read changes nothing.
+  const remembered = (value: Investigation) =>
+    labels
+      .resolve(
+        value.nodes,
+        value.mode === "live"
+          ? (label) => label.confidence !== "synthetic" && label.kind !== "demo"
+          : undefined,
+      )
+      .catch(() => value.nodes);
   const providers = options.providers ?? providersFromEnvironment();
   const acquirer = options.acquirer ?? acquireProtocolEvidence;
   const mutate = async <T>(id: string, run: () => Promise<T>) =>
@@ -231,6 +243,7 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         providers,
         input.historyMode,
       );
+      value.nodes = await remembered(value);
       await store.save(value);
       return value;
     }
@@ -475,15 +488,20 @@ export function createAgentService(options: AgentServiceOptions = {}) {
             : setVisibility(current, input);
         next.updatedAt = nextRevision(current.updatedAt);
         await store.save(next);
-        // Remember it outside the case too, so the next trace starts already knowing.
-        if (operation === "annotate" && input.label)
-          await labels
-            .put({
-              chainId: input.chainId as number,
-              address: input.address as string,
-              label: input.label,
-            })
-            // The case is already saved; failing to remember must not undo that.
+        // Keep the store in step with the case: a label attached here is remembered for
+        // the next trace, and one removed here is forgotten, or the next expansion would
+        // put it back.
+        if (operation === "annotate")
+          await (
+            input.label
+              ? labels.put({
+                  chainId: input.chainId as number,
+                  address: input.address as string,
+                  label: input.label,
+                })
+              : labels.remove(input.chainId as number, input.address as string)
+          )
+            // The case is already saved; failing to update the store must not undo that.
             .catch(() => undefined);
         return next;
       });
@@ -502,9 +520,7 @@ export function createAgentService(options: AgentServiceOptions = {}) {
       return mutate(id, async () => {
         const current = await store.read(id);
         const next = await expandCase(current, input, providers);
-        // Wallets named in an earlier investigation arrive already labelled, which is
-        // the point of remembering them. A label the case already holds always wins.
-        next.nodes = await labels.resolve(next.nodes).catch(() => next.nodes);
+        next.nodes = await remembered(next);
         next.updatedAt = nextRevision(current.updatedAt);
         await store.save(next);
         return next;
@@ -714,5 +730,7 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         throw errorFor(error);
       }
     },
+    /** For callers that load wallets outside `call`, such as the HTTP API. */
+    applyRememberedLabels: remembered,
   };
 }

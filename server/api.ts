@@ -201,6 +201,7 @@ export function createApiServer(options: ApiOptions) {
             providers,
             value.historyMode,
           );
+          result.nodes = await agentService.applyRememberedLabels(result);
           await store.save(result);
           return send(res, 201, result);
         }
@@ -341,6 +342,7 @@ export function createApiServer(options: ApiOptions) {
           const value = await exclusive(id, async () => {
             const current = await store.read(id);
             const next = await expandCase(current, input, providers);
+            next.nodes = await agentService.applyRememberedLabels(next);
             next.updatedAt = nextRevision(current.updatedAt);
             await store.save(next);
             return next;

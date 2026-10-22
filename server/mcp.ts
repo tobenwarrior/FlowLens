@@ -123,7 +123,7 @@ const tools = [
   {
     operation: "annotate",
     description:
-      "Attach, edit or remove a local chain/address-scoped entity label. Preserve source, observed time, confidence and claim type. Verified-evidence is a supplied assertion with justification, not authentication by FlowLens. Funding links never prove ownership. No external label provider is queried.",
+      "Attach, edit or remove a local chain/address-scoped entity label. The local label store follows: an attached label is remembered for later traces and a removed one is forgotten. Preserve source, observed time, confidence and claim type. Verified-evidence is a supplied assertion with justification, not authentication by FlowLens. Funding links never prove ownership. No external label provider is queried.",
     readOnly: false,
     input: z
       .object({
@@ -634,8 +634,15 @@ export function createMcpServer(
     outputSchema: outputFor(tool.operation),
     annotations: {
       readOnlyHint: tool.readOnly,
-      destructiveHint:
-        tool.operation === "import" || tool.operation === "replay",
+      // Import and replay can replace a snapshot or evidence bundle; annotate and the
+      // label tools can overwrite or forget a label that later traces rely on.
+      destructiveHint: [
+        "import",
+        "replay",
+        "annotate",
+        "label_put",
+        "label_forget",
+      ].includes(tool.operation),
       idempotentHint: tool.readOnly,
       openWorldHint:
         !tool.readOnly &&

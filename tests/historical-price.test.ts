@@ -4,6 +4,9 @@ import {
   distinctLookups,
   fetchHistoricalPrices,
   latestSwapAtOrBefore,
+  LOG_PAGE_SIZE,
+  MAX_LOG_QUERIES_PER_CALL,
+  MAX_QUERIES_PER_LOOKUP,
   sqrtPriceFromSwapData,
   SWAP_TOPIC,
 } from "../server/historical-price.ts";
@@ -61,6 +64,7 @@ function sqrtPriceX96For(rawRatio: number): bigint {
 
 // 1 USDC = 1/2000 ETH, expressed in the pool's raw units.
 const ETH_AT_2000 = sqrtPriceX96For(10 ** 18 / 2000 / 10 ** 6);
+const ETH_AT_3000 = sqrtPriceX96For(10 ** 18 / 3000 / 10 ** 6);
 
 test("sqrtPriceX96 is read from the third word of the swap payload", () => {
   assert.equal(sqrtPriceFromSwapData(swapData(123456789n)), 123456789n);
@@ -81,6 +85,17 @@ test("the latest swap at or before the block wins, and later swaps are ignored",
   const picked = latestSwapAtOrBefore(logs, 2000);
   assert.equal(picked?.blockNumber, 2000);
   assert.equal(picked?.sqrtPriceX96, 200n);
+});
+
+test("within one block the swap with the highest log index is the latest", () => {
+  const logs = [
+    // Neither the first nor the last entry of the block is the latest.
+    { blockNumber: "0x3e8", logIndex: "0x3", data: swapData(300n) },
+    { blockNumber: "0x3e8", logIndex: "0x7", data: swapData(700n) },
+    { blockNumber: "0x3e8", logIndex: "0x", data: swapData(100n) },
+    { blockNumber: "0x3e7", logIndex: "0x9", data: swapData(900n) },
+  ];
+  assert.equal(latestSwapAtOrBefore(logs, 1000)?.sqrtPriceX96, 700n);
 });
 
 test("a window containing only later swaps yields no price", () => {
@@ -239,6 +254,194 @@ test("a provider failure degrades to the spot price instead of throwing", async 
   });
   assert.deepEqual(result.quotes, []);
   assert.match(result.warnings[0], /Log query failed/);
+});
+
+interface PoolSwap {
+  block: number;
+  logIndex?: number;
+  sqrtPriceX96: bigint;
+}
+
+/**
+ * A pool's Swap history served the way Etherscan serves getLogs: filtered to the
+ * requested range, oldest first, cut to one page, and "No records found" when empty.
+ */
+function poolHistory(swaps: PoolSwap[]): { fetch: typeof fetch; seen: URL[] } {
+  const ordered = [...swaps].sort(
+    (a, b) => a.block - b.block || (a.logIndex ?? 0) - (b.logIndex ?? 0),
+  );
+  const seen: URL[] = [];
+  const impl = (async (input: URL | string) => {
+    const url = new URL(String(input));
+    seen.push(url);
+    const from = Number(url.searchParams.get("fromBlock"));
+    const to = Number(url.searchParams.get("toBlock"));
+    const result = ordered
+      .filter((swap) => swap.block >= from && swap.block <= to)
+      .slice(0, Number(url.searchParams.get("offset")))
+      .map((swap) => ({
+        blockNumber: `0x${swap.block.toString(16)}`,
+        logIndex: `0x${(swap.logIndex ?? 0).toString(16)}`,
+        data: swapData(swap.sqrtPriceX96),
+      }));
+    const body = result.length
+      ? { status: "1", message: "OK", result }
+      : { status: "0", message: "No records found", result: [] };
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as unknown as typeof fetch;
+  return { fetch: impl, seen };
+}
+
+const B = 21_000_000;
+const lookup = (fetcher: typeof fetch, block = B) =>
+  fetchHistoricalPrices(1, [transfer(block)], {
+    key: "test-key",
+    fetch: fetcher,
+    intervalMs: 0,
+    resolvePool: async () => POOL,
+  });
+const range = (url: URL) => [
+  Number(url.searchParams.get("fromBlock")),
+  Number(url.searchParams.get("toBlock")),
+];
+
+test("an active pool is priced from its swap at the transfer's block, not the window's oldest page", async () => {
+  // A swap in every block of the window. One query over all 50,000 blocks would return
+  // the oldest page, about a week before the transfer.
+  const swaps = Array.from({ length: 50_101 }, (_, index) => ({
+    block: B - 50_000 + index,
+    sqrtPriceX96: ETH_AT_2000,
+  }));
+  const { fetch: fetcher, seen } = poolHistory(swaps);
+  const result = await lookup(fetcher);
+  assert.equal(result.quotes.length, 1);
+  assert.match(result.quotes[0].source, new RegExp(`last swap at block ${B}$`));
+  assert.equal(result.calls, 1);
+  for (const url of seen)
+    assert.ok(range(url)[1] <= B, "never reads past the transfer");
+});
+
+test("a full page narrows the window so the newest swaps are not cut off", async () => {
+  // Thirty swaps a block: the first 64-block window holds 1,920, more than a page. The
+  // block's last swap is the only one at a different price.
+  const swaps: PoolSwap[] = [];
+  for (let block = B - 200; block <= B; block++)
+    for (let logIndex = 0; logIndex < 30; logIndex++)
+      swaps.push({
+        block,
+        logIndex,
+        sqrtPriceX96:
+          block === B && logIndex === 29 ? ETH_AT_3000 : ETH_AT_2000,
+      });
+  const { fetch: fetcher, seen } = poolHistory(swaps);
+  const result = await lookup(fetcher);
+  assert.equal(result.quotes.length, 1);
+  assert.ok(Math.abs(Number(result.quotes[0].usd) - 3000) / 3000 < 0.001);
+  assert.equal(result.calls, 2);
+  assert.ok(
+    range(seen[1])[0] > range(seen[0])[0],
+    "narrowed toward the transfer",
+  );
+  assert.equal(range(seen[1])[1], B);
+});
+
+test("a quiet pool steps back through adjoining windows to its last swap", async () => {
+  const { fetch: fetcher, seen } = poolHistory([
+    { block: B - 40_000, sqrtPriceX96: ETH_AT_2000 },
+    { block: B - 3_000, sqrtPriceX96: ETH_AT_3000 },
+  ]);
+  const result = await lookup(fetcher);
+  assert.equal(result.quotes.length, 1);
+  assert.match(
+    result.quotes[0].source,
+    new RegExp(`last swap at block ${B - 3_000}$`),
+  );
+  assert.ok(Math.abs(Number(result.quotes[0].usd) - 3000) / 3000 < 0.001);
+  // It starts at the transfer's block and steps back through windows of 64, 256,
+  // 1,024 and 4,096 blocks, each ending just before the previous one began.
+  assert.deepEqual(range(seen[0]), [B - 63, B]);
+  assert.equal(seen.length, 4);
+  for (let index = 1; index < seen.length; index++)
+    assert.equal(range(seen[index])[1], range(seen[index - 1])[0] - 1);
+});
+
+test("a pool silent for the whole window gets no price and never reads before it", async () => {
+  const { fetch: fetcher, seen } = poolHistory([
+    { block: B - 60_000, sqrtPriceX96: ETH_AT_2000 },
+  ]);
+  const result = await lookup(fetcher);
+  assert.deepEqual(result.quotes, []);
+  assert.match(result.warnings[0], /No swaps found .* keeps the spot price/);
+  for (const url of seen) assert.ok(range(url)[0] >= B - 50_000);
+  assert.equal(range(seen.at(-1)!)[0], B - 50_000);
+});
+
+test("a provider refusal is reported as a refusal, not read as an empty window", async () => {
+  const refusing = (async () =>
+    new Response(
+      JSON.stringify({
+        status: "0",
+        message: "NOTOK",
+        result: "Max rate limit reached",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    )) as unknown as typeof fetch;
+  const result = await lookup(refusing);
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.calls, 1, "does not step back past a refusal");
+  assert.match(result.warnings[0], /Max rate limit reached/);
+  assert.doesNotMatch(result.warnings[0], /No swaps found/);
+});
+
+test("one call stops at its total query budget and says how many pairs it left", async () => {
+  // A pool with no swaps at all: every lookup steps back through six empty windows.
+  const { fetch: fetcher } = poolHistory([]);
+  const transfers = Array.from({ length: 20 }, (_, index) =>
+    transfer(B + index * 1_000),
+  );
+  const result = await fetchHistoricalPrices(1, transfers, {
+    key: "test-key",
+    fetch: fetcher,
+    intervalMs: 0,
+    maxLookups: 20,
+    resolvePool: async () => POOL,
+  });
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.calls, MAX_LOG_QUERIES_PER_CALL);
+  assert.match(
+    result.warnings.at(-1)!,
+    /Stopped after 80 log queries; 7 asset\/block pairs keep the spot price/,
+  );
+});
+
+test("a lookup that cannot settle stops at its query budget", async () => {
+  // An inconsistent provider: every window wider than one block is full, every single
+  // block is empty, so the search never finds its swap.
+  const inconsistent = (async (input: URL | string) => {
+    const [from, to] = range(new URL(String(input)));
+    const result =
+      to > from
+        ? Array.from({ length: LOG_PAGE_SIZE }, () => ({
+            blockNumber: `0x${from.toString(16)}`,
+            data: swapData(ETH_AT_2000),
+          }))
+        : [];
+    return new Response(
+      JSON.stringify(
+        result.length
+          ? { status: "1", message: "OK", result }
+          : { status: "0", message: "No records found", result: [] },
+      ),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as unknown as typeof fetch;
+  const result = await lookup(inconsistent);
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.calls, MAX_QUERIES_PER_LOOKUP);
+  assert.match(result.warnings[0], /after 10 log queries/);
 });
 
 /**

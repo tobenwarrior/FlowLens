@@ -22,6 +22,13 @@ import { createPublicRpcClient } from "./rpc.ts";
  * The price returned is the last swap at or before the transfer's block, so it is the
  * most recent trade the pool had seen by then. A pool with no swap in the search window
  * yields nothing rather than a guess.
+ *
+ * Etherscan returns logs oldest first, one page at a time, so a single query over the
+ * whole window would hand back the window's oldest swaps: on an active pool, a price from
+ * days before the transfer. The lookup searches backward from the transfer's block
+ * instead. It starts with a small window ending there, narrows it when a page comes back
+ * full because the newest swaps may lie past that page, and steps further back, widening,
+ * while windows are empty.
  */
 
 const ENDPOINT = "https://api.etherscan.io/v2/api";
@@ -30,6 +37,14 @@ export const SWAP_TOPIC =
   "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67";
 /** How far back to look for the pool's last trade before the transfer. */
 const DEFAULT_WINDOW = 50_000;
+/** The first window, ending at the transfer's block; an active pool's swaps fit one page. */
+const FIRST_WINDOW = 64;
+/** Etherscan's largest log page. A full page means the window may hold more. */
+export const LOG_PAGE_SIZE = 1000;
+/** Log queries one lookup may spend narrowing and stepping back through its window. */
+export const MAX_QUERIES_PER_LOOKUP = 10;
+/** Log queries one call may spend across all its lookups. */
+export const MAX_LOG_QUERIES_PER_CALL = 80;
 
 export class HistoricalPriceError extends Error {
   code: string;
@@ -44,6 +59,8 @@ export class HistoricalPriceError extends Error {
 
 export interface SwapLog {
   blockNumber: number;
+  /** Position within the block; -1 when the provider did not say. */
+  logIndex: number;
   sqrtPriceX96: bigint;
 }
 
@@ -65,16 +82,24 @@ export function sqrtPriceFromSwapData(data: string): bigint | null {
 
 function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
+  if (typeof value !== "string") return null;
+  // Etherscan writes a zero quantity as a bare "0x".
+  if (value === "0x") return 0;
+  try {
     const parsed = value.startsWith("0x")
       ? Number(BigInt(value))
       : Number(value);
     return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
-/** Latest swap at or before `block`, from an Etherscan log page. */
+/**
+ * Latest swap at or before `block`, from an Etherscan log page. Within one block the
+ * highest log index is the latest; pages arrive oldest first, so without an index a later
+ * entry wins.
+ */
 export function latestSwapAtOrBefore(
   logs: unknown,
   block: number,
@@ -88,11 +113,53 @@ export function latestSwapAtOrBefore(
     if (blockNumber === null || blockNumber > block) continue;
     const sqrtPriceX96 = sqrtPriceFromSwapData(String(record.data ?? ""));
     if (sqrtPriceX96 === null) continue;
-    if (!best || blockNumber > best.blockNumber)
-      best = { blockNumber, sqrtPriceX96 };
+    const logIndex = toNumber(record.logIndex) ?? -1;
+    if (
+      !best ||
+      blockNumber > best.blockNumber ||
+      (blockNumber === best.blockNumber && logIndex >= best.logIndex)
+    )
+      best = { blockNumber, logIndex, sqrtPriceX96 };
   }
   return best;
 }
+
+type LogPage =
+  | { kind: "logs"; logs: unknown[] }
+  | { kind: "empty" }
+  | { kind: "refused"; reason: string };
+
+/**
+ * Etherscan answers "no records found" and a refusal (bad key, rate limit) with the same
+ * status "0"; only the result tells them apart. Taking a refusal for an empty window
+ * would send the search further back and price the transfer from an older swap.
+ */
+function readLogPage(payload: unknown): LogPage {
+  const body = (payload && typeof payload === "object" ? payload : {}) as {
+    status?: unknown;
+    message?: unknown;
+    result?: unknown;
+  };
+  if (Array.isArray(body.result)) {
+    if (!body.result.length) return { kind: "empty" };
+    if (body.status === "1") return { kind: "logs", logs: body.result };
+  }
+  const reason =
+    typeof body.result === "string" && body.result
+      ? body.result
+      : typeof body.message === "string" && body.message
+        ? body.message
+        : "unexpected response";
+  return { kind: "refused", reason: reason.slice(0, 200) };
+}
+
+type SwapSearch =
+  | { kind: "found"; swap: SwapLog }
+  | { kind: "none" }
+  | { kind: "unusable" }
+  | { kind: "refused"; reason: string }
+  | { kind: "exhausted" }
+  | { kind: "spent" };
 
 export interface HistoricalLookup {
   quotes: PriceQuote[];
@@ -153,7 +220,9 @@ export async function fetchHistoricalPrices(
     Math.max(options.windowBlocks ?? DEFAULT_WINDOW, 1),
     500_000,
   );
-  const interval = options.intervalMs ?? 250;
+  // Etherscan's free tier allows three calls a second and one lookup can take several
+  // queries, so stay under that limit.
+  const interval = options.intervalMs ?? 400;
   const fetcher = options.fetch ?? fetch;
   const at = options.now?.() ?? new Date().toISOString();
 
@@ -193,19 +262,11 @@ export async function fetchHistoricalPrices(
         findPool(client, route, token).then((found) => found?.pool ?? null);
     })();
 
-  for (const [id, { asset, block }] of selected) {
-    const token = routedToken(route, asset);
-    if (!poolCache.has(token)) {
-      poolCache.set(token, await rpc(token).catch(() => null));
-    }
-    const pool = poolCache.get(token) ?? null;
-    if (!pool) {
-      warnings.push(
-        `No known ${route.usdSymbol} pool for ${asset.symbol} on chain ${chainId}; it keeps the spot price.`,
-      );
-      continue;
-    }
-
+  const queryLogs = async (
+    pool: Address,
+    fromBlock: number,
+    toBlock: number,
+  ): Promise<LogPage> => {
     const wait = Math.max(0, lastCall + interval - Date.now());
     if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
     lastCall = Date.now();
@@ -218,14 +279,13 @@ export async function fetchHistoricalPrices(
       action: "getLogs",
       address: pool,
       topic0: SWAP_TOPIC,
-      fromBlock: String(Math.max(0, block - windowBlocks)),
-      toBlock: String(block),
+      fromBlock: String(fromBlock),
+      toBlock: String(toBlock),
       page: "1",
-      offset: "100",
+      offset: String(LOG_PAGE_SIZE),
     }).toString();
 
     calls += 1;
-    let payload: { status?: unknown; message?: unknown; result?: unknown };
     try {
       const response = await fetcher(url, {
         signal: AbortSignal.timeout(15_000),
@@ -237,31 +297,86 @@ export async function fetchHistoricalPrices(
           `Provider returned HTTP ${response.status}.`,
           response.status >= 500,
         );
-      payload = (await response.json()) as typeof payload;
+      return readLogPage(await response.json());
     } catch (error) {
+      return {
+        kind: "refused",
+        reason: error instanceof Error ? error.message : "unknown error",
+      };
+    }
+  };
+
+  /** Walk back from `block` until the newest swap at or before it is in hand. */
+  const lastSwapBefore = async (
+    pool: Address,
+    block: number,
+  ): Promise<SwapSearch> => {
+    const lowest = Math.max(0, block - windowBlocks);
+    let hi = block;
+    let span = FIRST_WINDOW;
+    let narrowed = false;
+    for (let query = 0; query < MAX_QUERIES_PER_LOOKUP; query++) {
+      if (hi < lowest) return { kind: "none" };
+      if (calls >= MAX_LOG_QUERIES_PER_CALL) return { kind: "spent" };
+      const lo = Math.max(lowest, hi - span + 1);
+      const page = await queryLogs(pool, lo, hi);
+      if (page.kind === "refused") return page;
+      if (page.kind === "logs") {
+        if (page.logs.length >= LOG_PAGE_SIZE && hi > lo) {
+          // The newest swaps in this window may lie past the first page.
+          span = Math.ceil((hi - lo + 1) / 2);
+          narrowed = true;
+          continue;
+        }
+        const swap = latestSwapAtOrBefore(page.logs, hi);
+        return swap ? { kind: "found", swap } : { kind: "unusable" };
+      }
+      // Nothing here: step back past this window. Once a page has filled, the pool is
+      // busy enough that the window stays narrow.
+      hi = lo - 1;
+      if (!narrowed) span *= 4;
+    }
+    return hi < lowest ? { kind: "none" } : { kind: "exhausted" };
+  };
+
+  const unpriced = (search: SwapSearch, symbol: string, block: number) => {
+    switch (search.kind) {
+      case "refused":
+        return `Log query failed for ${symbol} at block ${block}: ${search.reason}; it keeps the spot price.`;
+      case "exhausted":
+        return `Stopped looking for the last ${symbol} swap before block ${block} after ${MAX_QUERIES_PER_LOOKUP} log queries; it keeps the spot price.`;
+      case "unusable":
+        return `No usable swap price for ${symbol} at block ${block}; it keeps the spot price.`;
+      default:
+        return `No swaps found for ${symbol} within ${windowBlocks} blocks before ${block}; it keeps the spot price.`;
+    }
+  };
+
+  for (const [index, [id, { asset, block }]] of selected.entries()) {
+    const token = routedToken(route, asset);
+    if (!poolCache.has(token)) {
+      poolCache.set(token, await rpc(token).catch(() => null));
+    }
+    const pool = poolCache.get(token) ?? null;
+    if (!pool) {
       warnings.push(
-        `Log query failed for ${asset.symbol} at block ${block}: ${
-          error instanceof Error ? error.message : "unknown error"
-        }`,
+        `No known ${route.usdSymbol} pool for ${asset.symbol} on chain ${chainId}; it keeps the spot price.`,
       );
       continue;
     }
 
-    // Etherscan reports "no records found" as a non-error status.
-    if (payload.status !== "1") {
+    const search = await lastSwapBefore(pool, block);
+    if (search.kind === "spent") {
       warnings.push(
-        `No swaps found for ${asset.symbol} within ${windowBlocks} blocks before ${block}; it keeps the spot price.`,
+        `Stopped after ${MAX_LOG_QUERIES_PER_CALL} log queries; ${selected.length - index} asset/block pairs keep the spot price.`,
       );
+      break;
+    }
+    if (search.kind !== "found") {
+      warnings.push(unpriced(search, asset.symbol, block));
       continue;
     }
-
-    const swap = latestSwapAtOrBefore(payload.result, block);
-    if (!swap) {
-      warnings.push(
-        `No usable swap price for ${asset.symbol} at block ${block}; it keeps the spot price.`,
-      );
-      continue;
-    }
+    const { swap } = search;
 
     const usd = priceFromSqrtPriceX96(
       swap.sqrtPriceX96,

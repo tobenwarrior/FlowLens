@@ -8,6 +8,7 @@ import * as z from "zod/v4";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createAgentService } from "./agent.ts";
+import { MAX_SPOT_ASSETS } from "./price-provider.ts";
 import { jsonSchema } from "./schema.ts";
 
 export const MCP_MAX_BYTES = 5_000_000;
@@ -154,7 +155,7 @@ const tools = [
               .strict(),
           )
           .max(50),
-        maxAssets: z.number().int().min(1).max(12).optional(),
+        maxAssets: z.number().int().min(1).max(MAX_SPOT_ASSETS).optional(),
       })
       .strict(),
   },

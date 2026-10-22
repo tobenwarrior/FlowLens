@@ -2,8 +2,12 @@ import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem";
 import { assetKey, normalizeAddress } from "../src/domain/engine.ts";
 import type { PriceQuote } from "../src/domain/pricing.ts";
 import type { Address, Asset } from "../src/domain/types.ts";
-import { createPublicRpcClient, RpcProviderError } from "./rpc.ts";
-import type { RpcClient } from "./rpc.ts";
+import {
+  createPublicRpcClient,
+  DEFAULT_RPC_INTERVAL_MS,
+  RpcProviderError,
+} from "./rpc.ts";
+import type { PublicRpcOptions, RpcClient } from "./rpc.ts";
 
 /**
  * Spot USD prices read from Uniswap V3 pools over the public RPC FlowLens already uses.
@@ -26,6 +30,39 @@ const POOL_ABI = parseAbi([
 ]);
 
 const FEE_TIERS = [500, 3000, 10000] as const;
+
+/**
+ * Most assets one spot lookup prices. Each can cost a pool lookup and a slot0 read at
+ * every fee tier, and ten at that worst case still fit the RPC client's 64-call and
+ * 120-second ceilings.
+ */
+export const MAX_SPOT_ASSETS = 10;
+
+/** RPC calls a spot lookup may need at worst for `assets` assets that need a pool. */
+export function spotCallBudget(assets: number): number {
+  return assets * FEE_TIERS.length * 2;
+}
+
+/**
+ * Time for `calls` public RPC calls, which the client spaces a second apart: never
+ * less than its 45-second default, so a slow endpoint gets at least the time it always
+ * had, and never more than its 120-second ceiling.
+ */
+function timeForCalls(calls: number): number {
+  return Math.min(
+    120_000,
+    Math.max(45_000, calls * DEFAULT_RPC_INTERVAL_MS + 15_000),
+  );
+}
+
+/**
+ * Call and time ceilings for a spot lookup over `assets` assets that need a pool. The
+ * public RPC spaces calls a second apart, so the time allowed grows with the calls.
+ */
+export function spotClientLimits(assets: number): PublicRpcOptions {
+  const maxCalls = Math.max(1, spotCallBudget(assets));
+  return { maxCalls, maxDurationMs: timeForCalls(maxCalls) };
+}
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 export interface ChainRoute {
@@ -193,6 +230,8 @@ export interface PriceLookup {
 
 export interface PriceLookupOptions {
   client?: RpcClient;
+  /** Builds the client when none is supplied; defaults to the public RPC. */
+  createClient?: (chainId: number, limits: PublicRpcOptions) => RpcClient;
   /** Hard ceiling on distinct assets priced in one lookup. */
   maxAssets?: number;
   now?: () => string;
@@ -200,7 +239,7 @@ export interface PriceLookupOptions {
 
 /**
  * Price the supplied assets for one chain. Bounded and single-pass: every asset costs
- * at most one pool lookup per fee tier plus one slot0 read, nothing is retried, and an
+ * at most one pool lookup and one slot0 read per fee tier, nothing is retried, and an
  * asset without a pool is reported in `warnings` rather than guessed at.
  */
 export async function fetchOnChainPrices(
@@ -219,7 +258,10 @@ export async function fetchOnChainPrices(
       calls: 0,
     };
 
-  const maxAssets = Math.min(Math.max(options.maxAssets ?? 6, 1), 12);
+  const maxAssets = Math.min(
+    Math.max(options.maxAssets ?? 6, 1),
+    MAX_SPOT_ASSETS,
+  );
   const at = options.now?.() ?? new Date().toISOString();
 
   // One entry per distinct asset on this chain, in a stable order.
@@ -236,8 +278,17 @@ export async function fetchOnChainPrices(
     );
   if (!selected.length) return { quotes: [], warnings, calls: 0 };
 
+  // The ceilings cover the worst case of every asset that needs a pool, so one asset's
+  // uninitialised tiers cannot use up the calls or time a later asset needs.
+  const needPool = selected.filter(
+    ([, asset]) => !route.pegged[routedToken(route, asset)],
+  ).length;
   const client =
-    options.client ?? createPublicRpcClient(chainId, { maxCalls: 48 });
+    options.client ??
+    (options.createClient ?? createPublicRpcClient)(
+      chainId,
+      spotClientLimits(needPool),
+    );
   const source = `${client.source ?? "Public RPC"} · Uniswap V3 spot`;
   const quotes: PriceQuote[] = [];
   let calls = 0;

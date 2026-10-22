@@ -106,6 +106,9 @@ async function boundedJson(response: Response, max: number): Promise<unknown> {
     );
   }
 }
+/** Spacing between public RPC calls unless a caller asks for more. */
+export const DEFAULT_RPC_INTERVAL_MS = 1000;
+
 /** Fixed public endpoints and read-only methods. No environment credentials, signing or automatic retries. */
 export function createPublicRpcClient(
   chainId: number,
@@ -117,7 +120,7 @@ export function createPublicRpcClient(
       "RPC_UNSUPPORTED_CHAIN",
       "Public RPC chain is not supported. Use Ethereum, Base or Arbitrum One.",
     );
-  const interval = options.intervalMs ?? 1000,
+  const interval = options.intervalMs ?? DEFAULT_RPC_INTERVAL_MS,
     maxCalls = options.maxCalls ?? 32,
     maxBytes = options.maxResponseBytes ?? 2_000_000,
     duration = options.maxDurationMs ?? 45_000;

@@ -125,7 +125,8 @@ function swapLeg(
   return transfer;
 }
 
-// Root history: 14 Ethereum and 12 Base transfers. Four second-hop transfers are revealed on expansion.
+// Root history: 16 Ethereum and 14 Base transfers, including two synthetic swap pairs.
+// Four second-hop transfers are revealed on expansion.
 const FIXTURE: Transfer[] = [
   evidence(1, USDC, NORTHSTAR, DEMO_ROOT, "25000000000", 2),
   evidence(2, ETH, NORTHSTAR, DEMO_ROOT, "2500000000000000000", 3),

@@ -137,6 +137,7 @@ const allowlist = [
   "tests/historical-price.test.ts",
   "tests/protocols.test.ts",
   "tests/acquisition-workflow.test.ts",
+  "tests/source-text.test.ts",
 ].sort();
 
 function options(args) {

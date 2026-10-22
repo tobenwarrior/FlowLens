@@ -344,7 +344,7 @@
           "icon_url": null,
           "name": "Synthetic Dollar",
           "reputation": "ok",
-          "symbol": "SYN‮USD",
+          "symbol": "SYN\u202eUSD",
           "total_supply": null,
           "type": "ERC-20",
           "volume_24h": null
@@ -403,7 +403,7 @@
           "icon_url": null,
           "name": "Synthetic Dollar",
           "reputation": "ok",
-          "symbol": "SYN‮USD",
+          "symbol": "SYN\u202eUSD",
           "total_supply": null,
           "type": "ERC-20",
           "volume_24h": null

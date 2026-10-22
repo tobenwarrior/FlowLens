@@ -50,7 +50,7 @@ export const tokenSymbol = (value: unknown): string =>
     ? value
         .replace(
           // eslint-disable-next-line no-control-regex -- Untrusted symbols must not retain control or bidi characters.
-          /[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g,
+          /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,
           "",
         )
         .slice(0, 24)

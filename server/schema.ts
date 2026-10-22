@@ -779,18 +779,28 @@ export const operationSchema = {
   version: 1,
   operations: [
     "status",
+    "schema",
+    "list",
     "create",
     "inspect",
     "expand",
     "evidence",
     "graph",
     "export",
+    "import",
     "replay",
     "acquire",
     "annotate",
     "visibility",
     "wallet",
+    "prices",
+    "prices_at_blocks",
+    "label_put",
+    "label_search",
+    "label_forget",
   ],
+  operationsScope:
+    "Operations of the shared agent boundary, each offered as an MCP tool. Not every operation has an HTTP route or CLI command, and contracts describes only some of those that do.",
   limits: {
     chains: [1, 8453, 42161],
     demoChains: [1, 8453],
@@ -861,6 +871,18 @@ export const operationSchema = {
       bodySchema: contractRef("ReplayRequest"),
       description:
         "Replay supplied protocol evidence. Optional caseId attaches it locally; indexed history is unchanged. Per-case route POST /api/investigations/{id}/replay also supported.",
+    },
+    prices: {
+      method: "POST",
+      path: "/api/prices",
+      description:
+        "Spot USD quotes, each from one named Uniswap V3 pool over the public RPC; no key. Body: chainId, assets (at most 50) and optional maxAssets (1-10). A quote is not a market rate, and applying it to an older transfer values that transfer at today's price.",
+    },
+    prices_at_blocks: {
+      method: "POST",
+      path: "/api/prices-at-blocks",
+      description:
+        "USD at each transfer's own block from the pool's last swap at or before it, through Etherscan logs and the server's ETHERSCAN_API_KEY. Body: chainId, transfers (at most 20000) and optional maxLookups (1-40). Unpriced pairs keep the spot rate and are reported.",
     },
     status: {
       method: "GET",

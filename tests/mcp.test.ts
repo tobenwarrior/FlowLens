@@ -189,7 +189,11 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
     const contract = successful<Record<string, unknown>>(
       await client.callTool({ name: "flowlens_schema", arguments: {} }),
     );
-    assert.ok(contract.operations);
+    // The shared contract names every operation the server offers as a tool.
+    assert.deepEqual(
+      [...(contract.operations as string[])].sort(),
+      list.tools.map((tool) => tool.name.slice("flowlens_".length)).sort(),
+    );
     assert.equal(stderr(), "");
   });
 });

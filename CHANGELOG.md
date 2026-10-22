@@ -37,7 +37,7 @@ The destination and fresh source-archive install passed 224/224 tests, lint, typ
 
 ### Release limitations
 
-License/copyright ownership and data-use rights remain owner decisions. The source archive contains no private case exports, private/temporary QA artifacts, credentials or installed dependencies; the two reviewed synthetic documentation screenshots are included. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
+FlowLens is licensed AGPL-3.0-only, copyright tobenwarrior; data-use rights remain owner decisions. The source archive contains no private case exports, private/temporary QA artifacts, credentials or installed dependencies; the two reviewed synthetic documentation screenshots are included. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
 
 ## Wallet flows and local attribution
 

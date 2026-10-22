@@ -2,7 +2,7 @@
 
 This file records the installed runtime dependency notices for FlowLens's declared production dependencies and their required transitive dependencies. The sanitized source archive excludes `node_modules`, `dist`, downloaded browsers, and other generated dependencies. These copied license texts are provided as a courtesy and as a starting point for downstream build distribution; they are not a complete legal audit or a declaration that every possible distribution is covered.
 
-No license for FlowLens itself has been selected. See [LICENSE-DECISION.md](LICENSE-DECISION.md) and [license options](docs/license-options.md). Dependency licenses do not grant rights to provider responses, imported investigation data, trademarks, or other third-party content. Review those rights separately before redistribution.
+FlowLens itself is licensed under [AGPL-3.0-only](LICENSE); the [license decision](docs/license-options.md) records why. Dependency licenses do not grant rights to provider responses, imported investigation data, trademarks, or other third-party content. Review those rights separately before redistribution.
 
 ## Installed runtime versions
 

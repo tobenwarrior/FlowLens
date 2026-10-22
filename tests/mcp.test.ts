@@ -56,6 +56,7 @@ async function withClient(
     env: {
       PATH: process.env.PATH ?? "",
       FLOWLENS_DATA_DIR: directory,
+      FLOWLENS_LABEL_FILE: join(directory, ".labels.json"),
       ETHERSCAN_API_KEY: "",
       FLOWLENS_BLOCKSCOUT: "off",
     },
@@ -441,6 +442,7 @@ test("MCP process restart resumes the durable cursor without losing or duplicati
       env: {
         PATH: process.env.PATH ?? "",
         FLOWLENS_DATA_DIR: directory,
+        FLOWLENS_LABEL_FILE: join(directory, ".labels.json"),
         ETHERSCAN_API_KEY: "",
         FLOWLENS_BLOCKSCOUT: "off",
       },

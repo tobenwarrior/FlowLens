@@ -234,6 +234,7 @@ test("official MCP client discovers and uses typed local annotation and visibili
     env: {
       PATH: process.env.PATH ?? "",
       FLOWLENS_DATA_DIR: dir,
+      FLOWLENS_LABEL_FILE: join(dir, ".labels.json"),
       ETHERSCAN_API_KEY: "",
       FLOWLENS_BLOCKSCOUT: "off",
     },

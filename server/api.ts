@@ -103,6 +103,8 @@ function send(
 }
 export interface ApiOptions {
   dataDir: string;
+  /** Remembered entity labels; defaults to FLOWLENS_LABEL_FILE or .local/labels.json. */
+  labelFile?: string;
   distDir?: string;
   providers?: Providers;
   acquirer?: Acquirer;
@@ -113,6 +115,7 @@ export function createApiServer(options: ApiOptions) {
   const providers = options.providers ?? providersFromEnvironment();
   const agentService = createAgentService({
     dataDir: options.dataDir,
+    labelFile: options.labelFile,
     providers,
     acquirer: options.acquirer,
   });

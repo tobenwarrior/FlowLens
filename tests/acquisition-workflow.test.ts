@@ -98,6 +98,7 @@ test("specific acquisition failures preserve their machine code and retryability
   workspace(async (dataDir) => {
     const service = createAgentService({
       dataDir,
+      labelFile: join(dataDir, ".labels.json"),
       providers,
       acquirer: async () => {
         throw new AcquisitionError(
@@ -170,6 +171,7 @@ test("agent acquisition preserves durable evidence through retries and preflight
     const f = contracts(),
       service = createAgentService({
         dataDir,
+        labelFile: join(dataDir, ".labels.json"),
         providers,
         acquirer: f.acquirer,
       });
@@ -205,6 +207,7 @@ test("agent acquisition preserves durable evidence through retries and preflight
     assert.equal(failed.acquisition.capability.status, "error");
     const restarted = createAgentService({
       dataDir,
+      labelFile: join(dataDir, ".labels.json"),
       providers,
       acquirer: f.acquirer,
     });
@@ -221,6 +224,7 @@ test("demo, missing cases, unsupported options and excessive budgets fail before
     const f = contracts(),
       service = createAgentService({
         dataDir,
+        labelFile: join(dataDir, ".labels.json"),
         providers,
         acquirer: f.acquirer,
       });
@@ -250,6 +254,7 @@ test("acquisition merges against the latest case and retains edits made during a
       });
     const service = createAgentService({
       dataDir,
+      labelFile: join(dataDir, ".labels.json"),
       providers,
       acquirer: async (input) => {
         begin();
@@ -281,6 +286,7 @@ test("official MCP client acquires and exports private protocol evidence without
     const f = contracts(),
       service = createAgentService({
         dataDir,
+        labelFile: join(dataDir, ".labels.json"),
         providers,
         acquirer: f.acquirer,
       });
@@ -335,7 +341,12 @@ test("official MCP client acquires and exports private protocol evidence without
 test("local HTTP acquisition persists the same model and rejects demo network queries", () =>
   workspace(async (dataDir) => {
     const f = contracts(),
-      server = createApiServer({ dataDir, providers, acquirer: f.acquirer });
+      server = createApiServer({
+        dataDir,
+        labelFile: join(dataDir, ".labels.json"),
+        providers,
+        acquirer: f.acquirer,
+      });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

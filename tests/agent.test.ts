@@ -22,6 +22,7 @@ async function withService(
     await run(
       createAgentService({
         dataDir: directory,
+        labelFile: join(directory, ".labels.json"),
         providers: {
           demo: demoProvider,
           live: new Map(),

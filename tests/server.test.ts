@@ -241,6 +241,7 @@ async function withApi(fn: (base: string, dir: string) => Promise<void>) {
   const dir = await mkdtemp(join(tmpdir(), "flowlens-test-"));
   const server = createApiServer({
     dataDir: dir,
+    labelFile: join(dir, ".labels.json"),
     providers: { demo: demoProvider, live: new Map() },
   });
   server.listen(0, "127.0.0.1");

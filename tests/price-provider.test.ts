@@ -166,6 +166,27 @@ test("an asset with no pool is reported as unpriced rather than guessed", async 
   assert.equal(result.calls, 3);
 });
 
+test("a failed pool read is reported once, as a failure rather than a missing pool", async () => {
+  const client = stubClient((method, params) => {
+    const call = (params[0] ?? {}) as { to?: string };
+    if ((call.to ?? "").toLowerCase().endsWith("31f984"))
+      return worstCase(method, params);
+    throw new Error("RPC call budget exhausted");
+  });
+  const result = await fetchOnChainPrices(1, [LOW_TOKEN], { client });
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /Pool read failed .*budget exhausted/);
+});
+
+test("pools that exist but hold no price are not reported as missing", async () => {
+  const client = stubClient(poolResponses(0n));
+  const result = await fetchOnChainPrices(1, [LOW_TOKEN], { client });
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /hold no usable price/);
+});
+
 test("an unsupported chain returns a warning and makes no calls", async () => {
   const result = await fetchOnChainPrices(999, [
     { ...USDC_ASSET, chainId: 999 },

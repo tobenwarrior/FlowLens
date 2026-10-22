@@ -56,6 +56,15 @@ function timeForCalls(calls: number): number {
 }
 
 /**
+ * Call and time ceilings for finding the pools of `tokens` distinct tokens: one factory
+ * read per fee tier each, up to the public client's 64-call limit.
+ */
+export function poolSearchLimits(tokens: number): PublicRpcOptions {
+  const maxCalls = Math.min(64, Math.max(1, tokens * FEE_TIERS.length));
+  return { maxCalls, maxDurationMs: timeForCalls(maxCalls) };
+}
+
+/**
  * Call and time ceilings for a spot lookup over `assets` assets that need a pool. The
  * public RPC spaces calls a second apart, so the time allowed grows with the calls.
  */
@@ -312,6 +321,10 @@ export async function fetchOnChainPrices(
     }
 
     let priced = false;
+    // A failed call is reported where it happens; pools that exist but hold no price
+    // are not the same as no pool at all.
+    let failed = false;
+    let empty = false;
     for (const fee of FEE_TIERS) {
       let pool: string;
       try {
@@ -340,6 +353,7 @@ export async function fetchOnChainPrices(
             error instanceof Error ? error.message : "unknown RPC error"
           }`,
         );
+        failed = true;
         break;
       }
       if (!pool || pool.toLowerCase() === ZERO) continue;
@@ -370,7 +384,10 @@ export async function fetchOnChainPrices(
           route.usd,
           route.usdDecimals,
         );
-        if (!usd) continue;
+        if (!usd) {
+          empty = true;
+          continue;
+        }
         quotes.push({
           key,
           usd,
@@ -386,13 +403,16 @@ export async function fetchOnChainPrices(
             error instanceof Error ? error.message : "unknown RPC error"
           }`,
         );
+        failed = true;
         break;
       }
     }
 
-    if (!priced && !route.pegged[token])
+    if (!priced && !failed)
       warnings.push(
-        `No Uniswap V3 ${route.usdSymbol} pool found for ${asset.symbol} on chain ${chainId}; it stays unpriced.`,
+        empty
+          ? `Uniswap V3 ${route.usdSymbol} pools for ${asset.symbol} on chain ${chainId} hold no usable price; it stays unpriced.`
+          : `No Uniswap V3 ${route.usdSymbol} pool found for ${asset.symbol} on chain ${chainId}; it stays unpriced.`,
       );
   }
 

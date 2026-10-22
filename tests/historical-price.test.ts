@@ -13,6 +13,7 @@ import {
 import { transferId } from "../src/domain/engine.ts";
 import { usdValue, priceBook } from "../src/domain/pricing.ts";
 import type { Address, Asset, Transfer } from "../src/domain/types.ts";
+import type { PublicRpcOptions } from "../server/rpc.ts";
 
 const ROOT = `0x${"1".repeat(40)}` as Address;
 const ALICE = `0x${"2".repeat(40)}` as Address;
@@ -240,6 +241,157 @@ test("the lookup is bounded and reports what it left on the spot price", async (
   });
   assert.equal(result.calls, 2);
   assert.match(result.warnings[0], /Priced 2 of 6/);
+});
+
+test("a failed pool lookup is reported as a failure, not as a token without a pool", async () => {
+  const result = await fetchHistoricalPrices(1, [transfer(21_000_000)], {
+    key: "test-key",
+    fetch: (() => {
+      throw new Error("no log query expected");
+    }) as unknown as typeof fetch,
+    intervalMs: 0,
+    resolvePool: async () => {
+      throw new Error("RPC call budget exhausted");
+    },
+  });
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.calls, 0);
+  assert.match(result.warnings[0], /Pool lookup failed .*budget exhausted/);
+  assert.doesNotMatch(result.warnings[0], /No known/);
+});
+
+test("a failed pool lookup is reported once for its token, however many blocks it covers", async () => {
+  const result = await fetchHistoricalPrices(
+    1,
+    [transfer(B), transfer(B + 1), transfer(B + 2)],
+    {
+      key: "test-key",
+      fetch: (() => {
+        throw new Error("no log query expected");
+      }) as unknown as typeof fetch,
+      intervalMs: 0,
+      resolvePool: async () => {
+        throw new Error("RPC call budget exhausted");
+      },
+    },
+  );
+  assert.deepEqual(result.quotes, []);
+  assert.equal(result.warnings.length, 1);
+  assert.match(
+    result.warnings[0],
+    /its 3 asset\/block pairs keep the spot price/,
+  );
+});
+
+test("the budget warning counts only pairs it cut off, not ones already reported", async () => {
+  // Fourteen quiet ETH pairs spend the query budget; a last token without a pool was
+  // already reported on its own.
+  const token: Asset = {
+    chainId: 1,
+    symbol: "TKN",
+    decimals: 18,
+    contract: `0x${"7".repeat(40)}` as Address,
+  };
+  const { fetch: fetcher } = poolHistory([]);
+  const result = await fetchHistoricalPrices(
+    1,
+    [
+      ...Array.from({ length: 14 }, (_, index) => transfer(B + index * 1_000)),
+      transfer(B + 20_000, token),
+    ],
+    {
+      key: "test-key",
+      fetch: fetcher,
+      intervalMs: 0,
+      maxLookups: 15,
+      resolvePool: async (address) =>
+        address === `0x${"7".repeat(40)}` ? null : POOL,
+    },
+  );
+  assert.equal(result.calls, MAX_LOG_QUERIES_PER_CALL);
+  assert.match(result.warnings[0], /No known USDC pool for TKN/);
+  assert.match(
+    result.warnings.at(-1)!,
+    /Stopped after 80 log queries; 1 asset\/block pair keeps the spot price/,
+  );
+});
+
+test("the pool search client gets ceilings sized to the distinct tokens", async () => {
+  const { poolSearchLimits } = await import("../server/price-provider.ts");
+  let limits: PublicRpcOptions | undefined;
+  const token: Asset = {
+    chainId: 1,
+    symbol: "TKN",
+    decimals: 18,
+    contract: `0x${"7".repeat(40)}` as Address,
+  };
+  const { fetch: fetcher } = poolHistory([
+    { block: B - 10, sqrtPriceX96: ETH_AT_2000 },
+  ]);
+  const result = await fetchHistoricalPrices(
+    1,
+    [transfer(B), transfer(B + 1), transfer(B + 2, token)],
+    {
+      key: "test-key",
+      fetch: fetcher,
+      intervalMs: 0,
+      createClient: (_chainId, given) => {
+        limits = given;
+        return {
+          chainId: 1,
+          source: "Stub RPC",
+          async request() {
+            // Every factory lookup finds the same pool.
+            return `0x${POOL.slice(2).padStart(64, "0")}`;
+          },
+        };
+      },
+    },
+  );
+  assert.deepEqual(limits, poolSearchLimits(2));
+  assert.equal(result.quotes.length, 3);
+});
+
+test("every pool is found before the first log query", async () => {
+  const events: string[] = [];
+  const { fetch: history } = poolHistory([
+    { block: B - 10, sqrtPriceX96: ETH_AT_2000 },
+  ]);
+  const fetcher = (async (input: URL | string) => {
+    events.push("logs");
+    return history(input);
+  }) as unknown as typeof fetch;
+  const token: Asset = {
+    chainId: 1,
+    symbol: "TKN",
+    decimals: 18,
+    contract: `0x${"7".repeat(40)}` as Address,
+  };
+  const result = await fetchHistoricalPrices(
+    1,
+    [transfer(B), transfer(B + 1), transfer(B + 2, token)],
+    {
+      key: "test-key",
+      fetch: fetcher,
+      intervalMs: 0,
+      resolvePool: async (address) => {
+        events.push(`pool ${address.slice(0, 6)}`);
+        return POOL;
+      },
+    },
+  );
+  assert.equal(result.quotes.length, 3);
+  assert.deepEqual(events.slice(0, 2), ["pool 0xc02a", "pool 0x7777"]);
+  assert.ok(events.slice(2).every((event) => event === "logs"));
+});
+
+test("pool search ceilings grow with the tokens and stay within the public client", async () => {
+  const { poolSearchLimits } = await import("../server/price-provider.ts");
+  const { createPublicRpcClient } = await import("../server/rpc.ts");
+  assert.equal(poolSearchLimits(4).maxCalls, 12);
+  assert.equal(poolSearchLimits(40).maxCalls, 64);
+  assert.ok((poolSearchLimits(4).maxDurationMs ?? 0) >= 12 * 1000);
+  assert.doesNotThrow(() => createPublicRpcClient(1, poolSearchLimits(40)));
 });
 
 test("a provider failure degrades to the spot price instead of throwing", async () => {

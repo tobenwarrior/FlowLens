@@ -5,10 +5,12 @@ import type { Address, Asset, Transfer } from "../src/domain/types.ts";
 import {
   findPool,
   poolRoute,
+  poolSearchLimits,
   priceFromSqrtPriceX96,
   routedToken,
 } from "./price-provider.ts";
 import { createPublicRpcClient } from "./rpc.ts";
+import type { PublicRpcOptions, RpcClient } from "./rpc.ts";
 
 /**
  * Prices read at the block a transfer actually settled on.
@@ -182,6 +184,8 @@ export interface HistoricalOptions {
    * public RPC, which serves it; only the historical *logs* need Etherscan.
    */
   resolvePool?: (token: Address) => Promise<Address | null>;
+  /** Builds that lookup's client when no resolvePool is given; defaults to the public RPC. */
+  createClient?: (chainId: number, limits: PublicRpcOptions) => RpcClient;
 }
 
 /**
@@ -252,12 +256,22 @@ export async function fetchHistoricalPrices(
   let calls = 0;
   let lastCall = 0;
 
-  // One factory lookup per token, shared across every block that token appears in.
-  const poolCache = new Map<string, Address | null>();
+  // One factory lookup per token, shared across every block that token appears in. A
+  // failed lookup is kept apart from a token that has no pool.
+  const poolCache = new Map<
+    string,
+    { pool: Address | null } | { failed: string }
+  >();
   const rpc =
     options.resolvePool ??
     (() => {
-      const client = createPublicRpcClient(chainId, { maxCalls: 48 });
+      const tokens = new Set(
+        selected.map(([, { asset }]) => routedToken(route, asset)),
+      );
+      const client = (options.createClient ?? createPublicRpcClient)(
+        chainId,
+        poolSearchLimits(tokens.size),
+      );
       return (token: Address) =>
         findPool(client, route, token).then((found) => found?.pool ?? null);
     })();
@@ -352,23 +366,60 @@ export async function fetchHistoricalPrices(
     }
   };
 
-  for (const [index, [id, { asset, block }]] of selected.entries()) {
+  // Find every token's pool before any log query, so the client's time ceiling covers
+  // back-to-back factory reads rather than the Etherscan searches between them.
+  const byToken = new Map<string, { symbol: string; pairs: number }>();
+  for (const [, { asset }] of selected) {
     const token = routedToken(route, asset);
-    if (!poolCache.has(token)) {
-      poolCache.set(token, await rpc(token).catch(() => null));
-    }
-    const pool = poolCache.get(token) ?? null;
-    if (!pool) {
-      warnings.push(
-        `No known ${route.usdSymbol} pool for ${asset.symbol} on chain ${chainId}; it keeps the spot price.`,
-      );
+    const seen = byToken.get(token);
+    if (seen) {
+      seen.pairs += 1;
       continue;
     }
+    byToken.set(token, { symbol: asset.symbol, pairs: 1 });
+    poolCache.set(
+      token,
+      await rpc(token).then(
+        (pool) => ({ pool }),
+        (error: unknown) => ({
+          failed: error instanceof Error ? error.message : "unknown error",
+        }),
+      ),
+    );
+  }
+  // One warning per token, however many of its blocks were asked for.
+  for (const [token, { symbol, pairs }] of byToken) {
+    const lookup = poolCache.get(token)!;
+    const left =
+      pairs === 1
+        ? "it keeps the spot price"
+        : `its ${pairs} asset/block pairs keep the spot price`;
+    if ("failed" in lookup)
+      warnings.push(
+        `Pool lookup failed for ${symbol} on chain ${chainId}: ${lookup.failed}; ${left}.`,
+      );
+    else if (!lookup.pool)
+      warnings.push(
+        `No known ${route.usdSymbol} pool for ${symbol} on chain ${chainId}; ${left}.`,
+      );
+  }
+
+  for (const [index, [id, { asset, block }]] of selected.entries()) {
+    const token = routedToken(route, asset);
+    const lookup = poolCache.get(token)!;
+    // Already reported above, once for the token.
+    if (!("pool" in lookup) || !lookup.pool) continue;
+    const pool = lookup.pool;
 
     const search = await lastSwapBefore(pool, block);
     if (search.kind === "spent") {
+      // Pairs whose token has no pool were already reported with that token.
+      const left = selected.slice(index).filter(([, { asset }]) => {
+        const found = poolCache.get(routedToken(route, asset))!;
+        return "pool" in found && found.pool;
+      }).length;
       warnings.push(
-        `Stopped after ${MAX_LOG_QUERIES_PER_CALL} log queries; ${selected.length - index} asset/block pairs keep the spot price.`,
+        `Stopped after ${MAX_LOG_QUERIES_PER_CALL} log queries; ${left} asset/block ${left === 1 ? "pair keeps" : "pairs keep"} the spot price.`,
       );
       break;
     }

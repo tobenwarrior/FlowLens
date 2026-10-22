@@ -87,7 +87,7 @@ const tools = [
   {
     operation: "create",
     description:
-      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history requires a permitted server key; explicit evidence-only mode needs no key and does not enumerate wallet history.",
+      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Arbitrum needs the key. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
     readOnly: false,
     input: z
       .object({
@@ -108,7 +108,7 @@ const tools = [
   {
     operation: "expand",
     description:
-      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 80 graph nodes; no recursive fanout. Live accepts at most 10 rows per stream. Coverage errors may be returned in a successful result with evidence preserved.",
+      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 80 graph nodes; no recursive fanout. Live accepts at most 10 rows per stream and uses the same provider routing as create, so without ETHERSCAN_API_KEY an Ethereum expansion goes to keyless Blockscout, which receives the expanded wallet. Coverage errors may be returned in a successful result with evidence preserved.",
     readOnly: false,
     input: z
       .object({

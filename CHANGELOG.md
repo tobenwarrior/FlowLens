@@ -43,4 +43,4 @@ License/copyright ownership and data-use rights remain owner decisions. The sour
 
 - Added chain/address-scoped wallet counterparties, exact per-asset gross/net totals, selected transfer pages and graph visibility controls. Hiding paths preserves evidence and accounting.
 - Added local label editing and shared CLI/API/MCP annotation and visibility operations. Claims retain source, observation time, confidence and evidence notes; ownership is not inferred.
-- Added revision checks for agent wallet paging and local mutation conflicts. Live indexed history still requires an existing permitted Etherscan key and remains unverified on this instance.
+- Added revision checks for agent wallet paging and local mutation conflicts. Etherscan indexed history remains unverified on this instance.

@@ -106,6 +106,16 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
         .map((op) => `flowlens_${op}`)
         .sort(),
     );
+    // A keyless live trace sends the wallet to a third party, so agents must be told
+    // before they create one.
+    const create = list.tools.find((tool) => tool.name === "flowlens_create")!;
+    assert.match(create.description ?? "", /keyless Blockscout/);
+    assert.match(create.description ?? "", /receives the traced wallet/);
+    assert.match(create.description ?? "", /FLOWLENS_BLOCKSCOUT=off/);
+    const expanding = list.tools.find(
+      (tool) => tool.name === "flowlens_expand",
+    )!;
+    assert.match(expanding.description ?? "", /keyless Blockscout/);
     const expand = list.tools.find((tool) => tool.name === "flowlens_expand")!;
     const schema = expand.inputSchema as {
       properties: Record<string, { maximum?: number }>;

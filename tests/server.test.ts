@@ -653,6 +653,7 @@ test("API and CLI expose shared JSON Schema request and evidence contracts", asy
     );
     const defs = schema.jsonSchema.$defs;
     assert.deepEqual(defs.CreateRequest.required, ["root", "mode"]);
+    assert.match(defs.CreateRequest.description, /receives the traced wallet/);
     assert.equal(defs.ExpandRequest.properties.maxPages.maximum, 3);
     assert.deepEqual(
       defs.ExpandLiveRequest.properties.chainId.enum,

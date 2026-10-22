@@ -124,7 +124,7 @@ export const jsonSchema = {
         },
       ],
       description:
-        "Demo uses only the synthetic 0x1111…1111 root. Live indexed mode requires an existing server-side permitted key and initially fetches one Ethereum page. Explicit live evidence-only mode creates an empty case with unsupported history coverage and no provider query. No key field is consumed or retained.",
+        "Demo uses only the synthetic 0x1111…1111 root. Live indexed mode initially fetches one Ethereum page: from Etherscan when the server has ETHERSCAN_API_KEY, otherwise from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet. FLOWLENS_BLOCKSCOUT=off turns that off. Explicit live evidence-only mode creates an empty case with unsupported history coverage and no provider query. No key field is consumed or retained.",
     },
     AnnotateRequest: {
       ...shape(

@@ -387,7 +387,7 @@ try {
   );
   await live.getByLabel("Close dialog").click();
   let revision = fixture.updatedAt;
-  let conflict = true;
+  let refusal = "conflict";
   let savedBody;
   await live.route(`**/api/investigations/${fixture.id}`, (route) => {
     if (route.request().method() === "GET") {
@@ -395,13 +395,23 @@ try {
       return route.fulfill({ json: { ...fixture, updatedAt: revision } });
     }
     savedBody = route.request().postDataJSON();
-    if (conflict)
+    if (refusal === "conflict")
       return route.fulfill({
         status: 409,
         json: {
           error: {
             code: "CASE_CONFLICT",
             message: "Investigation changed. Refresh the latest case.",
+          },
+        },
+      });
+    if (refusal === "invalid")
+      return route.fulfill({
+        status: 400,
+        json: {
+          error: {
+            code: "INVALID_ARGUMENT",
+            message: "Investigation failed validation.",
           },
         },
       });
@@ -412,24 +422,50 @@ try {
       },
     });
   });
-  await live.getByRole("button", { name: "Save case", exact: true }).click();
+  const saveCase = live.getByRole("button", { name: "Save case", exact: true });
+  const reloadAndSave = live.getByRole("button", {
+    name: "Reload latest & save",
+    exact: true,
+  });
+  await saveCase.click();
   await expect(live.getByRole("alert")).toContainText("Investigation changed");
   // A refused save offers to take the newer case and carry local notes and pins onto
   // it, while reloading without saving stays available as the conservative answer.
-  await expect(
-    live.getByRole("button", { name: "Reload latest & save", exact: true }),
-  ).toBeVisible();
+  await expect(reloadAndSave).toBeVisible();
+  // The offer belongs to that refusal: once dismissed, a later refusal does not bring it
+  // back, even an import of the same case refused with the same conflict message.
+  await live.getByRole("button", { name: "Dismiss error" }).click();
+  await live.getByLabel("Import investigation JSON").setInputFiles({
+    name: "stale-case.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(fixture)),
+  });
+  await expect(live.getByRole("alert")).toContainText("Investigation changed");
+  await expect(reloadAndSave).toHaveCount(0);
+  await live.getByRole("button", { name: "Dismiss error" }).click();
+  refusal = "invalid";
+  await saveCase.click();
+  await expect(live.getByRole("alert")).toContainText("failed validation");
+  await expect(reloadAndSave).toHaveCount(0);
+  refusal = "conflict";
+  await saveCase.click();
+  await expect(live.getByRole("alert")).toContainText("Investigation changed");
+  await expect(reloadAndSave).toBeVisible();
   await live.getByRole("button", { name: "Refresh case", exact: true }).click();
   await expect(live.getByRole("alert")).toHaveCount(0);
-  conflict = false;
-  await live.getByRole("button", { name: "Save case", exact: true }).click();
+  // A save that goes through retires an earlier refusal and its offer.
+  await saveCase.click();
+  await expect(reloadAndSave).toBeVisible();
+  refusal = null;
+  await saveCase.click();
   await expect(
     live.getByRole("button", { name: "Saved", exact: true }),
   ).toBeVisible();
+  await expect(live.getByRole("alert")).toHaveCount(0);
   expect(savedBody.updatedAt).toBe(revision);
   expect(savedBody.notes).toBe("Retain unsaved local notes");
   results.push(
-    "Mocked live UI contract: 10-row cursors, Arbitrum expansion, unsaved notes, stale-save recovery and revision-safe saves; no live provider requests",
+    "Mocked live UI contract: 10-row cursors, Arbitrum expansion, unsaved notes, stale-save recovery offered only for its own refusal, and revision-safe saves; no live provider requests",
   );
   await liveCtx.close();
   expect(errors).toEqual([]);

@@ -141,7 +141,15 @@ export default function App() {
   );
   const [protocolOpen, setProtocolOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  // The error on screen. A save the shared store refused as a conflict also names its
+  // case, which arms the offer to reload the newer case and save over it. Any other error
+  // replaces the whole value, so the offer lasts exactly as long as that refusal.
+  const [banner, setBanner] = useState<{
+    message: string;
+    conflictCaseId?: string;
+  }>({ message: "" });
+  const error = banner.message;
+  const setError = (message: string) => setBanner({ message });
   const [toast, setToast] = useState("");
   const [modal, setModal] = useState<WorkspaceModal>(null);
   const [selectedNode, setSelectedNode] = useState<WalletNode | null>(null);
@@ -160,9 +168,6 @@ export default function App() {
   // FlowLens does not make those in the background.
   const [liveBook, setLiveBook] = useState<PriceBook>(EMPTY_PRICE_BOOK);
   const [pricing, setPricing] = useState(false);
-  // Set when the shared store refused a save because it moved on. Cleared as soon as
-  // the case is replaced or saved, so the offer never outlives the conflict.
-  const [conflict, setConflict] = useState(false);
   // The shared case store behind the CLI, API and MCP tools. Listed on demand so the
   // dialog reflects whatever an agent has created since the page loaded.
   const [agentCases, setAgentCases] = useState<AgentCaseSummary[]>([]);
@@ -554,6 +559,9 @@ export default function App() {
   }
   async function save() {
     if (!investigation) return;
+    // A new save answers whatever the last error was, the offer included.
+    setError("");
+    let conflictCaseId: string | undefined;
     try {
       let updated = investigation;
       let shared = true;
@@ -569,7 +577,7 @@ export default function App() {
         // A refusal is the store's answer and must not be written over; not reaching
         // the API at all is different, and should still leave a browser copy.
         if (failure instanceof ApiError) {
-          if (failure.code === "CASE_CONFLICT") setConflict(true);
+          if (failure.code === "CASE_CONFLICT") conflictCaseId = updated.id;
           throw failure;
         }
         shared = false;
@@ -584,18 +592,19 @@ export default function App() {
       savedSnapshot.current = updated;
       setInvestigation(updated);
       setSavedAt(true);
-      setConflict(false);
       setToast(
         shared
           ? "Saved to this browser and the agent workspace."
           : "Saved on this browser. The agent workspace was not reachable.",
       );
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Could not save. Export JSON to preserve evidence.",
-      );
+      setBanner({
+        message:
+          e instanceof Error
+            ? e.message
+            : "Could not save. Export JSON to preserve evidence.",
+        conflictCaseId,
+      });
     }
   }
   /**
@@ -627,7 +636,6 @@ export default function App() {
       savedSnapshot.current = stored;
       setInvestigation(stored);
       setSavedAt(true);
-      setConflict(false);
       setDrawer(false);
       setSelectedNode(null);
       setSelectedTransfer(null);
@@ -635,11 +643,17 @@ export default function App() {
         "Saved onto the newer case. Your notes and pins were kept; evidence, labels and hidden selections came from the shared store.",
       );
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Could not reload the latest case. Export JSON to preserve evidence.",
-      );
+      // The store can move on again while this runs; offer again if it did.
+      setBanner({
+        message:
+          failure instanceof Error
+            ? failure.message
+            : "Could not reload the latest case. Export JSON to preserve evidence.",
+        conflictCaseId:
+          failure instanceof ApiError && failure.code === "CASE_CONFLICT"
+            ? caseId
+            : undefined,
+      });
     } finally {
       setBusy(false);
     }
@@ -909,7 +923,7 @@ export default function App() {
           <div className="error-banner" role="alert">
             <ShieldAlert size={17} />
             <span>{error}</span>
-            {conflict && (
+            {banner.conflictCaseId === investigation.id && (
               <button
                 className="button subtle"
                 disabled={busy}

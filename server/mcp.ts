@@ -644,9 +644,14 @@ export function createMcpServer(
         "label_forget",
       ].includes(tool.operation),
       idempotentHint: tool.readOnly,
-      openWorldHint:
-        !tool.readOnly &&
-        ["create", "expand", "acquire"].includes(tool.operation),
+      // Tools that may call an external provider: live history, acquisition and prices.
+      openWorldHint: [
+        "create",
+        "expand",
+        "acquire",
+        "prices",
+        "prices_at_blocks",
+      ].includes(tool.operation),
     },
   }));
   server.setRequestHandler("tools/list", async () => ({ tools: definitions }));

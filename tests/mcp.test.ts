@@ -169,6 +169,19 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
       "#/$defs/Transfer",
     );
     assert.equal(expand.annotations?.destructiveHint, false);
+    // Hosts are told which tools can reach an external provider, read-only or not.
+    for (const tool of list.tools)
+      assert.equal(
+        tool.annotations?.openWorldHint,
+        [
+          "flowlens_create",
+          "flowlens_expand",
+          "flowlens_acquire",
+          "flowlens_prices",
+          "flowlens_prices_at_blocks",
+        ].includes(tool.name),
+        tool.name,
+      );
     for (const name of ["flowlens_label_put", "flowlens_label_forget"])
       assert.equal(
         list.tools.find((tool) => tool.name === name)?.annotations

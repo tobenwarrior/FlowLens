@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, readdir } from "node:fs/promises";
+import { mkdtemp, rm, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
@@ -107,6 +107,38 @@ test("official MCP client discovers typed tools, bounded expansion and safe anno
         .map((op) => `flowlens_${op}`)
         .sort(),
     );
+    // The docs count and document every advertised tool, so they cannot drift from what
+    // the server actually offers.
+    const count = list.tools.length;
+    const docs = [
+      "README.md",
+      ...(await readdir(new URL("../docs", import.meta.url)))
+        .filter((name) => name.endsWith(".md"))
+        .map((name) => `docs/${name}`),
+    ];
+    for (const path of docs) {
+      const text = await readFile(
+        new URL(`../${path}`, import.meta.url),
+        "utf8",
+      );
+      for (const match of text.matchAll(
+        /\b(\d+) (?:stdio )?(?:MCP )?tool(?:s| contracts)\b/g,
+      ))
+        assert.equal(Number(match[1]), count, `${path}: "${match[0]}"`);
+    }
+    const guide = await readFile(
+      new URL("../docs/mcp.md", import.meta.url),
+      "utf8",
+    );
+    const readme = await readFile(
+      new URL("../README.md", import.meta.url),
+      "utf8",
+    );
+    assert.match(guide, new RegExp(`advertises ${count} tools`));
+    assert.match(readme, new RegExp(`all ${count} tool contracts`));
+    assert.match(readme, new RegExp(`${count} stdio MCP tools`));
+    for (const tool of list.tools)
+      assert.match(guide, new RegExp(`^\\| \`${tool.name}\` `, "m"), tool.name);
     // A keyless live trace sends the wallet to a third party, so agents must be told
     // before they create one.
     const create = list.tools.find((tool) => tool.name === "flowlens_create")!;

@@ -37,7 +37,7 @@ Use `--transfer-ids JSON_ARRAY` for selected flows. HTTP uses `POST /api/investi
 
 ## Attach or edit a label
 
-Use `flowlens_annotate` with `caseId`, `chainId`, `address` and `label`. The node must already exist in the case. `label: null` removes that node's local attribution; unknown ownership stays unknown. No entity grouping or common ownership is inferred from a funding relationship.
+Use `flowlens_annotate` with `caseId`, `chainId`, `address` and `label`. The node must already exist in the case. `label: null` removes that node's local attribution and forgets it from the label store, so the store does not put it back on a later create or expand; a provider that supplies its own label for that wallet, such as the synthetic demo fixture, can still return it. Updating the store is best effort: if the label file is busy or cannot be written, the case change still stands and the stored label stays, so check with `flowlens_label_search` and use `flowlens_label_forget` if it matters. Unknown ownership stays unknown. No entity grouping or common ownership is inferred from a funding relationship.
 
 A new annotation must include the existing label fields (`text`, `source`, `kind`, `confidence`, `retrievedAt`) plus `claimType` and `observedAt`. `sourceUrl` is optional HTTPS without embedded credentials. `observedAt` describes when the evidence was observed; `retrievedAt` describes its local collection time. Both require an ISO timestamp with timezone.
 
@@ -70,7 +70,7 @@ node server/cli.ts annotate --file .local/demo-case.json --chain 1 \
   --label-file .local/synthetic-label.json
 ```
 
-CLI removal uses `--remove true` instead of `--label-file`. HTTP uses `POST /api/investigations/{id}/annotate` and the same chain/address/label fields. MCP arguments accept no filesystem paths.
+CLI removal uses `--remove true` instead of `--label-file`; the CLI edits the case file only and leaves the label store alone. HTTP uses `POST /api/investigations/{id}/annotate` and the same chain/address/label fields. MCP arguments accept no filesystem paths.
 
 An agent with permitted access can retain its own local Arkham observation with a truthful provider name, source URL, observation timestamp and uncertainty. That does not authorize scraping, API integration, publication or redistribution of proprietary labels. No Arkham API or label dataset is bundled. Private observations and label files belong outside Git.
 

@@ -10,7 +10,11 @@ import {
 } from "../src/domain/demo.ts";
 import type { Investigation, TraceProvider } from "../src/domain/types.ts";
 import { BLOCKSCOUT_CHAINS, createBlockscoutProvider } from "./blockscout.ts";
-import { createEtherscanProvider, ProviderError } from "./etherscan.ts";
+import {
+  createEtherscanProvider,
+  ETHERSCAN_CHAINS,
+  ProviderError,
+} from "./etherscan.ts";
 import { operationSchema } from "./schema.ts";
 
 export interface Providers {
@@ -29,9 +33,10 @@ export function providersFromEnvironment(): Providers {
     switchValue === "off" ? undefined : createBlockscoutProvider();
   const live = new Map<number, TraceProvider>();
   for (const chainId of operationSchema.limits.liveChains) {
-    // A configured key keeps Etherscan the default; keyless Blockscout serves only chains it is confirmed for.
+    // A configured key keeps Etherscan the default on its chains; keyless Blockscout serves only chains
+    // it is confirmed for, and is the only provider for Derive Chain (957).
     const provider =
-      etherscan ??
+      (ETHERSCAN_CHAINS.includes(chainId) ? etherscan : undefined) ??
       (BLOCKSCOUT_CHAINS.includes(chainId) ? blockscout : undefined);
     if (provider) live.set(chainId, provider);
   }
@@ -40,6 +45,11 @@ export function providersFromEnvironment(): Providers {
 function liveProvider(providers: Providers, chainId: number): TraceProvider {
   const provider = providers.live.get(chainId);
   if (provider) return provider;
+  if (!ETHERSCAN_CHAINS.includes(chainId))
+    throw new ProviderError(
+      "PROVIDER_DISABLED",
+      `Live history for chain ${chainId} comes only from keyless Blockscout, which FLOWLENS_BLOCKSCOUT=off turns off; an Etherscan key does not cover it.`,
+    );
   throw new ProviderError(
     "KEY_REQUIRED",
     providers.live.size
@@ -117,11 +127,14 @@ export async function expandCase(
     throw new Error("Expansion must be an object");
   const query = input as Record<string, unknown>;
   const address = normalizeAddress(query.address as string);
-  const chains = value.mode === "live" ? [1, 42161] : [1, 8453];
+  const chains =
+    value.mode === "live"
+      ? operationSchema.limits.liveChains
+      : operationSchema.limits.demoChains;
   if (typeof query.chainId !== "number" || !chains.includes(query.chainId))
     throw new Error(
       value.mode === "live"
-        ? "Live chain ID must be 1 (Ethereum) or 42161 (Arbitrum One). Base, BSC and Optimism are not enabled; provider history may require a paid plan."
+        ? "Live chain ID must be 1 (Ethereum), 957 (Derive Chain) or 42161 (Arbitrum One). Base, BSC and Optimism are not enabled; provider history may require a paid plan."
         : "Demo chain ID must be 1 or 8453",
     );
   const pages = query.maxPages ?? 1;

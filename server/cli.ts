@@ -99,7 +99,7 @@ async function main() {
         create:
           "--mode demo|live --file PATH [--address EVM] [--title TEXT] [--history-mode indexed|evidence-only]",
         expand:
-          "--file PATH --address EVM --chain 1|8453|42161 [--pages 1..3] [--page-size N]",
+          "--file PATH --address EVM --chain 1|957|8453|42161 [--pages 1..3] [--page-size N]",
         annotate:
           "--file PATH --chain N --address EVM (--label-file PATH | --remove true) [--expected-revision ISO_TIMESTAMP]; local attribution assertion, not ownership authentication.",
         visibility:
@@ -447,8 +447,8 @@ async function main() {
     if (!["all", "in", "out"].includes(direction))
       throw new Error("Direction must be all, in or out");
     const chain = flags["--chain"];
-    if (chain && !["1", "8453", "42161"].includes(chain))
-      throw new Error("Chain must be 1, 8453 or 42161");
+    if (chain && !["1", "957", "8453", "42161"].includes(chain))
+      throw new Error("Chain must be 1, 957, 8453 or 42161");
     const transfers = filterTransfers(value.transfers, value.root, {
       ...(chain ? { chainId: Number(chain) } : {}),
       asset: flags["--asset"],

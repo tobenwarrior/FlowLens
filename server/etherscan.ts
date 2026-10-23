@@ -18,6 +18,7 @@ import {
 
 export { ProviderError };
 const ENDPOINT = "https://api.etherscan.io/v2/api";
+export const ETHERSCAN_CHAINS = [1, 42161];
 const MAX_RESPONSE_BYTES = 2_000_000;
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -157,7 +158,7 @@ export function createEtherscanProvider(
         "KEY_REQUIRED",
         "Set ETHERSCAN_API_KEY in the local server environment to enable live tracing.",
       );
-    if (![1, 42161].includes(query.chainId))
+    if (!ETHERSCAN_CHAINS.includes(query.chainId))
       throw new ProviderError(
         "UNSUPPORTED_CHAIN",
         "Live tracing supports Ethereum (1) and Arbitrum One (42161) only in this slice. Base, BSC and Optimism history may require a paid provider plan and are not enabled.",

@@ -17,10 +17,26 @@ import {
   type Row,
 } from "./history-provider.ts";
 
-// Hosts confirmed to answer a plain server request without a key on 21 October 2026.
-// base.blockscout.com and arbitrum.blockscout.com answered with a browser challenge and stay out.
-const EXPLORERS: Record<number, { api: string; native: string }> = {
-  1: { api: "https://eth.blockscout.com/api/v2", native: "ETH" },
+// Hosts confirmed to answer a plain server request without a key: eth.blockscout.com on 21 October
+// 2026, explorer.derive.xyz on 23 October 2026. base.blockscout.com and arbitrum.blockscout.com
+// answered with a browser challenge and stay out. `pageSize` marks explorers that honour items_count.
+const EXPLORERS: Record<
+  number,
+  { api: string; native: string; pageSize: boolean; warning?: string }
+> = {
+  1: {
+    api: "https://eth.blockscout.com/api/v2",
+    native: "ETH",
+    pageSize: false,
+  },
+  // v12.0.3 honours items_count; its rows carry calldata of up to ~130 KB, so pages ask for only the rows kept.
+  957: {
+    api: "https://explorer.derive.xyz/api/v2",
+    native: "ETH",
+    pageSize: true,
+    warning:
+      "Derive Chain subaccounts and their collateral, positions and trades are records inside Derive's own contracts, not wallet transfers; this history shows only native, ERC20 and internal transfers that touch the address.",
+  },
 };
 export const BLOCKSCOUT_CHAINS = Object.keys(EXPLORERS).map(Number);
 // Pre-v12 explorers ignore page-size requests and return 50 full rows, so the budget is above Etherscan's.
@@ -169,9 +185,88 @@ const traceMismatch = () =>
     "A Blockscout call trace does not match its internal transaction listing; no page was committed. Resume after provider indexing stabilizes.",
     true,
   );
+/** One frame of a transaction's full call trace, whichever tracer the explorer runs. Fields are unvalidated. */
+interface TraceFrame {
+  path: unknown;
+  failed: boolean;
+  /** call, delegatecall, staticcall, callcode, create, create2 or selfdestruct. */
+  type: unknown;
+  from: unknown;
+  to: unknown;
+  value: unknown;
+}
+/**
+ * A raw-trace response as frames in Blockscout's internal-transaction index order, or null above the
+ * frame budget. eth.blockscout.com serves a flat Parity list; explorer.derive.xyz serves a nested Geth
+ * callTracer tree, whose pre-order walk matched Blockscout's indexes on 23 October 2026.
+ */
+function traceFrames(value: unknown): TraceFrame[] | null {
+  const unavailable = () =>
+    new ProviderError(
+      "TRACE_UNAVAILABLE",
+      "Blockscout has no call trace yet for a listed internal transfer; no page was committed. Resume later using the saved cursor.",
+      true,
+    );
+  if (Array.isArray(value)) {
+    if (!value.length) throw unavailable();
+    if (value.length > MAX_FRAMES) return null;
+    return value.map((item): TraceFrame => {
+      const frame = row(item),
+        action = row(frame.action);
+      const common = { path: frame.traceAddress, failed: frame.error != null };
+      if (frame.type === "call")
+        return {
+          ...common,
+          type: action.callType,
+          from: action.from,
+          to: action.to,
+          value: action.value,
+        };
+      if (frame.type === "create" || frame.type === "create2")
+        return {
+          ...common,
+          type: frame.type,
+          from: action.from,
+          to: row(frame.result).address,
+          value: action.value,
+        };
+      if (frame.type === "suicide" || frame.type === "selfdestruct")
+        return {
+          ...common,
+          type: "selfdestruct",
+          from: action.address,
+          to: action.refundAddress,
+          value: action.balance,
+        };
+      return { ...common, type: frame.type, from: null, to: null, value: null };
+    });
+  }
+  const root = row(value);
+  if (!Object.keys(root).length) throw unavailable();
+  const frames: TraceFrame[] = [];
+  const stack: { frame: Row; path: number[] }[] = [{ frame: root, path: [] }];
+  while (stack.length) {
+    if (frames.length === MAX_FRAMES) return null;
+    const { frame, path } = stack.pop()!;
+    const calls = frame.calls ?? [];
+    if (!Array.isArray(calls)) throw traceMismatch();
+    frames.push({
+      path,
+      failed: frame.error != null,
+      type:
+        typeof frame.type === "string" ? frame.type.toLowerCase() : frame.type,
+      from: frame.from,
+      to: frame.to,
+      value: frame.value,
+    });
+    for (let i = calls.length - 1; i >= 0; i--)
+      stack.push({ frame: row(calls[i]), path: [...path, i] });
+  }
+  return frames;
+}
 /** Match one listed internal transfer to its frame in the transaction's full call trace. */
 function checkFrame(
-  frames: Row[],
+  frames: TraceFrame[],
   listed: {
     index: number;
     type: string;
@@ -180,9 +275,9 @@ function checkFrame(
     value: string;
   },
 ): Frame {
-  const byPath = new Map<string, Row>();
+  const byPath = new Map<string, TraceFrame>();
   for (const frame of frames) {
-    const path = frame.traceAddress;
+    const path = frame.path;
     if (
       !Array.isArray(path) ||
       path.length > 32 ||
@@ -193,29 +288,19 @@ function checkFrame(
     byPath.set(path.join("."), frame);
   }
   const frame = frames[listed.index];
-  if (!frame || frame.error != null) throw traceMismatch();
-  const action = row(frame.action),
-    path = frame.traceAddress as number[];
-  const [from, to, value] =
-    listed.type === "call"
-      ? frame.type === "call" && action.callType === "call"
-        ? [action.from, action.to, action.value]
-        : []
-      : listed.type === "selfdestruct"
-        ? frame.type === "suicide" || frame.type === "selfdestruct"
-          ? [action.address, action.refundAddress, action.balance]
-          : []
-        : frame.type === "create" || frame.type === "create2"
-          ? [action.from, row(frame.result).address, action.value]
-          : [];
+  if (!frame || frame.failed) throw traceMismatch();
+  const path = frame.path as number[];
+  // Tracers do not agree on whether a CREATE2 frame says create2, so either creation type matches.
+  const family = (type: unknown) => (type === "create2" ? "create" : type);
   try {
     if (
       !path.length ||
-      typeof value !== "string" ||
-      !QUANTITY.test(value) ||
-      BigInt(value).toString() !== listed.value ||
-      address(from) !== listed.from ||
-      address(to) !== listed.to
+      family(frame.type) !== family(listed.type) ||
+      typeof frame.value !== "string" ||
+      !QUANTITY.test(frame.value) ||
+      BigInt(frame.value).toString() !== listed.value ||
+      address(frame.from) !== listed.from ||
+      address(frame.to) !== listed.to
     )
       throw new Error();
   } catch {
@@ -224,7 +309,7 @@ function checkFrame(
   for (let depth = 0; depth < path.length; depth++) {
     const ancestor = byPath.get(path.slice(0, depth).join("."));
     if (!ancestor) throw traceMismatch();
-    if (ancestor.error != null)
+    if (ancestor.failed)
       return {
         omitted:
           "An internal call Blockscout lists as successful sits inside a reverted transaction or parent call; it moved no value and was excluded.",
@@ -239,12 +324,12 @@ function checkFrame(
     : { eventIndex };
 }
 
-/** Keyless Blockscout API v2 history. Every request goes to a fixed explorer host. */
+/** Keyless Blockscout API v2 history. Every request goes to the fixed explorer host of the queried chain. */
 export function createBlockscoutProvider(
   options: { fetch?: typeof fetch; intervalMs?: number } = {},
 ): TraceProvider {
   const fetcher = options.fetch ?? fetch;
-  // eth.blockscout.com advertised 180 keyless requests per minute; two per second stays below it.
+  // Both explorers advertised 180 keyless requests per minute; one queue at two per second stays below either.
   const interval = options.intervalMs ?? 500;
   let queue: Promise<unknown> = Promise.resolve();
   let lastCall = 0;
@@ -309,7 +394,7 @@ export function createBlockscoutProvider(
     if (!explorer)
       throw new ProviderError(
         "UNSUPPORTED_CHAIN",
-        "Keyless Blockscout history covers Ethereum (1) only. Other Blockscout hosts are not enabled until they are confirmed to answer without a browser check.",
+        "Keyless Blockscout history covers Ethereum (1) and Derive Chain (957) only. Other Blockscout hosts are not enabled until they are confirmed to answer without a browser check.",
       );
     const source = `Blockscout API v2 (${new URL(explorer.api).host})`;
     const wallet = address(query.address);
@@ -346,7 +431,9 @@ export function createBlockscoutProvider(
           erc20: fresh(),
           internal: fresh(),
         };
-    const warnings = [...WARNINGS];
+    const warnings = explorer.warning
+      ? [...WARNINGS, explorer.warning]
+      : [...WARNINGS];
     const transfers: Transfer[] = [];
     const retrievedAt = new Date().toISOString();
     let newest = 0;
@@ -357,7 +444,11 @@ export function createBlockscoutProvider(
           explorer.api,
           `addresses/${wallet}/${PATHS[stream]}`,
           state.params,
-          stream === "erc20" ? { type: "ERC-20" } : {},
+          // next_page_params does not echo items_count on v12, so every request repeats it.
+          {
+            ...(stream === "erc20" ? { type: "ERC-20" } : {}),
+            ...(explorer.pageSize ? { items_count: String(size) } : {}),
+          },
         ),
       );
       if (
@@ -546,14 +637,12 @@ export function createBlockscoutProvider(
         }
       }
       // One bounded trace read per transaction on this page; there is no recursive fanout.
-      const traces = new Map<string, Row[] | null>();
+      const traces = new Map<string, TraceFrame[] | null>();
       for (const hash of new Set(listed.map((l) => l.hash))) {
-        let frames: unknown;
+        let frames: TraceFrame[] | null;
         try {
-          frames = await request(
-            explorer.api,
-            `transactions/${hash}/raw-trace`,
-            null,
+          frames = traceFrames(
+            await request(explorer.api, `transactions/${hash}/raw-trace`, null),
           );
         } catch (error) {
           if (
@@ -561,16 +650,9 @@ export function createBlockscoutProvider(
             error.code !== "PROVIDER_RESPONSE_TOO_LARGE"
           )
             throw error;
-          traces.set(hash, null);
-          continue;
+          frames = null;
         }
-        if (!Array.isArray(frames) || !frames.length)
-          throw new ProviderError(
-            "TRACE_UNAVAILABLE",
-            "Blockscout has no call trace yet for a listed internal transfer; no page was committed. Resume later using the saved cursor.",
-            true,
-          );
-        traces.set(hash, frames.length > MAX_FRAMES ? null : frames.map(row));
+        traces.set(hash, frames);
       }
       for (const entry of listed) {
         const frames = traces.get(entry.hash);

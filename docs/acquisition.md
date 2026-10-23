@@ -6,12 +6,12 @@ No provider credential is required for these bounded public reads. Availability,
 
 ## Choose the right no-key workflow
 
-| Goal                                               | Operation                                    | Network behavior                                                                          |
-| -------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Learn the interface or test an agent               | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                          |
-| Preserve chosen evidence without indexing a wallet | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                           |
-| Fetch a known Safe or transaction scope            | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter |
-| Enumerate supported wallet history                 | Indexed live case and expansion              | Keyless Blockscout on Ethereum, or your own Etherscan key; only configured streams/chains |
+| Goal                                               | Operation                                    | Network behavior                                                                                           |
+| -------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Learn the interface or test an agent               | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                                           |
+| Preserve chosen evidence without indexing a wallet | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                                            |
+| Fetch a known Safe or transaction scope            | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter                  |
+| Enumerate supported wallet history                 | Indexed live case and expansion              | Keyless Blockscout on Ethereum and Derive Chain, or your own Etherscan key; only configured streams/chains |
 
 “No key” does not mean “offline” for public acquisition. `mode: "private"` describes retained non-demo investigation evidence; it does not certify a provider's truth, grant redistribution rights or make a public identifier confidential.
 

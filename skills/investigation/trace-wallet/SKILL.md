@@ -5,7 +5,7 @@ description: Trace an EVM wallet's inflows, outflows, funding and counterparties
 
 # Trace a wallet
 
-Use FlowLens to gather the evidence, follow the method in [the tracing guide](../../docs/tracing-guide.md), and keep every label tied to its source. A transfer proves movement, not ownership.
+Use FlowLens to gather the evidence, follow the method in [the tracing guide](references/tracing-method.md), and keep every label tied to its source. A transfer proves movement, not ownership.
 
 ## Ground rules
 
@@ -26,10 +26,14 @@ Without MCP, the CLI does the same: `node server/cli.ts create --mode live --add
 ## 2. Load and read the history
 
 - Check coverage after every call (`flowlens_inspect`): provider, streams, pages, status and errors. A retryable error means resume later, not retry in a loop. An empty page is not proof of no activity.
-- Load more with `flowlens_expand` (`caseId`, `address`, `chainId`, `maxPages`), one wallet and chain at a time. There is no automatic fan-out, so choose each hop deliberately and stop at exchanges, bridges and other services.
+- Load more with `flowlens_expand` (`caseId`, `address`, `chainId`, `maxPages`), one wallet and chain at a time. There is no automatic fan-out, so choose each hop deliberately and stop at pooled services. A candidate customer-specific CEX deposit address is not automatically a dead end: follow [cluster-wallets](../cluster-wallets/SKILL.md) to test its other depositors, assignment window and sweeps within a stated budget.
 - Read flows and counterparties with `flowlens_wallet` (filter by chain, asset, direction or dates) and page the graph with `flowlens_graph`.
 - Verify material transfers with `flowlens_evidence`: exact amount, token contract, block, time, hash and provenance.
 - For first funding, counterparty classes, linking clues and Safes, follow steps 2 to 6 of the tracing guide. Protocol reads (`flowlens_acquire` with `kind` `safe`, `bridge` or `internal`) stay separate from the graph totals.
+
+### Shared deposits and related-wallet hypotheses
+
+Use [cluster-wallets](../cluster-wallets/SKILL.md) for shared deposit addresses, repeated funding/sweeps and control clues. Keep infrastructure, possible shared account use and ownership separate. Do not combine customers of a hot/omnibus wallet or perform transitive ownership closure. The graph's `Group by type` is presentation, not automatic clustering.
 
 ## 3. Check labels, free sources first
 
@@ -46,6 +50,10 @@ Work down this list and stop when the question is answered:
    - Do not scrape at scale or collect a provider's label set. If the user has no access, say so and carry on with the free sources.
 
 For every label you find, keep the exact wording, the provider, the label type, the URL and when you saw it. Copies of the same label on several sites are one claim, not independent corroboration.
+
+### Corporate hints: expand the business clue
+
+When a source suggests a public company, follow [Corporate attribution](references/corporate-attribution.md). Expand the public brand with functional products/services and synonyms (for example on-chain options/derivatives when supported), including a published local-language legal name; do not stop at exact-address or generic market-making searches. Compare first-party company pages and business-facing X evidence, reciprocal links, published company location and timeline, then test namesakes and contradictions. Keep the company-profile hypothesis separate from the wallet-ownership hypothesis: the former does not prove the latter. Never use personal labels to deanonymize a private person.
 
 ## 4. Record labels in FlowLens
 
@@ -83,6 +91,9 @@ Offer `flowlens_export` so the user can keep or share the case, and warn that ex
 
 ## Related
 
-- [Tracing guide](../../docs/tracing-guide.md): the full method behind each step
-- [MCP guide](../../docs/mcp.md): every tool's arguments
-- [Wallet controls](../../docs/workspace-controls.md): labels, claim types and visibility
+- [Tracing method](references/tracing-method.md) and [attribution/venue continuation](references/attribution-and-venues.md): the full procedure
+- [Deposit clustering](../cluster-wallets/SKILL.md): bounded account-relationship hypotheses, not automatic ownership
+- [MCP guide](../../../docs/mcp.md): every tool's arguments
+- [Wallet controls](../../../docs/workspace-controls.md): labels, claim types and visibility
+- [Evidence review](../audit-trace-evidence/SKILL.md): validate coverage, exact amounts, source provenance and claim boundaries before reporting
+- [PDF/DOCX report](../../reporting/report-investigation/SKILL.md): build a local evidence report with cited, privacy-reviewed screenshots and all-page inspection

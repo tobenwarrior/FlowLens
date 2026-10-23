@@ -12,6 +12,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run format:check
+npm run skills:check
 npm run build
 npm run release:check
 npm run release:source

@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, writeFile, realpath } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
+import { checkSkills } from "./check-skills.mjs";
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // Reviewed release metadata, deliberately independent of shell environment and file mtimes.
 const timestamp = "2026-10-21T00:00:00.000Z";
@@ -38,9 +40,24 @@ const LICENSE_SHA256 =
 // Adding a distributable file is an explicit review decision. Do not replace this with a glob.
 const allowlist = [
   ".env.example",
+  "skills/README.md",
+  "skills/investigation/README.md",
+  "skills/reporting/README.md",
+  "scripts/check-skills.mjs",
+  "skills/investigation/cluster-wallets/SKILL.md",
+  "skills/investigation/cluster-wallets/references/exchange-deposits.md",
+  "skills/investigation/cluster-wallets/references/hypothesis-ledger.md",
+  "skills/investigation/trace-wallet/references/tracing-method.md",
+  "skills/investigation/trace-wallet/references/attribution-and-venues.md",
+  "skills/reporting/report-investigation/references/exporting.md",
   "AGENTS.md",
   "CLAUDE.md",
-  "skills/trace-wallet/SKILL.md",
+  "skills/investigation/trace-wallet/SKILL.md",
+  "skills/reporting/report-investigation/SKILL.md",
+  "skills/reporting/report-investigation/references/manifest.md",
+  "skills/investigation/trace-wallet/references/corporate-attribution.md",
+  "skills/investigation/audit-trace-evidence/SKILL.md",
+  "skills/investigation/audit-trace-evidence/references/registry-review.md",
   ".gitattributes",
   ".gitignore",
   ".repo-audit.toml",
@@ -58,6 +75,8 @@ const allowlist = [
   "tsconfig.json",
   "vite.config.ts",
   "scripts/release.mjs",
+  "scripts/report-investigation.ts",
+  "scripts/report-document.ts",
   ...images,
   "docs/architecture.md",
   "docs/bridge-internal-evidence.md",
@@ -75,6 +94,7 @@ const allowlist = [
   "docs/trace-provider.md",
   "docs/bridge-provider.md",
   "docs/acquisition.md",
+  "docs/investigation-reports.md",
   "server/agent.ts",
   "server/api.ts",
   "server/cli.ts",
@@ -126,7 +146,7 @@ const allowlist = [
 
 function options(args) {
   const result = {
-    root: resolve(dirname(fileURLToPath(import.meta.url)), ".."),
+    root: repositoryRoot,
     output: undefined,
     check: false,
   };
@@ -156,7 +176,12 @@ async function sourceFile(root, path) {
     try {
       stat = await lstat(current);
     } catch (error) {
-      if (error.code === "ENOENT" && !required.has(path)) return undefined;
+      if (
+        error.code === "ENOENT" &&
+        !required.has(path) &&
+        !(root === repositoryRoot && path.startsWith("skills/"))
+      )
+        return undefined;
       throw new Error(`${path}: missing or unreadable release file`, {
         cause: error,
       });
@@ -372,6 +397,11 @@ function tarEntry(path, data) {
 
 async function main() {
   const config = options(process.argv.slice(2));
+  const resolvedRoot = await realpath(config.root);
+  await checkSkills(config.root, {
+    allowMissing: resolvedRoot !== repositoryRoot,
+  });
+  config.root = resolvedRoot;
   const files = [];
   const findings = [];
   for (const path of allowlist) {

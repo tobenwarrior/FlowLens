@@ -4,12 +4,12 @@ FlowLens is agent-first wallet tracing, built for humans too. Display branding i
 
 ## Investigating a wallet
 
-To trace or attribute a wallet with FlowLens, rather than change FlowLens itself, follow `skills/trace-wallet/SKILL.md`. It drives the MCP tools or CLI, checks labels on free sources (explorer name tags, self-chosen names, X) before Arkham or Nansen, uses those only with the user's own access, and records every label with its source. The full method behind it is in `docs/tracing-guide.md`.
+Start with `skills/README.md` for agent workflows. Tracing, CEX deposit/account clustering and evidence review live under `skills/investigation/`; document exports live under `skills/reporting/`. Follow `skills/investigation/trace-wallet/SKILL.md` to gather evidence, and `skills/investigation/cluster-wallets/SKILL.md` when a candidate dedicated deposit endpoint warrants further review. Stop indiscriminate expansion through pooled services; clustering hypotheses do not establish ownership.
 
 ## Start and verify
 
 - Requires Node 24.12+ (current 24 LTS or 26 recommended). Install the lockfile with `npm ci --ignore-scripts`; run `npm start` after `npm run build` for the loopback UI/API.
-- Use `npm run lint`, `npm run typecheck`, `npm run format:check`, and `npm run build` for source checks.
+- Use `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run skills:check`, and `npm run build` for source checks.
 - The test suite in `tests/` is git-ignored and kept out of the public repository. Where a local copy exists, also run `npm test`, and `FLOWLENS_URL=http://127.0.0.1:4319 npm run test:browser` with the production server and Chrome available. Never commit `tests/`.
 - Run `npm run release:check` and `npm run release:source` for the explicit sanitized source export. Review its manifest.
 - Read README.md, docs/architecture.md, docs/acquisition.md and docs/mcp.md before changing shared operations.
@@ -23,6 +23,10 @@ Keep gross inflows and outflows separate from net. Transfers do not establish bu
 Demo data must be synthetic and visibly marked. Do not copy private investigations, proprietary labels, credentials or private source into fixtures, docs, screenshots or exports. Arkham integration remains deferred pending suitable rights. No paywall circumvention.
 
 Keep keys server-side or user-local. No telemetry, hosted exposure, credential generation, account changes or live wallet queries without task authorization. External provider access and redistribution rights are separate questions.
+
+## Skill organization
+
+Every text file under `skills/` is limited to 200 logical lines and 25 KiB, including entries, references, indexes and helpers. Keep entries short and split procedures by topic; never minify prose to fit. Run `npm run skills:check` after edits; the release audit enforces the same limit. Agent procedures belong in skill references; architecture, provider specifications and API/data contracts remain in `docs/`. Generic methods can be learned from authorized vault notes, but private case contents must stay local.
 
 ## Changes and Git
 

@@ -84,7 +84,9 @@ The same engine runs from a CLI, a local HTTP API and an MCP server, so an AI as
 
 Save a case, add notes, or export it as JSON to share or reopen later.
 
-For the method behind a trace that holds up, from classifying counterparties and finding first funding to what each linking clue can and cannot prove, read the [tracing guide](docs/tracing-guide.md).
+For the method behind a trace that holds up, from classifying counterparties and finding first funding to what each linking clue can and cannot prove, read the [tracing guide](skills/investigation/trace-wallet/references/tracing-method.md).
+
+The [skill index](skills/README.md) routes agent workflows. For a CEX deposit-address lead, use the [clustering procedure](skills/investigation/cluster-wallets/SKILL.md): examine the specific endpoint and its other depositors, not the exchange's pooled customer flows. This is a bounded evidence-review method, not automatic ownership clustering.
 
 A few habits keep a trace honest:
 
@@ -139,7 +141,7 @@ For MCP, launch `node server/mcp.ts` from your MCP host. Start with `flowlens_st
 }
 ```
 
-Use the returned `result.id` as `caseId` for the other tools. The [tracing guide](docs/tracing-guide.md) gives agents a step-by-step method mapped to these tools. The [MCP guide](docs/mcp.md) covers setup and all 20 tool contracts; [wallet controls](docs/workspace-controls.md) covers labels and visibility from the CLI, API and MCP.
+Use the returned `result.id` as `caseId` for the other tools. The [tracing guide](skills/investigation/trace-wallet/references/tracing-method.md) gives agents a step-by-step method mapped to these tools. The [MCP guide](docs/mcp.md) covers setup and all 20 tool contracts; [wallet controls](docs/workspace-controls.md) covers labels and visibility from the CLI, API and MCP.
 
 The browser, API and MCP server share cases in `.local/cases` and labels in `.local/labels.json`. Set `FLOWLENS_DATA_DIR` and `FLOWLENS_LABEL_FILE` to absolute paths when your MCP host launches from another directory.
 

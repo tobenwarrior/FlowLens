@@ -13,6 +13,7 @@ npm ci --ignore-scripts
 npm run lint
 npm run typecheck
 npm run format:check
+npm run skills:check
 npm run build
 npm run release:check
 ```
@@ -28,6 +29,12 @@ Keep browser, CLI, API and MCP on the same domain contract. A new agent operatio
 An adapter must state its chains and streams, pagination/frozen-window semantics, historical limits, request/rate/byte budgets, attribution source and failure behavior. Unsupported or failed coverage is not zero activity. An exhausted provider stream is not proof of complete wallet history. Live acceptance claims must name exactly what was verified.
 
 Keep gross inflow and gross outflow separate from net. Distinguish chains and asset contracts, preserve exact raw units and stable evidence IDs, and never turn a transfer into a trade or common funding into ownership. Configuration, observed signature material, consumed authorization, bridge transport and independent beneficiary credit are distinct claims.
+
+## Agent skills and procedural guides
+
+Use the [skill index](skills/README.md). Investigation procedures belong under `skills/investigation/`, and report preparation under `skills/reporting/`; keep architecture, provider specifications and API/data contracts in `docs/`. Short routing pages can preserve old documentation URLs.
+
+Every skill text file must be at most 200 logical lines and 25 KiB. Split long procedures into linked, focused references rather than packing lines. `npm run skills:check` checks the whole tree, and `npm run release:check` runs the same guard before source export. Add new public files to the explicit release allowlist; private vault notes and real cases never become public examples.
 
 ## Keep research and secrets private
 

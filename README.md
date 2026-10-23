@@ -167,7 +167,7 @@ The key stays on the server and is never sent to the browser. [Provider coverage
 
 FlowLens grows as we learn more about following funds on-chain. Next up:
 
-- **More EVM chains**, as their explorers or providers allow it.
+- **Every EVM chain.** Wallet history works today on Ethereum and Derive Chain with no key, and on Arbitrum One with your own Etherscan key. The goal is any EVM chain, through whichever explorer or provider can serve it.
 - **Better tracing techniques**, added as we learn them.
 
 If there's a wallet you can't follow, or a pattern FlowLens should recognise, [open an issue](https://github.com/tobenwarrior/FlowLens/issues).

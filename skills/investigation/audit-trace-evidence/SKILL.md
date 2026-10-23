@@ -61,4 +61,4 @@ For a screenshot-backed PDF or DOCX, follow [report-investigation](../../reporti
 
 ## Maintenance
 
-[Registry review](references/registry-review.md) records why this project-local skill was chosen instead of installing third-party executables. Verify the documented CLI examples offline with `node --test skills/investigation/audit-trace-evidence/contract.test.mjs`. Synthetic checks certify command compatibility only, not live-provider coverage or attribution.
+[Registry review](references/registry-review.md) records why this project-local skill was chosen instead of installing third-party executables. Verify the documented CLI examples offline with `node --test tests/audit-trace-evidence-skill.test.mjs`. Synthetic checks certify command compatibility only, not live-provider coverage or attribution.

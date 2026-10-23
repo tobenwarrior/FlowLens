@@ -1,5 +1,11 @@
 # Investigation reports
 
+## Default: a concise human-facing brief
+
+Agents use document `--brief` by default. Page 1: conclusion first, exactly 3 decisive cited facts and 1 scope/ownership caveat, target 150–250 words and never more than 250. No hard minimum; prefer a shorter complete brief to padding. Add an optional page 2 with at most 2 essential, readable screenshots and short source-link/capture-date captions. Do not repeat disclaimers or dump full source ledgers, transaction tables or checksums into the brief. Keep those in a separate private appendix, not attached unless requested.
+
+Material unresolved or contradictory evidence must remain visible in the concise conclusion/facts/caveat; do not manufacture confidence or omit facts merely to fit. Preserve full inputs and author a curated brief manifest. Inspect rendered page count and readability; a two-page target is not permission to clip content. Detailed mode remains explicitly available only on request: render the retained complete audit manifest without `--brief` into a separate appendix. The brief bundle alone cannot restore omitted narrative. The CLI full printed `cleanText`-weighted budget is 2,300 units, not a word counter: wide glyphs count 2, and generated metadata/labels/source hosts/dates/footer count too. Hosts are capped at 60 characters; see [brief bounds](manifest.md). Oversized input errors before writing; nothing is truncated automatically. The shipped brief retains a short source list, one compact Bundle SHA-256 fingerprint and the pointer `Detailed layout available from retained bundle; full investigation kept separately.`; full per-file hashes/ledgers are private detailed output. Short captions show source link and capture date/unknown, with crop/redaction disclosure in the manifest. Every CLI brief format first passes the same offline PDF render gate: no horizontal overflow and exactly 1 page without images or 2 with images; failure writes nothing. Inspect every actual delivered page too.
+
 `scripts/report-investigation.ts` turns one saved FlowLens case into a Markdown report. It is offline: it reads the case file and nothing else. It makes no provider, price, balance or label request, does not expand any wallet and does not modify the case.
 
 ```sh
@@ -27,7 +33,7 @@ Keep cases and reports from real investigations under `.local/`. They are privat
 
 ## Reading limits
 
-Every report repeats these limits:
+Detailed audit reports include these limits; a brief combines applicable material scope/ownership limits into 1 concise caveat rather than repeating the full list:
 
 - Net flow is loaded inflow minus loaded outflow. It is not a holding, balance, profit, loss, buy or sell.
 - Self-transfers count as both inflow and outflow. Failed transactions are excluded by provider validation, yet a successful frame inside a larger transaction can still mislead.
@@ -52,18 +58,18 @@ Before relying on a report, audit the case it came from with the [audit-trace-ev
 Use the [report-investigation skill](../SKILL.md) for a reusable research-ledger → verified claims → privacy-reviewed screenshots → local manifest → document → all-page review workflow. The [manifest v1 reference](manifest.md) lists the shared fields and citation rules. This path curates an evidence report; it does not automatically establish that its written assertions follow from a case.
 
 ```sh
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.pdf
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.docx
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.html
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.pdf --brief
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.docx --brief
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.html --brief
 ```
 
 Generate PDF OR DOCX as requested; generate both only when requested. HTML is a local preview. The exporter reads the local manifest, optional case and local PNG/JPEG inputs without remote fetching; source URLs are citations, not permission to retrieve images or pages. An existing output requires explicit `--force`, never an automatic retry. Outputs must not alias any case, manifest or image input, including symlink/hardlink aliases. Preserve input bytes and retain pre/post SHA-256 inventories.
 
-Optional `--format pdf|docx|html` must agree with the output extension. Case and image paths resolve from the manifest directory by default; `--bundle-root DIR` changes that confined input root. Unknown manifest keys are rejected. Section paragraphs/bullets/table are optional; sections/sources/screenshots/limitations default to empty arrays. A supplied case root must match the manifest subject.
+Use `--brief` for the default concise document; omit it only for explicitly requested detailed audit output. Optional `--format pdf|docx|html` must agree with the output extension. Case and image paths resolve from the manifest directory by default; `--bundle-root DIR` changes that confined input root. Unknown manifest keys are rejected. Section paragraphs/bullets/table are optional; sections/sources/screenshots/limitations default to empty arrays. A supplied case root must match the manifest subject.
 
-The exporter computes manifest/case/image SHA-256 and image dimensions, prints Evidence inventory and figure captions with bundle-relative paths, and writes no checksum sidecar. It embeds exact local image bytes; redactions are disclosure text, not image edits. Image display scales down only. Limits: manifest 1,000,000 bytes, case 5,000,000 bytes, each PNG/JPEG 8,000,000 bytes, 12,000 pixels per side and 40,000,000 total pixels. Aggregate image caps are 64,000,000 bytes and 200,000,000 decoded pixels per report; JPEG decoding has a 512 MB memory budget. Images undergo PNG scanline/chunk validation or strict JPEG decoding without rewriting source bytes. See the manifest reference for section/source/image-count bounds.
+The exporter computes manifest/case/image SHA-256 and image dimensions. Detailed mode prints Evidence inventory and full figure metadata with bundle-relative paths and writes no checksum sidecar; keep it separate from the brief. Brief captions retain the cited source and capture date/unknown status without repeated metadata. It embeds exact local image bytes; redactions are disclosure text, not image edits. Image display scales down only. Limits: manifest 1,000,000 bytes, case 5,000,000 bytes, each PNG/JPEG 8,000,000 bytes, 12,000 pixels per side and 40,000,000 total pixels. Aggregate image caps are 64,000,000 bytes and 200,000,000 decoded pixels per report; JPEG decoding has a 512 MB memory budget. Images undergo PNG scanline/chunk validation or strict JPEG decoding without rewriting source bytes. See the manifest reference for section/source/image-count bounds.
 
-DOCX/HTML use installed project dependencies. PDF needs `@playwright/test` and an already installed local Chromium or Google Chrome. The exporter never downloads a browser; PDF rendering disables JavaScript, runs offline and aborts every network request. If no browser exists, report the limitation instead of silently downloading one or using a hosted converter.
+All CLI `--brief` outputs, including DOCX and HTML, need `@playwright/test` and installed local Chromium/Google Chrome for print-layout validation before writing. Detailed DOCX/HTML use installed project dependencies without a browser; detailed PDF needs the browser. The exporter never downloads a browser; PDF rendering disables JavaScript, runs offline and aborts every network request. If no browser exists, report the limitation instead of silently downloading one or using a hosted converter.
 
 Each included screenshot needs an evidence ID, descriptive caption, resolvable source ID/URL, original capture UTC (or `null`/omitted when unknown) and crop/redaction disclosure. Keep original capture, user-supplied evidence and derived figures distinct. Cropping now does not establish when an older screenshot was captured. Screenshots observe a source; they are not independent proof of its claims.
 

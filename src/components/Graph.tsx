@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -11,7 +11,12 @@ import {
   Pin,
 } from "lucide-react";
 import type { Investigation, Transfer, WalletNode } from "../domain/types.ts";
-import { buildEdges, formatUnits, nodeKey } from "../domain/engine.ts";
+import {
+  buildEdges,
+  formatUnits,
+  nodeKey,
+  assetKey,
+} from "../domain/engine.ts";
 
 export const short = (s: string) => `${s.slice(0, 6)}…${s.slice(-4)}`;
 export const chainName = (id: number) =>
@@ -54,8 +59,32 @@ export function Graph({
   selected?: string;
   grouped: boolean;
 }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ width: 1100, height: 600 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+    const update = () => {
+      const bounds = element.getBoundingClientRect();
+      const width = Math.max(1, Math.round(bounds.width));
+      const height = Math.max(1, Math.round(bounds.height));
+      setViewport((previous) =>
+        previous.width === width && previous.height === height
+          ? previous
+          : { width, height },
+      );
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [investigation.id]);
   const [drag, setDrag] = useState<{
     x: number;
     y: number;
@@ -114,7 +143,7 @@ export function Graph({
         t.chainId === n.chainId && (t.from === n.address || t.to === n.address),
     );
   return (
-    <div className="graph-wrap" data-testid="funding-graph">
+    <div className="graph-wrap" data-testid="funding-graph" ref={viewportRef}>
       <div className="graph-lane lane-in">
         <ArrowDownLeft size={14} /> SOURCES OF FUNDS
       </div>
@@ -122,11 +151,18 @@ export function Graph({
         DESTINATIONS <ArrowUpRight size={14} />
       </div>
       <svg
-        viewBox={`0 0 1100 ${height}`}
+        viewBox={`0 0 ${viewport.width} ${viewport.height}`}
         className="graph-svg"
         aria-label="Interactive directed funding graph"
+        aria-description="Drag the blank canvas to pan. Use zoom controls or Fit graph to inspect more connections. Expansion retains the current text scale."
+        width={viewport.width}
+        height={viewport.height}
         onPointerDown={(e) => {
-          if (e.target === e.currentTarget) {
+          if (
+            e.target === e.currentTarget ||
+            (e.target instanceof Element &&
+              e.target.getAttribute("data-pan-surface") === "true")
+          ) {
             setDrag({ x: e.clientX, y: e.clientY, px: pan.x, py: pan.y });
             e.currentTarget.setPointerCapture(e.pointerId);
           }
@@ -139,7 +175,16 @@ export function Graph({
             });
         }}
         onPointerUp={() => setDrag(null)}
+        onPointerCancel={() => setDrag(null)}
+        onLostPointerCapture={() => setDrag(null)}
       >
+        <rect
+          width={viewport.width}
+          height={viewport.height}
+          fill="transparent"
+          data-pan-surface="true"
+          className="graph-pan-surface"
+        />
         <defs>
           <marker
             id="arrow-in"
@@ -168,14 +213,22 @@ export function Graph({
           </filter>
         </defs>
         <g
-          transform={`translate(${550 * (1 - zoom) + pan.x} ${(height / 2) * (1 - zoom) + pan.y}) scale(${zoom})`}
+          transform={`translate(${viewport.width / 2 + pan.x} ${viewport.height / 2 + pan.y}) scale(${zoom}) translate(-550 ${-height / 2})`}
+          data-testid="graph-world"
         >
-          <circle cx="550" cy={height / 2} r="152" className="root-orbit" />
+          <circle
+            cx="550"
+            cy={height / 2}
+            r="152"
+            className="root-orbit"
+            pointerEvents="none"
+          />
           <circle
             cx="550"
             cy={height / 2}
             r="108"
             className="root-orbit inner"
+            pointerEvents="none"
           />
           {edges.map((edge) => {
             const a = point(edge.from, edge.chainId),
@@ -214,6 +267,7 @@ export function Graph({
                 <g
                   transform={`translate(${(x1 + x2) / 2 - 32} ${(a.y + b.y) / 2 - 11 + bend * 0.75})`}
                   className="edge-count"
+                  pointerEvents="none"
                 >
                   <rect width="64" height="23" rx="11" />
                   <text x="32" y="15" textAnchor="middle">
@@ -227,6 +281,7 @@ export function Graph({
           <foreignObject x="446" y={height / 2 - 61} width="208" height="124">
             <button
               className={`wallet-card root-card ${selected === root ? "selected" : ""}`}
+              title={`Investigation focus address: ${root}. Labels remain chain-specific in the wallet panel.`}
               onClick={() =>
                 onNode({ address: investigation.root, chainId: 1 })
               }
@@ -246,7 +301,14 @@ export function Graph({
           {nodes.map((n) => {
             const p = positions.get(nodeKey(n.chainId, n.address))!;
             const list = nodeTransfers(n);
-            const asset = list[0]?.asset;
+            const symbols = [
+              ...new Map(
+                list.map((transfer) => [
+                  assetKey(transfer.asset),
+                  transfer.asset.symbol,
+                ]),
+              ).values(),
+            ];
             return (
               <foreignObject
                 key={nodeKey(n.chainId, n.address)}
@@ -256,7 +318,7 @@ export function Graph({
                 height="82"
               >
                 <button
-                  title={`${n.label?.text || n.address} · ${chainName(n.chainId)}`}
+                  title={`${n.label?.text ? `${n.label.text} · ` : ""}${chainName(n.chainId)} · ${n.address}${n.label ? ` · ${n.label.claimType || n.label.kind} / ${n.label.confidence}` : " · Ownership unknown"}`}
                   className={`wallet-card counterparty ${selected === nodeKey(n.chainId, n.address) ? "selected" : ""} ${incoming.includes(n) ? "incoming" : "outgoing"}`}
                   onClick={() => onNode(n)}
                 >
@@ -278,9 +340,7 @@ export function Graph({
                     <span>
                       <i className={`chain-dot chain-${n.chainId}`} />
                       {chainName(n.chainId)}{" "}
-                      <span className="cp-category">
-                        · {grouped ? n.category || "wallet" : short(n.address)}
-                      </span>
+                      <span className="cp-category">· {short(n.address)}</span>
                     </span>
                   </span>
                   {investigation.pinned.includes(
@@ -292,10 +352,11 @@ export function Graph({
                   )}
                 </button>
                 <span className="node-amount">
-                  {asset
-                    ? `${displayUnits(list[0].rawAmount, asset.decimals)} ${asset.symbol}`
+                  {list.length} transfer{list.length === 1 ? "" : "s"}
+                  {symbols.length > 0 ? ` · ${symbols[0]}` : ""}
+                  {symbols.length > 1
+                    ? ` + ${symbols.length - 1} asset${symbols.length === 2 ? "" : "s"}`
                     : ""}
-                  {list.length > 1 ? ` + ${list.length - 1} more` : ""}
                 </span>
               </foreignObject>
             );
@@ -328,7 +389,7 @@ export function Graph({
         <button
           title="Zoom out"
           aria-label="Zoom out"
-          onClick={() => setZoom((z) => Math.max(0.55, z - 0.15))}
+          onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))}
         >
           <Minus size={16} />
         </button>
@@ -345,7 +406,16 @@ export function Graph({
           title="Fit graph"
           aria-label="Fit graph"
           onClick={() => {
-            setZoom(1);
+            setZoom(
+              Math.max(
+                0.05,
+                Math.min(
+                  1,
+                  (viewport.width - 48) / 1100,
+                  (viewport.height - 88) / height,
+                ),
+              ),
+            );
             setPan({ x: 0, y: 0 });
           }}
         >

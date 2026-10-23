@@ -809,7 +809,13 @@ type Block =
   | { kind: "paragraph"; runs: Run[]; note?: boolean }
   | { kind: "bullets"; items: Cell[] }
   | { kind: "table"; headers: string[]; rows: Cell[][]; widths: number[] }
-  | { kind: "figure"; screenshot: LoadedScreenshot; caption: Run[] };
+  | {
+      kind: "figure";
+      screenshot: LoadedScreenshot;
+      caption: Run[];
+      size?: { width: number; height: number };
+      pageBreak?: boolean;
+    };
 const run = (text: string, extra: Omit<Run, "text"> = {}): Run => ({
   text,
   ...extra,
@@ -1070,6 +1076,12 @@ export function buildReport(bundle: ReportBundle): Block[] {
       widths: [14, 30, 11, 45],
       rows: [
         [
+          plain("Bundle digest"),
+          plain("manifest, case and screenshot hashes"),
+          plain(""),
+          [mono(bundleDigest(bundle))],
+        ],
+        [
           plain("Manifest"),
           plain(bundle.manifestFile.name),
           plain(String(bundle.manifestFile.bytes)),
@@ -1131,6 +1143,326 @@ export function buildReport(bundle: ReportBundle): Block[] {
   return blocks;
 }
 
+export const BRIEF_LIMITS = {
+  title: 90,
+  subtitle: 120,
+  summary: 600,
+  conclusion: 300,
+  sections: 1,
+  heading: 60,
+  paragraphs: 1,
+  paragraph: 300,
+  /** Bullets plus table rows. */
+  items: 4,
+  bullet: 220,
+  tableColumns: 4,
+  cell: 100,
+  limitations: 1,
+  limitation: 250,
+  sources: 6,
+  sourceTitle: 80,
+  screenshots: 2,
+  caption: 140,
+  host: 60,
+  /** Includes generated labels, hosts and the digest line (about 400 of it). */
+  pageOneText: 2300,
+  /** Smallest allowed display scale and width, so a figure stays readable. */
+  minScale: 1 / 3,
+  minWidth: 320,
+  singleFigureHeight: 860,
+  stackedFigureHeight: 400,
+} as const;
+const BRIEF_STATUS: Record<AssessmentStatus, string> = {
+  unresolved: "no attribution conclusion",
+  hypothesis: "working explanation, not established",
+  "source-supported": "as reliable as the cited sources",
+  "user-confirmed": "user assertion, not independent proof",
+};
+const BRIEF_QUALIFICATION =
+  "Sources and screenshots show what was stated or displayed; they do not by themselves prove ownership or control.";
+
+/** One SHA-256 over the manifest, case and screenshot hashes, so a brief pins the exact bundle. */
+export function bundleDigest(bundle: ReportBundle): string {
+  const lines = [
+    `manifest ${bundle.manifestFile.sha256}`,
+    ...(bundle.caseFile
+      ? [`case ${bundle.caseFile.relativePath} ${bundle.caseFile.sha256}`]
+      : []),
+    ...bundle.screenshots.map((s) => `image ${s.relativePath} ${s.sha256}`),
+  ];
+  return createHash("sha256").update(lines.join("\n")).digest("hex");
+}
+
+/** Brief figure size: fit the shared page, never upscale; null when it would be unreadably small. */
+export function briefFigureSize(
+  image: ImageInfo,
+  count: number,
+): { width: number; height: number } | null {
+  const maxHeight =
+    count > 1
+      ? BRIEF_LIMITS.stackedFigureHeight
+      : BRIEF_LIMITS.singleFigureHeight;
+  const scale = Math.min(1, CONTENT_PX / image.width, maxHeight / image.height);
+  const size = {
+    width: Math.max(1, Math.round(image.width * scale)),
+    height: Math.max(1, Math.round(image.height * scale)),
+  };
+  return scale < BRIEF_LIMITS.minScale ||
+    size.width < Math.min(BRIEF_LIMITS.minWidth, image.width)
+    ? null
+    : size;
+}
+
+/**
+ * Brief mode never shortens reviewed text. It refuses a manifest that cannot fit one
+ * executive page plus one screenshot page, listing every violation at once.
+ */
+/** Wide glyphs (CJK, emoji, full-width forms) take about twice the advance of Latin text. */
+export function displayWeight(text: string): number {
+  let weight = 0;
+  for (const c of cleanText(text).trim())
+    weight +=
+      /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6\p{Extended_Pictographic}]|[\u{20000}-\u{3fffd}]/u.test(
+        c,
+      )
+        ? 2
+        : 1;
+  return weight;
+}
+/** Every string the brief puts on page 1, including generated labels, hosts and the digest line. */
+function briefPageOneText(bundle: ReportBundle): string[] {
+  const m = bundle.manifest,
+    section = m.sections[0];
+  return [
+    m.title,
+    m.subtitle ?? "",
+    m.classification,
+    `Subject ${m.subject.address} · chain ${m.subject.chainIds.join(", ")} · prepared ${m.preparedAt}`,
+    `Status: ${m.assessment.status} (${BRIEF_STATUS[m.assessment.status]}). `,
+    m.assessment.conclusion,
+    m.summary,
+    section?.heading ?? "",
+    ...(section?.paragraphs ?? []),
+    ...(section?.bullets ?? []),
+    ...(section?.table
+      ? [section.table.headers, ...section.table.rows].flat()
+      : []),
+    `Qualification: ${m.limitations[0] ?? BRIEF_QUALIFICATION}`,
+    ...m.sources.flatMap((s) => [s.id, ...sourceLink(s).map((r) => r.text)]),
+    `Bundle SHA-256 ${"0".repeat(64)}. Detailed layout available from retained bundle; full investigation kept separately.`,
+  ];
+}
+export function checkBrief(bundle: ReportBundle): void {
+  const m = bundle.manifest,
+    issues: string[] = [];
+  const over = (label: string, value: string | undefined, max: number) => {
+    if (value !== undefined && value.trim().length > max)
+      issues.push(
+        `${label} has ${value.trim().length} characters (max ${max})`,
+      );
+  };
+  const count = (label: string, length: number, max: number) => {
+    if (length > max) issues.push(`${label}: ${length} (max ${max})`);
+  };
+  over("title", m.title, BRIEF_LIMITS.title);
+  over("subtitle", m.subtitle, BRIEF_LIMITS.subtitle);
+  over("summary", m.summary, BRIEF_LIMITS.summary);
+  over(
+    "assessment.conclusion",
+    m.assessment.conclusion,
+    BRIEF_LIMITS.conclusion,
+  );
+  count("sections", m.sections.length, BRIEF_LIMITS.sections);
+  const section = m.sections[0];
+  if (section) {
+    over("sections[0].heading", section.heading, BRIEF_LIMITS.heading);
+    count(
+      "sections[0].paragraphs",
+      section.paragraphs?.length ?? 0,
+      BRIEF_LIMITS.paragraphs,
+    );
+    section.paragraphs?.forEach((text, i) =>
+      over(`sections[0].paragraphs[${i}]`, text, BRIEF_LIMITS.paragraph),
+    );
+    count(
+      "sections[0] bullets plus table rows",
+      (section.bullets?.length ?? 0) + (section.table?.rows.length ?? 0),
+      BRIEF_LIMITS.items,
+    );
+    section.bullets?.forEach((text, i) =>
+      over(`sections[0].bullets[${i}]`, text, BRIEF_LIMITS.bullet),
+    );
+    if (section.table) {
+      count(
+        "sections[0].table columns",
+        section.table.headers.length,
+        BRIEF_LIMITS.tableColumns,
+      );
+      [section.table.headers, ...section.table.rows].forEach((row, r) =>
+        row.forEach((text, c) =>
+          over(`sections[0].table cell [${r}][${c}]`, text, BRIEF_LIMITS.cell),
+        ),
+      );
+    }
+  }
+  count("limitations", m.limitations.length, BRIEF_LIMITS.limitations);
+  m.limitations.forEach((text, i) =>
+    over(`limitations[${i}]`, text, BRIEF_LIMITS.limitation),
+  );
+  count("sources", m.sources.length, BRIEF_LIMITS.sources);
+  m.sources.forEach((s, i) =>
+    over(`sources[${i}].title`, s.title, BRIEF_LIMITS.sourceTitle),
+  );
+  count("screenshots", m.screenshots.length, BRIEF_LIMITS.screenshots);
+  m.screenshots.forEach((s, i) =>
+    over(`screenshots[${i}].caption`, s.caption, BRIEF_LIMITS.caption),
+  );
+  if (m.screenshots.length <= BRIEF_LIMITS.screenshots)
+    for (const s of bundle.screenshots)
+      if (!briefFigureSize(s.image, bundle.screenshots.length))
+        issues.push(
+          `screenshot ${s.shot.id} (${s.image.width}x${s.image.height} px) would shrink below readable size on a shared page; crop it tighter`,
+        );
+  const pageOne = briefPageOneText(bundle).reduce(
+    (sum, text) => sum + displayWeight(text),
+    0,
+  );
+  count(
+    "page-1 text weight (characters, wide glyphs count 2)",
+    pageOne,
+    BRIEF_LIMITS.pageOneText,
+  );
+  for (const s of m.sources)
+    if (s.url && safeUrl(s.url))
+      over(`sources ${s.id} host`, new URL(s.url).host, BRIEF_LIMITS.host);
+  if (issues.length)
+    throw new Error(
+      `Manifest is too long for --brief. Shorten the reviewed text (nothing is truncated automatically), or omit --brief for the detailed report:\n- ${issues.join("\n- ")}`,
+    );
+}
+
+const day = (value: string | null | undefined) =>
+  value ? value.slice(0, 10) : "unknown";
+function sourceLink(source: ReportManifest["sources"][number]): Run[] {
+  const url = source.url ? safeUrl(source.url) : undefined;
+  return url
+    ? [
+        run(source.title, { href: url }),
+        run(
+          ` (${new URL(url).host}${source.observedAt ? `, observed ${day(source.observedAt)}` : ""})`,
+        ),
+      ]
+    : [
+        run(source.title),
+        run(
+          ` (${source.type}${source.observedAt ? `, observed ${day(source.observedAt)}` : ""})`,
+        ),
+      ];
+}
+
+/** One executive page plus at most one screenshot page. Call checkBrief first. */
+export function buildBrief(bundle: ReportBundle): Block[] {
+  checkBrief(bundle);
+  const m = bundle.manifest,
+    section = m.sections[0];
+  const sources = new Map(m.sources.map((s) => [s.id, s]));
+  const blocks: Block[] = [
+    {
+      kind: "title",
+      title: m.title,
+      subtitle: m.subtitle,
+      banner: m.classification,
+    },
+    {
+      kind: "paragraph",
+      runs: [
+        run("Subject ", { bold: true }),
+        mono(normalizeAddress(m.subject.address)),
+        run(
+          ` · chain ${m.subject.chainIds.join(", ")} · prepared ${m.preparedAt}`,
+        ),
+      ],
+    },
+    {
+      kind: "paragraph",
+      runs: [
+        run(`Status: ${m.assessment.status}`, { bold: true }),
+        run(` (${BRIEF_STATUS[m.assessment.status]}). `, { italic: true }),
+        run(m.assessment.conclusion),
+      ],
+    },
+    { kind: "paragraph", runs: [run(m.summary)] },
+  ];
+  if (section) {
+    blocks.push({ kind: "heading", level: 2, text: section.heading });
+    for (const text of section.paragraphs ?? [])
+      blocks.push({ kind: "paragraph", runs: [run(text)] });
+    if (section.bullets?.length)
+      blocks.push({ kind: "bullets", items: section.bullets.map(plain) });
+    if (section.table)
+      blocks.push({
+        kind: "table",
+        headers: section.table.headers,
+        rows: section.table.rows.map((row) => row.map(plain)),
+        widths: section.table.headers.map(() => 1),
+      });
+  }
+  blocks.push({
+    kind: "paragraph",
+    runs: [
+      run("Qualification: ", { bold: true }),
+      run(m.limitations[0] ?? BRIEF_QUALIFICATION),
+    ],
+  });
+  if (m.sources.length)
+    blocks.push(
+      { kind: "heading", level: 2, text: "Sources" },
+      {
+        kind: "bullets",
+        items: m.sources.map((s) => [
+          run(`${s.id} `, { bold: true }),
+          ...sourceLink(s),
+        ]),
+      },
+    );
+  blocks.push({
+    kind: "paragraph",
+    note: true,
+    runs: [
+      run("Bundle SHA-256 "),
+      mono(bundleDigest(bundle)),
+      run(
+        ". Detailed layout available from retained bundle; full investigation kept separately.",
+      ),
+    ],
+  });
+  bundle.screenshots.forEach((s, index) => {
+    const source = sources.get(s.shot.sourceId)!;
+    blocks.push({
+      kind: "figure",
+      screenshot: s,
+      size: briefFigureSize(s.image, bundle.screenshots.length)!,
+      pageBreak: index === 0,
+      caption: [
+        run(`Figure ${s.shot.id}. `, { bold: true }),
+        run(`${s.shot.caption} Source: `),
+        ...sourceLink(source).slice(0, 1),
+        run(
+          ` · captured ${day(s.shot.capturedAt)}${s.shot.redactions?.length ? " · crop/redaction disclosed in manifest" : ""}`,
+        ),
+      ],
+    });
+  });
+  return blocks;
+}
+
+export interface RenderOptions {
+  /** One executive page plus at most one screenshot page; detailed audit omitted. */
+  brief?: boolean;
+}
+const blocksFor = (bundle: ReportBundle, options: RenderOptions) =>
+  options.brief ? buildBrief(bundle) : buildReport(bundle);
+
 function htmlRuns(runs: Run[]): string {
   return runs
     .map((r) => {
@@ -1147,8 +1479,9 @@ function htmlRuns(runs: Run[]): string {
 }
 const CSS = `@page{size:A4;margin:20mm 18mm}
 *{box-sizing:border-box}
-body{margin:0;font:11pt/1.45 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#1a1a1a}
+body{margin:0;font:11pt/1.45 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#1a1a1a;overflow-wrap:anywhere;word-break:break-word}
 main{max-width:174mm;margin:0 auto}
+main *{min-width:0;max-width:100%}
 h1{font-size:15pt;margin:18pt 0 6pt;border-bottom:1px solid #ccc;padding-bottom:3pt;break-after:avoid}
 h2{font-size:12pt;margin:12pt 0 4pt;break-after:avoid}
 .title{font-size:22pt;border:0;margin:24pt 0 4pt}
@@ -1165,8 +1498,11 @@ figure{margin:6pt 0 0;break-inside:avoid;text-align:center}
 figure img{display:block;margin:0 auto 6pt;border:.5pt solid #999}
 figcaption{text-align:left;font-size:9.5pt}`;
 /** Self-contained HTML: no script, no remote resource, images inline as data URLs. */
-export function renderHtml(bundle: ReportBundle): string {
-  const body = buildReport(bundle)
+export function renderHtml(
+  bundle: ReportBundle,
+  options: RenderOptions = {},
+): string {
+  const body = blocksFor(bundle, options)
     .map((block) => {
       switch (block.kind) {
         case "title":
@@ -1183,8 +1519,8 @@ export function renderHtml(bundle: ReportBundle): string {
         }
         case "figure": {
           const s = block.screenshot,
-            size = displaySize(s.image);
-          return `<figure><img src="data:${s.image.mime};base64,${s.data.toString("base64")}" width="${size.width}" height="${size.height}" style="width:${size.width}px;height:${size.height}px" alt="${escapeHtml(`Figure ${s.shot.id}: ${s.shot.caption}`)}"><figcaption>${htmlRuns(block.caption)}</figcaption></figure>`;
+            size = block.size ?? displaySize(s.image);
+          return `<figure${block.pageBreak ? ' class="page-break"' : ""}><img src="data:${s.image.mime};base64,${s.data.toString("base64")}" width="${size.width}" height="${size.height}" style="width:${size.width}px;height:${size.height}px" alt="${escapeHtml(`Figure ${s.shot.id}: ${s.shot.caption}`)}"><figcaption>${htmlRuns(block.caption)}</figcaption></figure>`;
         }
       }
     })
@@ -1210,8 +1546,15 @@ ${body}
 const BROWSER_HELP =
   "PDF output needs a local Chromium. Install one with `npx playwright install chromium` or install Google Chrome, then retry. FlowLens never downloads a browser by itself; use .docx or .html output meanwhile.";
 /** Renders the same self-contained HTML in a throwaway offline browser context. */
-export async function renderPdf(bundle: ReportBundle): Promise<Buffer> {
-  const html = renderHtml(bundle);
+/** Counts page objects in a Chromium PDF (uncompressed object headers). */
+export function pdfPageCount(pdf: Buffer): number {
+  return pdf.toString("latin1").match(/\/Type\s*\/Page(?![s\w])/g)?.length ?? 0;
+}
+export async function renderPdf(
+  bundle: ReportBundle,
+  options: RenderOptions = {},
+): Promise<Buffer> {
+  const html = renderHtml(bundle, options);
   let chromium: typeof import("@playwright/test").chromium;
   try {
     ({ chromium } = await import("@playwright/test"));
@@ -1271,19 +1614,45 @@ export async function renderPdf(bundle: ReportBundle): Promise<Buffer> {
       throw new Error(
         `Report rendering attempted ${attempted.length} network request(s); refused`,
       );
+    if (options.brief) {
+      await page.emulateMedia({ media: "print" });
+      const overflow = await page.evaluate(() =>
+        [...document.querySelectorAll("main, main *")]
+          .filter(
+            (node) =>
+              !(node instanceof HTMLImageElement) &&
+              node.scrollWidth > node.clientWidth + 1 &&
+              node.clientWidth > 0,
+          )
+          .map((node) => node.tagName.toLowerCase()),
+      );
+      if (overflow.length)
+        throw new Error(
+          `Brief text overflows the page width in: ${[...new Set(overflow)].join(", ")}. Shorten or break the reviewed text; nothing is truncated automatically`,
+        );
+    }
     const m = bundle.manifest;
     const small =
-      'font:7.5pt -apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#555;width:100%;padding:0 18mm;';
-    return await page.pdf({
+      'font:7.5pt -apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#555;width:100%;padding:0 18mm;gap:8pt;overflow-wrap:anywhere;';
+    const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
       tagged: true,
       outline: true,
       displayHeaderFooter: true,
       margin: { top: "20mm", bottom: "20mm", left: "18mm", right: "18mm" },
-      headerTemplate: `<div style="${small}display:flex;justify-content:space-between"><span>${escapeHtml(m.title)}</span><span>${escapeHtml(m.classification)}</span></div>`,
+      headerTemplate: `<div style="${small}display:flex;justify-content:space-between"><span style="min-width:0">${escapeHtml(m.title)}</span><span style="min-width:0;text-align:right">${escapeHtml(m.classification)}</span></div>`,
       footerTemplate: `<div style="${small}display:flex;justify-content:space-between"><span>Prepared ${escapeHtml(m.preparedAt)}</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`,
     });
+    if (options.brief) {
+      const expected = bundle.screenshots.length ? 2 : 1,
+        pages = pdfPageCount(pdf);
+      if (pages !== expected)
+        throw new Error(
+          `Brief rendered ${pages} pages instead of ${expected}: page 1 text or the screenshot page does not fit. Shorten the reviewed text or crop the screenshots; nothing is truncated automatically`,
+        );
+    }
+    return pdf;
   } finally {
     await browser.close();
   }
@@ -1308,10 +1677,13 @@ function docxRuns(runs: Run[], size = 22) {
   });
 }
 /** Word document with semantic headings, fixed-layout tables, embedded images, header, footer and page numbers. */
-export async function renderDocx(bundle: ReportBundle): Promise<Buffer> {
+export async function renderDocx(
+  bundle: ReportBundle,
+  options: RenderOptions = {},
+): Promise<Buffer> {
   const m = bundle.manifest;
   const border = { style: BorderStyle.SINGLE, size: 4, color: "BBBBBB" };
-  const children = buildReport(bundle).flatMap((block) => {
+  const children = blocksFor(bundle, options).flatMap((block) => {
     switch (block.kind) {
       case "title":
         return [
@@ -1428,10 +1800,11 @@ export async function renderDocx(bundle: ReportBundle): Promise<Buffer> {
       }
       case "figure": {
         const s = block.screenshot,
-          size = displaySize(s.image);
+          size = block.size ?? displaySize(s.image);
         return [
           new Paragraph({
             alignment: AlignmentType.CENTER,
+            pageBreakBefore: block.pageBreak,
             keepNext: true,
             children: [
               new ImageRun({
@@ -1528,7 +1901,7 @@ const EXTENSIONS: Record<string, ReportFormat> = {
   ".htm": "html",
 };
 const USAGE =
-  "Usage: node scripts/report-document.ts --manifest MANIFEST.json --output REPORT.pdf|.docx|.html [--format pdf|docx|html] [--bundle-root DIR] [--force]";
+  "Usage: node scripts/report-document.ts --manifest MANIFEST.json --output REPORT.pdf|.docx|.html [--format pdf|docx|html] [--bundle-root DIR] [--brief] [--force]";
 
 /** Never modifies inputs; refuses existing output without --force and any output aliasing an input. */
 export async function main(
@@ -1543,6 +1916,7 @@ export async function main(
       format: { type: "string" },
       "bundle-root": { type: "string" },
       force: { type: "boolean", default: false },
+      brief: { type: "boolean", default: false },
     },
   });
   if (!values.manifest || !values.output) throw new Error(USAGE);
@@ -1558,12 +1932,18 @@ export async function main(
       `Output extension must be .${format ?? "pdf, .docx or .html"} to match the report format`,
     );
   const bundle = await loadReportBundle(values.manifest, values["bundle-root"]);
+  const options = { brief: values.brief };
+  if (options.brief) {
+    checkBrief(bundle);
+    // Every brief format is gated on the same rendered layout: width overflow and page count.
+    if (format !== "pdf") await renderPdf(bundle, options);
+  }
   const data =
     format === "html"
-      ? Buffer.from(renderHtml(bundle))
+      ? Buffer.from(renderHtml(bundle, options))
       : format === "docx"
-        ? await renderDocx(bundle)
-        : await renderPdf(bundle);
+        ? await renderDocx(bundle, options)
+        : await renderPdf(bundle, options);
   const output = await writeReportFile(
     values.output,
     data,

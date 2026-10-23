@@ -7,6 +7,14 @@ description: Produce an offline PDF or DOCX investigation report with cited, pri
 
 Use [trace-wallet](../../investigation/trace-wallet/SKILL.md) for research and [audit-trace-evidence](../../investigation/audit-trace-evidence/SKILL.md) before drafting. This skill packages existing authorized evidence; it does not fetch providers, infer identities, sign, post or purchase access. Follow [AGENTS.md](../../../AGENTS.md) and the [report guide](references/exporting.md). Keep real cases, manifests, original captures, redacted images, inventories and output under `.local/investigations/<case>/`, never public source or fixtures.
 
+## Default deliverable: a two-page brief
+
+Default to `--brief`, not the full audit. Page 1 is an executive page: target 150–250 words, at most 250 words of reader-facing text. Lead with the conclusion, then exactly 3 decisive facts with source IDs and 1 concise scope/ownership caveat. Integrate material contradictory or unresolved evidence into those facts/caveat; do not manufacture confidence or silently omit an unresolved material fact to fit. No hard minimum; do not pad a shorter sufficient answer.
+
+An optional page 2 contains at most 2 essential, readable screenshots with short captions: source ID/link, capture date or unknown status, and any material crop/redaction note. No repeated disclaimers, source inventories, full transaction tables or checksum walls in the main report. A screenshot that cannot be read at normal size is not useful evidence.
+
+Preserve the full audit, research/source ledgers, exact transaction/contract details, original images and checksums in a separate private appendix under the case directory. Reference that appendix by evidence IDs; do not attach it by default. Detailed mode is available only when explicitly requested: render the retained complete audit manifest without `--brief` into a separate appendix. Rendering the brief manifest without that flag only changes its layout; it cannot restore omitted narrative. The two-page limit is an authoring target that must be checked in the rendered format, not a reason to clip inconvenient evidence. The shipped flag enforces [character/count/readability bounds](references/manifest.md), not word count, and refuses over-budget input without truncation or writing. Its compact source list and single bundle fingerprint are not a full audit; keep per-file hashes and ledgers in the private appendix.
+
 ## 1. Verify the research ledger and claims
 
 - Record full addresses, numeric chain IDs, exact transaction hashes/event or trace indices, raw integer amounts/decimals, token contracts, block and UTC event times, source URLs and observation/retrieval times. Keep gross inflow/outflow/net separate; transfers are not balances, trades, profit or ownership. Preserve provider/chain/stream/page/cursor errors and date gaps.
@@ -29,7 +37,7 @@ Follow the exact [manifest contract](references/manifest.md). Use version 1, a c
 
 - Resolve `caseFile` and image paths relative to the manifest directory by default, never the shell working directory. If `--bundle-root DIR` is explicit, those paths are relative to that confined root instead. Include only the intended local case and reviewed PNG/JPEG files, not arbitrary paths, remote URLs, browser caches or private chats. Source URLs are citations, not fetch instructions.
 - Calculate SHA-256 hashes of the original manifest, optional case and every original/derived image before exporting; retain the inventory privately. Preserve original capture timestamps separately from file-modification/report times. After export compare input hashes byte-for-byte and hash the final outputs. A checksum proves byte identity, not authenticity or claim truth.
-- The exporter computes manifest/case/image SHA-256 and image dimensions, records them in Evidence inventory and figure captions with bundle-relative paths, and writes no checksum sidecar. It embeds the exact reviewed image bytes and only scales display down, never up; it performs no image redaction. Retain your private pre/post input and output inventory separately.
+- The exporter computes manifest/case/image SHA-256 and image dimensions. Detailed mode records them in Evidence inventory and figure captions with bundle-relative paths and writes no checksum sidecar; keep that audit output separate from the brief. The brief uses short cited source/capture captions, not hash inventories. It embeds the exact reviewed image bytes and only scales display down, never up; it performs no image redaction. Retain your private pre/post input and output inventory separately.
 - Pick new output paths that cannot alias any input through a symlink, hardlink or shared canonical path. Preserve inputs even with `--force`; overwriting a report is different from overwriting evidence. Never delete originals or silently overwrite existing outputs.
 
 ## 4. Export only the requested formats, offline
@@ -37,17 +45,20 @@ Follow the exact [manifest contract](references/manifest.md). Use version 1, a c
 Run from the project root, with the project-supported Node version and already reviewed local dependencies. Replace `CASE` with a private local case directory. The manifest supplies text and local image inputs; the exporter makes no remote fetching or provider/price/label calls.
 
 ```sh
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.pdf
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.docx
-node scripts/report-document.ts --manifest .local/investigations/CASE/report-manifest.json --output .local/investigations/CASE/report.html
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.pdf --brief
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.docx --brief
+node scripts/report-document.ts --manifest .local/investigations/CASE/brief-manifest.json --output .local/investigations/CASE/brief.html --brief
 ```
 
-Optional `--format pdf|docx|html` must agree with the output extension; it cannot override a mismatched extension. Optional `--bundle-root DIR` changes the confined local input root, not the output format. DOCX/HTML use installed project dependencies; PDF additionally needs `@playwright/test` and an already installed local Chromium or Google Chrome. The exporter never downloads a browser, disables JavaScript, uses an offline context and aborts network requests. If a browser is missing, disclose the limitation; do not install one without separate authorization.
+Optional `--format pdf|docx|html` must agree with the output extension; it cannot override a mismatched extension. Optional `--bundle-root DIR` changes the confined local input root, not the output format. Every CLI `--brief` output (PDF, DOCX and HTML) needs `@playwright/test` and an already installed local Chromium or Google Chrome: the same offline PDF layout gate runs before writing any format. Detailed DOCX/HTML remain browser-independent; detailed PDF still needs the browser. The exporter never downloads a browser, disables JavaScript, uses an offline context and aborts network requests. If a browser is missing, disclose the limitation; do not install one without separate authorization.
 
 Choose PDF OR DOCX according to the request; run both only when both are requested. HTML is a local preview, not a substitute for inspecting the delivered format. Existing output is refused without explicit `--force`; use it only when replacement is authorized. Do not automatically append it after an error. A missing dependency or renderer is a reported limitation, not permission to install paid software, call hosted conversion APIs or change global configuration.
 
 ## 5. Render every page and inspect the delivered format
 
+- Count all visible page-1 words, not only the summary: at most 250, targeting 150–250 without padding. The CLI full printed `cleanText`-weighted 2,300 budget is not a word counter; wide glyphs count 2 and generated metadata/labels/hosts/footer count too. Source URL hosts are limited to 60 characters. Tighten phrasing while retaining material contradictions and the scope caveat; do not silently delete evidence to meet the budget.
+
+- The CLI first checks print-width overflow and exact PDF page count for every brief output format: 1 page without screenshots, 2 with screenshots. Any failure writes nothing; no text is hidden or truncated. This shared gate does not replace native DOCX visual QA.
 - Render ALL pages of each final PDF and DOCX with an available local renderer, then inspect every rendered page. DOCX requires a local viewer/converter capable of pagination; a ZIP/XML check is not visual QA. HTML preview alone does not certify PDF or DOCX layout. If no suitable renderer is available, report visual QA incomplete and do not claim the document passed.
 - Check readability at normal viewing size, page breaks, clipped text, table wrapping, orphan headings, full addresses/hashes, screenshot resolution/crop, captions, citation/source IDs and visible link text. Confirm source links point to the intended public URL without silently opening/fetching them. Confirm unknown capture dates remain unknown and all redactions are disclosed.
 - Reopen the final output after layout fixes and inspect ALL pages again; each format paginates differently. Never claim one format is validated because the other looks correct. Verify no image, caption, metadata or source inventory leaks private aliases, chat names or account UI.
@@ -55,6 +66,6 @@ Choose PDF OR DOCX according to the request; run both only when both are request
 
 ## 6. Deliver a bounded report
 
-Return requested file paths and their SHA-256 values, with a concise conclusion, claim-specific status, scope/coverage limits and any incomplete visual QA. Include cited screenshots only if authorized and reviewed. Do not post, upload or share externally without separate authorization. Do not attach raw chats or unredacted originals by default.
+Return requested brief file paths and a one-line verdict, with any incomplete visual QA disclosed. Preserve output SHA-256 values and the full source/image inventory in the separate private appendix, not the main report. Attach detailed audit output only when requested. Include cited screenshots only if authorized and reviewed. Do not post, upload or share externally without separate authorization. Do not attach raw chats or unredacted originals by default.
 
 [Manifest reference](references/manifest.md) defines fields; [report guide](references/exporting.md) explains the CLI and limits. Contract tests are local: `node --test tests/report-investigation-skill.test.mjs`. Synthetic tests are not evidence about any real company or wallet.

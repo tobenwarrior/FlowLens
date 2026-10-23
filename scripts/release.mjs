@@ -40,6 +40,7 @@ const LICENSE_SHA256 =
 // Adding a distributable file is an explicit review decision. Do not replace this with a glob.
 const allowlist = [
   ".env.example",
+  ".claude/launch.json",
   "skills/README.md",
   "skills/investigation/README.md",
   "skills/reporting/README.md",
@@ -131,6 +132,7 @@ const allowlist = [
   "src/domain/bridges.ts",
   "src/domain/demo.ts",
   "src/domain/engine.ts",
+  "src/domain/search-intent.ts",
   "src/domain/internal.ts",
   "src/domain/protocols.ts",
   "src/domain/safe.ts",

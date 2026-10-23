@@ -6,7 +6,7 @@ FlowLens is licensed under [AGPL-3.0-only](LICENSE). Contributions are accepted 
 
 ## Run and check a change
 
-Read [README.md](README.md), [architecture](docs/architecture.md) and the relevant provider contract first. Start with the keyless synthetic demo; real-wallet access is unnecessary for most development.
+Read [README.md](README.md), [architecture](docs/architecture.md) and the relevant provider contract first. Run a live trace of a public wallet to see the product as people use it. Tests stay offline: they use synthetic fixtures (the browser test opens `/?fixture=synthetic`) and injected provider responses, so most development needs no network or key.
 
 ```sh
 npm ci --ignore-scripts

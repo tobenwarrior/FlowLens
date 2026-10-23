@@ -29,6 +29,16 @@ Host checks the same day: `base.blockscout.com` and `arbitrum.blockscout.com` an
 
 Limits: one address, one day, one explorer version. The run stopped at a partial cursor, so older history was not read. Agreement on six sampled transfers is not an audit of the other 78. Explorer v12 changes pagination echoes; the adapter does not depend on them, but no v12 explorer was exercised with a wallet. The private run notes, including the address, stay outside the repository.
 
+## Live public-wallet check — 23 October 2026
+
+With `ETHERSCAN_API_KEY` unset, the web app and CLI traced three public organisation wallets through `eth.blockscout.com`: the ENS DAO endowment (`endowment.ensdao.eth`, `0x4F2083f5fBede34C2714aFfb3105539775f7FE64`), the ENS DAO wallet (`wallet.ensdao.eth`, `0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7`) and the Uniswap governance timelock (`0x1a9C8182C09F50C8318d769245beA52c32BE35BC`, Blockscout contract name `Timelock`).
+
+- Blockscout's `internal-transactions` endpoint did not answer for any of them: adapter requests hit the 15-second timeout and a direct 60-second request got no response, while the transactions and token-transfers endpoints answered in under a second. While it was down, every live trace failed whole and committed nothing. The adapter now keeps a page's native and ERC20 rows when only the internal stream is unavailable, records internal transfers as uncovered with a warning, and leaves the internal cursor in place for the next page. Later that day the endpoint answered again and a CLI `create` plus `expand --pages 1` covered all three streams.
+- The ENS DAO endowment's first page held 12 transfers with 8 counterparties (ETHx, WETH, weETH, USDC, syrupUSDC, ETH and one unsolicited token); the expansion brought the case to 23 transfers with no error. The README screenshots show this trace, captured from a production build with an empty label store.
+- All three wallets' newest pages included unsolicited airdropped tokens; on the ENS DAO wallet and the Uniswap timelock they were most of the rows.
+
+Limits: three addresses on one day, stopped at partial cursors, so older history was not read. No transfers were cross-checked against receipts in this pass.
+
 ## Local release verification
 
 Verified on macOS with Node **26.8.1** and npm **11.19.0**:

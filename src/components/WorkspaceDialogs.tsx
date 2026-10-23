@@ -14,8 +14,10 @@ import {
   X,
 } from "lucide-react";
 import type { Investigation } from "../domain/types.ts";
-import { DEMO_ROOT } from "../domain/demo.ts";
 import { chainName, short } from "./Graph.tsx";
+import { EXAMPLES } from "./StartPanel.tsx";
+
+const CLI_EXAMPLE = EXAMPLES[0].address;
 
 export type WorkspaceModal = "cases" | "coverage" | "agents" | "help" | null;
 
@@ -31,7 +33,8 @@ export interface AgentCaseSummary {
 
 interface WorkspaceDialogsProps {
   modal: Exclude<WorkspaceModal, null>;
-  investigation: Investigation;
+  /** Null on the start screen, before any case is open. */
+  investigation: Investigation | null;
   saved: Investigation[];
   /** Cases the CLI, API and MCP share through the local case store. */
   agentCases: AgentCaseSummary[];
@@ -59,6 +62,7 @@ export function WorkspaceDialogs({
 }: WorkspaceDialogsProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const evidenceOnly =
+    !!investigation &&
     investigation.transfers.length === 0 &&
     investigation.coverage.some((item) => item.provider === "evidence-only");
   useEffect(() => {
@@ -203,22 +207,26 @@ export function WorkspaceDialogs({
                 ))
               )}
             </div>
-            <label className="notes-label">
-              INVESTIGATION NOTES
-              <textarea
-                aria-label="Investigation notes"
-                value={investigation.notes}
-                placeholder="Record observations, alternatives, and unresolved questions…"
-                onChange={(e) => onNotesChange(e.target.value)}
-              />
-            </label>
+            {investigation && (
+              <label className="notes-label">
+                INVESTIGATION NOTES
+                <textarea
+                  aria-label="Investigation notes"
+                  value={investigation.notes}
+                  placeholder="Record observations, alternatives, and unresolved questions…"
+                  onChange={(e) => onNotesChange(e.target.value)}
+                />
+              </label>
+            )}
             <div className="modal-actions">
               <button className="button" onClick={onImport}>
                 <Upload size={15} /> Import JSON
               </button>
-              <button className="button primary" onClick={onSave}>
-                <Save size={15} /> Save current case
-              </button>
+              {investigation && (
+                <button className="button primary" onClick={onSave}>
+                  <Save size={15} /> Save current case
+                </button>
+              )}
             </div>
           </>
         ) : modal === "coverage" ? (
@@ -232,67 +240,83 @@ export function WorkspaceDialogs({
               A graph is only as complete as its sources. End-of-page is not
               proof of full wallet history.
             </p>
-            <div className="coverage-source">
-              <div>
-                <strong>
-                  {investigation.mode === "demo"
-                    ? "Synthetic fixture provider"
-                    : evidenceOnly
-                      ? "Evidence-only investigation"
-                      : "Indexed transfer ledger"}
-                </strong>
-                <span className="case-badge">
-                  {investigation.mode === "demo" ? "DEMO" : "LIVE"}
+            {!investigation ? (
+              <div className="empty-state">
+                <span>
+                  No case is open. Trace a wallet and each loaded stream will
+                  list its provider, pages and cursor here.
                 </span>
               </div>
-              <p>
-                {investigation.mode === "demo"
-                  ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
-                  : evidenceOnly
-                    ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
-                    : "Loaded indexed transfers; each coverage row below names its provider and page state. Blockscout serves Ethereum without a key. Etherscan history uses your permitted server-side key, and chain access depends on your provider plan."}
-              </p>
-            </div>
-            <div className="coverage-list">
-              {investigation.coverage.map((c) => (
-                <div key={c.key}>
-                  <span
-                    className={`status-dot ${c.status === "error" ? "red" : "amber"}`}
-                  />
+            ) : (
+              <>
+                <div className="coverage-source">
                   <div>
                     <strong>
-                      {chainName(c.chainId)} · {short(c.address)}
+                      {investigation.mode === "demo"
+                        ? "Synthetic fixture provider"
+                        : evidenceOnly
+                          ? "Evidence-only investigation"
+                          : "Indexed transfer ledger"}
                     </strong>
-                    <span>
-                      {c.provider} · {c.pagesLoaded} pages · {c.status}
+                    <span className="case-badge">
+                      {investigation.mode === "demo" ? "DEMO" : "LIVE"}
                     </span>
-                    {c.warnings.map((w, i) => (
-                      <p key={i}>{w}</p>
-                    ))}
-                    {c.error && <p className="error-text">{c.error}</p>}
-                    <code>
-                      {c.cursor
-                        ? `Resume cursor: ${c.cursor.slice(0, 90)}${c.cursor.length > 90 ? "…" : ""}`
-                        : "No next-page cursor in loaded stream"}
-                    </code>
                   </div>
+                  <p>
+                    {investigation.mode === "demo"
+                      ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
+                      : evidenceOnly
+                        ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
+                        : "Loaded indexed transfers; each coverage row below names its provider and page state. Blockscout serves Ethereum without a key. Etherscan history uses your permitted server-side key, and chain access depends on your provider plan."}
+                  </p>
                 </div>
-              ))}
-            </div>
-            <div className="warning-box">
-              <ShieldAlert size={18} />
-              <p>
-                The indexed graph does not include internal calls, NFTs, fees or
-                complete cross-chain history. Gross flow is not unique capital,
-                profit, or assets under management.
-              </p>
-            </div>
+                <div className="coverage-list">
+                  {investigation.coverage.map((c) => (
+                    <div key={c.key}>
+                      <span
+                        className={`status-dot ${c.status === "error" ? "red" : "amber"}`}
+                      />
+                      <div>
+                        <strong>
+                          {chainName(c.chainId)} · {short(c.address)}
+                        </strong>
+                        <span>
+                          {c.provider} ·{" "}
+                          {c.streams.length
+                            ? c.streams.join(", ")
+                            : "no streams"}{" "}
+                          · {c.pagesLoaded} pages · {c.status}
+                        </span>
+                        {c.warnings.map((w, i) => (
+                          <p key={i}>{w}</p>
+                        ))}
+                        {c.error && <p className="error-text">{c.error}</p>}
+                        <code>
+                          {c.cursor
+                            ? `Resume cursor: ${c.cursor.slice(0, 90)}${c.cursor.length > 90 ? "…" : ""}`
+                            : "No next-page cursor in loaded stream"}
+                        </code>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="warning-box">
+                  <ShieldAlert size={18} />
+                  <p>
+                    The indexed graph does not include NFTs, fees or complete
+                    cross-chain history, and holds internal transfers only for
+                    the streams listed above. Gross flow is not unique capital,
+                    profit, or assets under management.
+                  </p>
+                </div>
+              </>
+            )}
             <div className="coverage-source">
               <strong>
                 Protocol observations · separate from graph totals
               </strong>
               <p>
-                {investigation.mode === "demo"
+                {investigation?.mode === "demo"
                   ? "Protocol evidence offers a clearly marked synthetic replay of Safe, bridge and internal-trace observations. No public provider is queried."
                   : "Protocol evidence can explicitly query Safe configuration/history or a known CCTP transaction and call trace. Public endpoint support and coverage are checked per request. No wallet-history discovery is implied."}
               </p>
@@ -319,15 +343,15 @@ export function WorkspaceDialogs({
               trace, inspect and preserve evidence without clicking the graph.
             </p>
             <div className="code-example">
-              <span>CREATE A REPRODUCIBLE DEMO CASE</span>
+              <span>START A LIVE CASE FROM ONE WALLET</span>
               <code>
-                node server/cli.ts create --address {DEMO_ROOT} --mode demo
+                node server/cli.ts create --mode live --address {CLI_EXAMPLE}{" "}
                 --file .local/case.json
               </code>
               <span>EXPAND ONE WALLET SCOPE · ONE PAGE</span>
               <code>
                 node server/cli.ts expand --file .local/case.json --address{" "}
-                {DEMO_ROOT} --chain 1 --pages 1
+                {CLI_EXAMPLE} --chain 1 --pages 1
               </code>
               <span>INSPECT EVIDENCE & COVERAGE</span>
               <code>node server/cli.ts inspect --file .local/case.json</code>
@@ -367,12 +391,11 @@ export function WorkspaceDialogs({
                 <section>
                   <strong>Start with a wallet</strong>
                   <p>
-                    The synthetic demo needs no key. Select Cedar wallet or a
-                    funding path to inspect it. Live Ethereum history needs no
-                    key: Blockscout serves it and receives the wallet you trace.
-                    Arbitrum needs a permitted Etherscan key; evidence-only
-                    cases start without an index. Each chain has separate
-                    coverage.
+                    Paste any Ethereum address, or pick a public wallet on the
+                    start screen. Live Ethereum history needs no key: Blockscout
+                    serves it and receives the wallet you trace. Arbitrum needs
+                    a permitted Etherscan key; evidence-only cases start without
+                    an index. Each chain has separate coverage.
                   </p>
                 </section>
               </div>

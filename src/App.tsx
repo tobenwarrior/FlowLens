@@ -58,6 +58,7 @@ import {
 } from "./domain/workspace.ts";
 import { visibleTransfers } from "./domain/wallet-flows.ts";
 import { Sidebar } from "./components/Sidebar.tsx";
+import { StartPanel } from "./components/StartPanel.tsx";
 import { WorkspaceDialogs } from "./components/WorkspaceDialogs.tsx";
 import type {
   AgentCaseSummary,
@@ -130,12 +131,20 @@ function download(c: Investigation) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// The synthetic case is an offline fixture for the browser test (?fixture=synthetic).
+// It is never offered to people: the workspace opens on live tracing.
+const SYNTHETIC_FIXTURE =
+  new URLSearchParams(window.location.search).get("fixture") === "synthetic";
+
 export default function App() {
   const [investigation, setInvestigation] = useState<Investigation | null>(
     null,
   );
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<"demo" | "live">("demo");
+  const [mode, setMode] = useState<"demo" | "live">(
+    SYNTHETIC_FIXTURE ? "demo" : "live",
+  );
+  const [booted, setBooted] = useState(false);
   const [historyMode, setHistoryMode] = useState<"indexed" | "evidence-only">(
     "indexed",
   );
@@ -328,16 +337,18 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      let initial: Investigation;
+      let initial: Investigation | null;
       try {
         const raw = localStorage.getItem(CURRENT);
-        initial = raw
-          ? parseInvestigation(JSON.parse(raw))
-          : await createDemoInvestigation();
+        initial = raw ? parseInvestigation(JSON.parse(raw)) : null;
       } catch {
-        initial = await createDemoInvestigation();
+        initial = null;
       }
-      if (initial.mode === "live") {
+      // A saved synthetic case only reopens under the test fixture switch.
+      if (initial?.mode === "demo" && !SYNTHETIC_FIXTURE) initial = null;
+      if (!initial && SYNTHETIC_FIXTURE)
+        initial = await createDemoInvestigation();
+      if (initial?.mode === "live") {
         try {
           const latest = await api<Investigation>(
             `/investigations/${encodeURIComponent(initial.id)}`,
@@ -351,13 +362,16 @@ export default function App() {
         }
       }
       if (alive) {
-        setInvestigation(initial);
-        setMode(initial.mode);
-        setHistoryMode(
-          hasEvidenceOnlyCoverage(initial) ? "evidence-only" : "indexed",
-        );
-        setInput(initial.root);
+        if (initial) {
+          setInvestigation(initial);
+          setMode(initial.mode);
+          setHistoryMode(
+            hasEvidenceOnlyCoverage(initial) ? "evidence-only" : "indexed",
+          );
+          setInput(initial.root);
+        }
         setSaved(readCases());
+        setBooted(true);
       }
     })();
     fetch("/api/status")
@@ -472,18 +486,25 @@ export default function App() {
     setSelectedTransfer(t);
     setDrawer(true);
   };
-  async function start() {
+  // The start screen's examples pass an indexed live trace, whatever the selector shows.
+  async function start(
+    target = input,
+    run: { mode: "demo" | "live"; history: "indexed" | "evidence-only" } = {
+      mode,
+      history: historyMode,
+    },
+  ) {
     setError("");
     let root;
     try {
-      root = normalizeAddress(input.trim());
+      root = normalizeAddress(target.trim());
     } catch {
       setError(
         "Enter a valid EVM address: 0x followed by 40 hexadecimal characters.",
       );
       return;
     }
-    if (mode === "demo" && root !== DEMO_ROOT) {
+    if (run.mode === "demo" && root !== DEMO_ROOT) {
       setError(
         "Demo mode uses the synthetic focus wallet. Choose Live for a real address, or reset to the demo wallet.",
       );
@@ -492,19 +513,19 @@ export default function App() {
     setBusy(true);
     try {
       const c =
-        mode === "demo"
+        run.mode === "demo"
           ? await createDemoInvestigation()
           : await api<Investigation>("/investigations", {
               root,
-              mode,
-              historyMode,
+              mode: run.mode,
+              historyMode: run.history,
               title: `Trace ${short(root)}`,
             });
       setInvestigation(c);
       setDrawer(false);
       resetFilters();
       setToast(
-        mode === "demo"
+        run.mode === "demo"
           ? "Synthetic investigation ready"
           : "Investigation created. Review source coverage.",
       );
@@ -779,25 +800,38 @@ export default function App() {
       .then(() => setDrawer(false))
       .catch(() => {});
   };
-  if (!investigation)
+  if (!booted)
     return (
       <div className="boot">
-        <div className="brand-mark">
-          f<span>·</span>
-        </div>
+        <img
+          className="boot-mark"
+          src="/flowlens-mark.png"
+          alt=""
+          width={128}
+          height={128}
+        />
         <p>Opening your investigation workspace…</p>
         <LoaderCircle className="spin" size={20} />
       </div>
     );
-  const networks = [
-    ...new Set([
-      ...investigation.transfers.map((t) => t.chainId),
-      ...investigation.coverage.map((item) => item.chainId),
-    ]),
-  ];
+  const networks = investigation
+    ? [
+        ...new Set([
+          ...investigation.transfers.map((t) => t.chainId),
+          ...investigation.coverage.map((item) => item.chainId),
+        ]),
+      ]
+    : [];
   const evidenceOnly =
+    !!investigation &&
     hasEvidenceOnlyCoverage(investigation) &&
     investigation.transfers.length === 0;
+  // Internal transfers are loaded only where a scope's provider streamed them.
+  const loadedScopes =
+    investigation?.coverage.filter((c) => c.pagesLoaded > 0) ?? [];
+  const internalScopes = loadedScopes.filter((c) =>
+    c.streams.includes("internal"),
+  ).length;
   const hasFilter =
     chain !== "all" || asset !== "all" || direction !== "all" || from || to;
   return (
@@ -897,7 +931,11 @@ export default function App() {
                   if (next === "demo") setInput(DEMO_ROOT);
                 }}
               >
-                <option value="demo">Demo data</option>
+                {/* Also shown while a synthetic case someone opened is current, so the
+                    selector never claims a mode the case is not in. */}
+                {(SYNTHETIC_FIXTURE || mode === "demo") && (
+                  <option value="demo">Synthetic test fixture</option>
+                )}
                 <option value="live">
                   {provider ? `Live · ${provider}` : "Live · key required"}
                 </option>
@@ -923,7 +961,7 @@ export default function App() {
           <div className="error-banner" role="alert">
             <ShieldAlert size={17} />
             <span>{error}</span>
-            {banner.conflictCaseId === investigation.id && (
+            {investigation && banner.conflictCaseId === investigation.id && (
               <button
                 className="button subtle"
                 disabled={busy}
@@ -935,7 +973,7 @@ export default function App() {
             )}
             {/* Reloading without saving stays available: looking at the newer case
                 before deciding is the more conservative answer to a conflict. */}
-            {investigation.mode === "live" && (
+            {investigation?.mode === "live" && (
               <button
                 className="button subtle"
                 disabled={busy}
@@ -953,394 +991,430 @@ export default function App() {
             </button>
           </div>
         )}
-        <div className="demo-banner">
-          <span
-            className={`demo-dot ${investigation.mode === "live" ? "live" : ""}`}
-          />
-          <strong>
-            {investigation.mode === "demo"
-              ? "You’re exploring a synthetic investigation."
-              : evidenceOnly
-                ? "Private investigation · evidence only."
-                : "Private investigation · partial source coverage."}
-          </strong>
-          <span>
-            {investigation.mode === "demo"
-              ? "Fictional wallets, labels and transfers. No live claims."
-              : evidenceOnly
-                ? "No wallet history loaded. Add bounded protocol observations from the evidence panel."
-                : "Only loaded transfers are shown. Review provider limitations."}
-          </span>
-          <button onClick={() => setModal("coverage")}>
-            View coverage <ArrowRight size={13} />
-          </button>
-        </div>
-        <section
-          className={`investigation-panel ${evidenceOnly ? "evidence-only-case" : ""}`}
-        >
-          <div className="case-header">
-            <div className="case-title">
-              <span className="case-symbol">
-                <GitBranch size={19} />
-              </span>
-              <div>
-                <h2>
-                  {/* The built-in fixture already carries its own title, and an agent
-                      can create demo-mode cases with names of their own. */}
-                  {investigation.title}
-                  <span className="case-badge">
-                    {investigation.mode === "demo" ? "DEMO" : "LOCAL"}
-                  </span>
-                </h2>
-                <span className="case-subtitle">
-                  {short(investigation.root)} <span>·</span> {networks.length}{" "}
-                  networks <span>·</span> {investigation.transfers.length}{" "}
-                  evidence records
-                </span>
-              </div>
-            </div>
-            <div className="case-actions">
-              {investigation.mode === "live" && !error && (
-                <button
-                  className="button subtle"
-                  disabled={busy}
-                  onClick={() => void refreshCase()}
-                >
-                  <RotateCcw size={15} />
-                  <span>Refresh case</span>
-                </button>
-              )}
-              <button
-                className="button subtle"
-                onClick={() => download(investigation)}
-              >
-                <Download size={15} />
-                <span>Export JSON</span>
-              </button>
-              <button
-                className={`button ${savedAt ? "saved" : ""}`}
-                onClick={() => void save()}
-              >
-                {savedAt ? <Check size={15} /> : <Save size={15} />}
-                <span>{savedAt ? "Saved" : "Save case"}</span>
-              </button>
-            </div>
-          </div>
-          <div className="filterbar">
-            <label className="filter-select">
-              <Layers size={14} />
-              <select
-                aria-label="Filter network"
-                value={chain}
-                onChange={(e) => setChain(e.target.value)}
-              >
-                <option value="all">All networks</option>
-                {networks.map((n) => (
-                  <option key={n} value={n}>
-                    {chainName(n)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={12} />
-            </label>
-            <label className="filter-select">
-              <span className="asset-icon">◈</span>
-              <select
-                aria-label="Filter asset"
-                value={asset}
-                onChange={(e) => setAsset(e.target.value)}
-              >
-                <option value="all">All assets</option>
-                {allFlows.map((f) => (
-                  <option key={assetKey(f.asset)} value={assetKey(f.asset)}>
-                    {f.asset.symbol} · {chainName(f.asset.chainId)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={12} />
-            </label>
-            <label className="filter-select">
-              <ArrowDownLeft size={14} />
-              <select
-                aria-label="Filter direction"
-                value={direction}
-                onChange={(e) =>
-                  setDirection(e.target.value as typeof direction)
-                }
-              >
-                <option value="all">Both directions</option>
-                <option value="in">Inflows to focus</option>
-                <option value="out">Outflows from focus</option>
-              </select>
-              <ChevronDown size={12} />
-            </label>
-            <button
-              className={`filter-select date-toggle ${from || to ? "active" : ""}`}
-              onClick={() => setShowDates((v) => !v)}
-            >
-              <SlidersHorizontal size={14} />
-              <span>{from || to ? "Custom dates" : "All time"}</span>
-              <ChevronDown size={12} />
-            </button>
-            {hasFilter && (
-              <button className="reset-button" onClick={resetFilters}>
-                <RotateCcw size={12} /> Reset
-              </button>
-            )}
-            <div className="filter-spacer" />
-            <div className="view-switch" aria-label="Workspace view">
-              <button
-                aria-label="Graph view"
-                className={view === "graph" ? "active" : ""}
-                onClick={() => setView("graph")}
-              >
-                <GitBranch size={15} /> <span>Graph</span>
-              </button>
-              <button
-                aria-label="List view"
-                className={view === "list" ? "active" : ""}
-                onClick={() => setView("list")}
-              >
-                <List size={15} /> <span>Evidence</span>
-              </button>
-            </div>
-          </div>
-          {showDates && (
-            <div className="date-row">
-              <label>
-                From UTC{" "}
-                <input
-                  type="date"
-                  aria-label="From date"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                />
-              </label>
-              <span>→</span>
-              <label>
-                To UTC{" "}
-                <input
-                  type="date"
-                  aria-label="To date"
-                  value={to}
-                  min={from}
-                  onChange={(e) => setTo(e.target.value)}
-                />
-              </label>
+        {investigation ? (
+          <>
+            <div className="demo-banner">
               <span
-                className={`date-hint ${dateRangeInvalid ? "error-text" : ""}`}
-                role={dateRangeInvalid ? "alert" : undefined}
-              >
-                {dateRangeInvalid
-                  ? "From date must be on or before the To date."
-                  : "Filters apply to loaded evidence only."}
-              </span>
-            </div>
-          )}
-          <div className="summary-scope-mobile">
-            {primaryFlow
-              ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)} · focus wallet · loaded scope`
-              : "No matching evidence"}
-            {flows.length > 1 ? ` · ${flows.length - 1} other assets` : ""}
-          </div>
-          <div className="flow-summary">
-            <div>
-              <span className="metric-label">
-                <ArrowDownLeft size={13} /> Gross inflow
-              </span>
-              <strong className="inflow">
-                {primaryFlow
-                  ? displayUnits(primaryFlow.inflow, primaryFlow.asset.decimals)
-                  : "0"}
-                <small>{primaryFlow?.asset.symbol || "—"}</small>
-              </strong>
-            </div>
-            <div>
-              <span className="metric-label">
-                <ArrowUpRight size={13} /> Gross outflow
-              </span>
+                className={`demo-dot ${investigation.mode === "live" ? "live" : ""}`}
+              />
               <strong>
-                {primaryFlow
-                  ? displayUnits(
-                      primaryFlow.outflow,
-                      primaryFlow.asset.decimals,
-                    )
-                  : "0"}
-                <small>{primaryFlow?.asset.symbol || "—"}</small>
+                {investigation.mode === "demo"
+                  ? "You’re exploring a synthetic investigation."
+                  : evidenceOnly
+                    ? "Private investigation · evidence only."
+                    : "Private investigation · partial source coverage."}
               </strong>
-            </div>
-            <div>
-              <span className="metric-label">Net flow</span>
-              <strong className="net">
-                {primaryFlow && BigInt(primaryFlow.net) > 0n ? "+" : ""}
-                {primaryFlow
-                  ? displayUnits(primaryFlow.net, primaryFlow.asset.decimals)
-                  : "0"}
-                <small>{primaryFlow?.asset.symbol || "—"}</small>
-              </strong>
-            </div>
-            <div className="scope-note">
-              <span className="scope-icon">
-                <LayoutGrid size={16} />
+              <span>
+                {investigation.mode === "demo"
+                  ? "Fictional wallets, labels and transfers. No live claims."
+                  : evidenceOnly
+                    ? "No wallet history loaded. Add bounded protocol observations from the evidence panel."
+                    : "Only loaded transfers are shown. Review provider limitations."}
               </span>
-              <p>
-                <strong>
-                  {primaryFlow
-                    ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)}`
-                    : "No matching evidence"}
-                </strong>
-                <span>
-                  Focus wallet · loaded scope only
-                  {flows.length > 1
-                    ? ` · ${flows.length - 1} other assets`
-                    : ""}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="canvas-heading">
-            <div>
-              <span className="eyebrow">
-                {view === "graph" ? "FUNDING GRAPH" : "TRANSACTION HISTORY"}
-              </span>
-              {view === "graph" && (
-                <span className="record-count">
-                  {filtered.length} transfers
-                </span>
-              )}
-            </div>
-            <div>
-              <button
-                className="text-button"
-                onClick={() =>
-                  selectNode({
-                    address: investigation.root,
-                    chainId: chain === "all" ? 1 : Number(chain),
-                  })
-                }
-              >
-                Wallet flows <ArrowRight size={13} />
+              <button onClick={() => setModal("coverage")}>
+                View coverage <ArrowRight size={13} />
               </button>
-              {investigation.hidden.length +
-                (investigation.hiddenTransfers?.length || 0) >
-                0 && (
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() =>
-                    void changeVisibility({
-                      nodeKeys: investigation.hidden,
-                      transferIds: investigation.hiddenTransfers || [],
-                      visible: true,
-                    }).catch(() => {})
-                  }
-                >
-                  Restore{" "}
-                  {investigation.hidden.length +
-                    (investigation.hiddenTransfers?.length || 0)}{" "}
-                  hidden
-                </button>
-              )}
-              {view === "graph" && (
-                <button
-                  className={`text-button ${grouped ? "active" : ""}`}
-                  onClick={() => setGrouped((g) => !g)}
-                  title="Arrange counterparties by service category"
-                >
-                  <Layers size={13} />
-                  {grouped ? "Grouped by type" : "Group by type"}
-                </button>
-              )}
             </div>
-          </div>
-          {view === "graph" && (
-            <div className="mobile-graph-hint">
-              Drag to follow paths · select a wallet to inspect
-            </div>
-          )}
-          <div className={`canvas-and-drawer ${drawer ? "drawer-open" : ""}`}>
-            <div className="canvas-main" ref={canvasRef}>
-              {view === "graph" ? (
-                <Graph
-                  investigation={investigation}
-                  transfers={graphTransfers}
-                  onNode={selectNode}
-                  onTransfer={selectTransfer}
-                  selected={
-                    selectedNode
-                      ? selectedNode.address === investigation.root
-                        ? investigation.root
-                        : nodeKey(selectedNode.chainId, selectedNode.address)
-                      : undefined
-                  }
-                  grouped={grouped}
-                />
-              ) : (
-                <div className="address-page">
-                  <AddressOverview
-                    investigation={investigation}
-                    address={selectedNode?.address ?? investigation.root}
-                    book={activeBook}
-                    onSelectWallet={selectNode}
-                  />
-                  <TransferTable
-                    investigation={investigation}
-                    address={selectedNode?.address ?? investigation.root}
-                    book={activeBook}
-                    onSelect={selectTransfer}
-                    onLoadPrices={
-                      investigation.mode === "demo" ? undefined : loadPrices
+            <section
+              className={`investigation-panel ${evidenceOnly ? "evidence-only-case" : ""}`}
+            >
+              <div className="case-header">
+                <div className="case-title">
+                  <span className="case-symbol">
+                    <GitBranch size={19} />
+                  </span>
+                  <div>
+                    <h2>
+                      {/* The built-in fixture already carries its own title, and an agent
+                      can create demo-mode cases with names of their own. */}
+                      {investigation.title}
+                      <span className="case-badge">
+                        {investigation.mode === "demo" ? "DEMO" : "LOCAL"}
+                      </span>
+                    </h2>
+                    <span className="case-subtitle">
+                      {short(investigation.root)} <span>·</span>{" "}
+                      {networks.length} networks <span>·</span>{" "}
+                      {investigation.transfers.length} evidence records
+                    </span>
+                  </div>
+                </div>
+                <div className="case-actions">
+                  {investigation.mode === "live" && !error && (
+                    <button
+                      className="button subtle"
+                      disabled={busy}
+                      onClick={() => void refreshCase()}
+                    >
+                      <RotateCcw size={15} />
+                      <span>Refresh case</span>
+                    </button>
+                  )}
+                  <button
+                    className="button subtle"
+                    onClick={() => download(investigation)}
+                  >
+                    <Download size={15} />
+                    <span>Export JSON</span>
+                  </button>
+                  <button
+                    className={`button ${savedAt ? "saved" : ""}`}
+                    onClick={() => void save()}
+                  >
+                    {savedAt ? <Check size={15} /> : <Save size={15} />}
+                    <span>{savedAt ? "Saved" : "Save case"}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="filterbar">
+                <label className="filter-select">
+                  <Layers size={14} />
+                  <select
+                    aria-label="Filter network"
+                    value={chain}
+                    onChange={(e) => setChain(e.target.value)}
+                  >
+                    <option value="all">All networks</option>
+                    {networks.map((n) => (
+                      <option key={n} value={n}>
+                        {chainName(n)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} />
+                </label>
+                <label className="filter-select">
+                  <span className="asset-icon">◈</span>
+                  <select
+                    aria-label="Filter asset"
+                    value={asset}
+                    onChange={(e) => setAsset(e.target.value)}
+                  >
+                    <option value="all">All assets</option>
+                    {allFlows.map((f) => (
+                      <option key={assetKey(f.asset)} value={assetKey(f.asset)}>
+                        {f.asset.symbol} · {chainName(f.asset.chainId)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} />
+                </label>
+                <label className="filter-select">
+                  <ArrowDownLeft size={14} />
+                  <select
+                    aria-label="Filter direction"
+                    value={direction}
+                    onChange={(e) =>
+                      setDirection(e.target.value as typeof direction)
                     }
-                    onLoadBlockPrices={
-                      investigation.mode === "demo"
-                        ? undefined
-                        : loadBlockPrices
-                    }
-                    pricing={pricing}
-                  />
+                  >
+                    <option value="all">Both directions</option>
+                    <option value="in">Inflows to focus</option>
+                    <option value="out">Outflows from focus</option>
+                  </select>
+                  <ChevronDown size={12} />
+                </label>
+                <button
+                  className={`filter-select date-toggle ${from || to ? "active" : ""}`}
+                  onClick={() => setShowDates((v) => !v)}
+                >
+                  <SlidersHorizontal size={14} />
+                  <span>{from || to ? "Custom dates" : "All time"}</span>
+                  <ChevronDown size={12} />
+                </button>
+                {hasFilter && (
+                  <button className="reset-button" onClick={resetFilters}>
+                    <RotateCcw size={12} /> Reset
+                  </button>
+                )}
+                <div className="filter-spacer" />
+                <div className="view-switch" aria-label="Workspace view">
+                  <button
+                    aria-label="Graph view"
+                    className={view === "graph" ? "active" : ""}
+                    onClick={() => setView("graph")}
+                  >
+                    <GitBranch size={15} /> <span>Graph</span>
+                  </button>
+                  <button
+                    aria-label="List view"
+                    className={view === "list" ? "active" : ""}
+                    onClick={() => setView("list")}
+                  >
+                    <List size={15} /> <span>Evidence</span>
+                  </button>
+                </div>
+              </div>
+              {showDates && (
+                <div className="date-row">
+                  <label>
+                    From UTC{" "}
+                    <input
+                      type="date"
+                      aria-label="From date"
+                      value={from}
+                      onChange={(e) => setFrom(e.target.value)}
+                    />
+                  </label>
+                  <span>→</span>
+                  <label>
+                    To UTC{" "}
+                    <input
+                      type="date"
+                      aria-label="To date"
+                      value={to}
+                      min={from}
+                      onChange={(e) => setTo(e.target.value)}
+                    />
+                  </label>
+                  <span
+                    className={`date-hint ${dateRangeInvalid ? "error-text" : ""}`}
+                    role={dateRangeInvalid ? "alert" : undefined}
+                  >
+                    {dateRangeInvalid
+                      ? "From date must be on or before the To date."
+                      : "Filters apply to loaded evidence only."}
+                  </span>
                 </div>
               )}
-            </div>
-            {drawer && (
-              <EvidenceDrawer
-                investigation={investigation}
-                node={selectedNode}
-                transfer={selectedTransfer}
-                onClose={() => setDrawer(false)}
-                onSelect={selectTransfer}
-                onExpand={(n) => void expand(n)}
-                onPin={togglePin}
-                onHide={hide}
-                onWallet={selectNode}
-                onVisibility={changeVisibility}
-                onAnnotate={annotate}
-                filter={{
-                  asset: asset === "all" ? undefined : asset,
-                  from: from || undefined,
-                  to: to || undefined,
-                }}
-                busy={busy}
-              />
-            )}
-          </div>
-          <div className="canvas-footer">
-            <span>
-              <span className="status-dot amber" />
-              <strong>Partial coverage</strong>
-              <span className="footer-detail">
-                {investigation.mode === "demo"
-                  ? "Synthetic native & token transfers"
-                  : evidenceOnly
-                    ? "Wallet history not indexed"
-                    : "Loaded native & ERC-20 streams"}{" "}
-                · internal transfers excluded
-              </span>
-            </span>
-            <button onClick={() => setModal("coverage")}>
-              Review sources <ArrowRight size={13} />
-            </button>
-          </div>
-        </section>
+              <div className="summary-scope-mobile">
+                {primaryFlow
+                  ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)} · focus wallet · loaded scope`
+                  : "No matching evidence"}
+                {flows.length > 1 ? ` · ${flows.length - 1} other assets` : ""}
+              </div>
+              <div className="flow-summary">
+                <div>
+                  <span className="metric-label">
+                    <ArrowDownLeft size={13} /> Gross inflow
+                  </span>
+                  <strong className="inflow">
+                    {primaryFlow
+                      ? displayUnits(
+                          primaryFlow.inflow,
+                          primaryFlow.asset.decimals,
+                        )
+                      : "0"}
+                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                  </strong>
+                </div>
+                <div>
+                  <span className="metric-label">
+                    <ArrowUpRight size={13} /> Gross outflow
+                  </span>
+                  <strong>
+                    {primaryFlow
+                      ? displayUnits(
+                          primaryFlow.outflow,
+                          primaryFlow.asset.decimals,
+                        )
+                      : "0"}
+                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                  </strong>
+                </div>
+                <div>
+                  <span className="metric-label">Net flow</span>
+                  <strong className="net">
+                    {primaryFlow && BigInt(primaryFlow.net) > 0n ? "+" : ""}
+                    {primaryFlow
+                      ? displayUnits(
+                          primaryFlow.net,
+                          primaryFlow.asset.decimals,
+                        )
+                      : "0"}
+                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                  </strong>
+                </div>
+                <div className="scope-note">
+                  <span className="scope-icon">
+                    <LayoutGrid size={16} />
+                  </span>
+                  <p>
+                    <strong>
+                      {primaryFlow
+                        ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)}`
+                        : "No matching evidence"}
+                    </strong>
+                    <span>
+                      Focus wallet · loaded scope only
+                      {flows.length > 1
+                        ? ` · ${flows.length - 1} other assets`
+                        : ""}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div className="canvas-heading">
+                <div>
+                  <span className="eyebrow">
+                    {view === "graph" ? "FUNDING GRAPH" : "TRANSACTION HISTORY"}
+                  </span>
+                  {view === "graph" && (
+                    <span className="record-count">
+                      {filtered.length} transfers
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      selectNode({
+                        address: investigation.root,
+                        chainId: chain === "all" ? 1 : Number(chain),
+                      })
+                    }
+                  >
+                    Wallet flows <ArrowRight size={13} />
+                  </button>
+                  {investigation.hidden.length +
+                    (investigation.hiddenTransfers?.length || 0) >
+                    0 && (
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        void changeVisibility({
+                          nodeKeys: investigation.hidden,
+                          transferIds: investigation.hiddenTransfers || [],
+                          visible: true,
+                        }).catch(() => {})
+                      }
+                    >
+                      Restore{" "}
+                      {investigation.hidden.length +
+                        (investigation.hiddenTransfers?.length || 0)}{" "}
+                      hidden
+                    </button>
+                  )}
+                  {view === "graph" && (
+                    <button
+                      className={`text-button ${grouped ? "active" : ""}`}
+                      onClick={() => setGrouped((g) => !g)}
+                      title="Arrange counterparties by service category"
+                    >
+                      <Layers size={13} />
+                      {grouped ? "Grouped by type" : "Group by type"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {view === "graph" && (
+                <div className="mobile-graph-hint">
+                  Drag to follow paths · select a wallet to inspect
+                </div>
+              )}
+              <div
+                className={`canvas-and-drawer ${drawer ? "drawer-open" : ""}`}
+              >
+                <div className="canvas-main" ref={canvasRef}>
+                  {view === "graph" ? (
+                    <Graph
+                      investigation={investigation}
+                      transfers={graphTransfers}
+                      onNode={selectNode}
+                      onTransfer={selectTransfer}
+                      selected={
+                        selectedNode
+                          ? selectedNode.address === investigation.root
+                            ? investigation.root
+                            : nodeKey(
+                                selectedNode.chainId,
+                                selectedNode.address,
+                              )
+                          : undefined
+                      }
+                      grouped={grouped}
+                    />
+                  ) : (
+                    <div className="address-page">
+                      <AddressOverview
+                        investigation={investigation}
+                        address={selectedNode?.address ?? investigation.root}
+                        book={activeBook}
+                        onSelectWallet={selectNode}
+                      />
+                      <TransferTable
+                        investigation={investigation}
+                        address={selectedNode?.address ?? investigation.root}
+                        book={activeBook}
+                        onSelect={selectTransfer}
+                        onLoadPrices={
+                          investigation.mode === "demo" ? undefined : loadPrices
+                        }
+                        onLoadBlockPrices={
+                          investigation.mode === "demo"
+                            ? undefined
+                            : loadBlockPrices
+                        }
+                        pricing={pricing}
+                      />
+                    </div>
+                  )}
+                </div>
+                {drawer && (
+                  <EvidenceDrawer
+                    investigation={investigation}
+                    node={selectedNode}
+                    transfer={selectedTransfer}
+                    onClose={() => setDrawer(false)}
+                    onSelect={selectTransfer}
+                    onExpand={(n) => void expand(n)}
+                    onPin={togglePin}
+                    onHide={hide}
+                    onWallet={selectNode}
+                    onVisibility={changeVisibility}
+                    onAnnotate={annotate}
+                    filter={{
+                      asset: asset === "all" ? undefined : asset,
+                      from: from || undefined,
+                      to: to || undefined,
+                    }}
+                    busy={busy}
+                  />
+                )}
+              </div>
+              <div className="canvas-footer">
+                <span>
+                  <span className="status-dot amber" />
+                  <strong>Partial coverage</strong>
+                  <span className="footer-detail">
+                    {investigation.mode === "demo"
+                      ? "Synthetic native & token transfers · internal transfers excluded"
+                      : evidenceOnly
+                        ? "Wallet history not indexed"
+                        : !internalScopes
+                          ? "Loaded native & ERC-20 streams · internal transfers excluded"
+                          : internalScopes === loadedScopes.length
+                            ? "Loaded native, ERC-20 & internal streams"
+                            : "Loaded native & ERC-20 streams · internal transfers on some scopes"}
+                  </span>
+                </span>
+                <button onClick={() => setModal("coverage")}>
+                  Review sources <ArrowRight size={13} />
+                </button>
+              </div>
+            </section>
+          </>
+        ) : (
+          <StartPanel
+            provider={provider}
+            busy={busy}
+            savedCount={saved.length}
+            onTrace={(address) => {
+              setInput(address);
+              setMode("live");
+              setHistoryMode("indexed");
+              void start(address, { mode: "live", history: "indexed" });
+            }}
+            onCases={() => {
+              setSaved(readCases());
+              setModal("cases");
+              void refreshAgentCases();
+            }}
+            onAgents={() => setModal("agents")}
+          />
+        )}
         <footer className="page-footer">
           <span>Evidence first. Assumptions second.</span>
           <span>Transfers show movement, not ownership.</span>
@@ -1364,7 +1438,7 @@ export default function App() {
           e.currentTarget.value = "";
         }}
       />
-      {protocolOpen && (
+      {protocolOpen && investigation && (
         <ProtocolEvidenceDialog
           investigation={investigation}
           onClose={() => setProtocolOpen(false)}
@@ -1430,7 +1504,7 @@ export default function App() {
             setDrawer(false);
           }}
           onNotesChange={(notes) =>
-            setInvestigation({ ...investigation, notes })
+            investigation && setInvestigation({ ...investigation, notes })
           }
           onImport={() => fileInput.current?.click()}
           onSave={() => void save()}

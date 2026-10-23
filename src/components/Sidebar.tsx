@@ -10,7 +10,8 @@ import {
 import type { Investigation } from "../domain/types.ts";
 
 interface SidebarProps {
-  investigation: Investigation;
+  /** Null on the start screen, before any case is open. */
+  investigation: Investigation | null;
   savedCount: number;
   onWorkspace: () => void;
   onCases: () => void;
@@ -33,12 +34,20 @@ export function Sidebar({
   return (
     <aside className="side-rail">
       <a className="brand" href="#" aria-label="FlowLens home">
-        <span className="brand-mark">
-          f<span>·</span>
-        </span>
-        <span>
-          FlowLens<span className="brand-period">.</span>
-        </span>
+        <img
+          className="brand-wordmark"
+          src="/flowlens-wordmark-dark.png"
+          alt=""
+          width={337}
+          height={72}
+        />
+        <img
+          className="brand-mark"
+          src="/flowlens-mark.png"
+          alt=""
+          width={128}
+          height={128}
+        />
       </a>
       <div className="workspace-label">
         LOCAL WORKSPACE <span>01</span>
@@ -74,27 +83,30 @@ export function Sidebar({
           className="nav-item"
           onClick={onProtocol}
           aria-label="Protocol evidence"
+          // Protocol evidence attaches to a case, so there is nothing to show before one.
+          disabled={!investigation}
+          title={investigation ? undefined : "Open or trace a case first"}
         >
           <ShieldCheck size={18} />
           <span>Protocol evidence</span>
         </button>
       </nav>
-      <div className="rail-case">
-        <span className="eyebrow">CURRENT INVESTIGATION</span>
-        <strong>{investigation.title}</strong>
-        <span>
-          <i className="status-dot" />
-          {investigation.mode === "demo"
-            ? "Synthetic demo"
-            : "Private local case"}
-        </span>
-        <div className="case-line" />
-        <p>
-          {investigation.transfers.length} evidence records
-          <br />
-          {investigation.expanded.length} wallet scopes loaded
-        </p>
-      </div>
+      {investigation && (
+        <div className="rail-case">
+          <span className="eyebrow">CURRENT INVESTIGATION</span>
+          <strong>{investigation.title}</strong>
+          <span>
+            <i className="status-dot" />
+            {investigation.mode === "demo" ? "Test fixture" : "Local case"}
+          </span>
+          <div className="case-line" />
+          <p>
+            {investigation.transfers.length} evidence records
+            <br />
+            {investigation.expanded.length} wallet scopes loaded
+          </p>
+        </div>
+      )}
       <div className="rail-bottom">
         <button className="agent-card" onClick={onAgents}>
           <span className="terminal-icon">

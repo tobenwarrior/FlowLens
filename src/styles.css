@@ -135,9 +135,6 @@ samp {
   min-height: 100vh;
   background: var(--navy);
 }
-.brand-period {
-  color: var(--blue);
-}
 .workspace-label,
 .drawer-section-heading,
 .table-heading,
@@ -1680,17 +1677,9 @@ samp {
 .boot p {
   margin: 0;
 }
-/* The mark holds a text node "f" and a <span>·</span>; the shared grid rule would
-   stack them as two rows overflowing the square, so lay them out in one row. */
-.boot .brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
+.boot-mark {
+  width: 40px;
+  height: 40px;
 }
 .boot .spin {
   width: 16px;
@@ -1875,16 +1864,9 @@ samp {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
   height: 48px;
   padding: 0 var(--gutter);
   border-bottom: 1px solid var(--border);
-  color: var(--text-bright);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 .brand:hover {
   text-decoration: none;
@@ -1893,31 +1875,16 @@ samp {
   outline-offset: -1px;
 }
 
-/* "f·" sits on one line inside the mark. As a grid, the dot stacked under the f. */
+/* The wordmark carries the name; the bare mark stands in for it on the collapsed rail. */
+.brand-wordmark {
+  display: block;
+  width: auto;
+  height: 22px;
+}
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius);
-  background: var(--blue);
-  color: var(--text-bright);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
-  transition: background 0.1s ease;
-}
-.brand-mark span {
-  margin-left: -1px;
-  opacity: 0.7;
-}
-.brand:hover .brand-mark {
-  background: var(--blue-light);
+  display: none;
+  width: 24px;
+  height: 24px;
 }
 
 .workspace-label {
@@ -2300,13 +2267,16 @@ samp {
     justify-content: center;
     padding: 0;
   }
-  .brand > span:last-child,
+  .brand-wordmark,
   .workspace-label,
   .nav-item > span,
   .rail-case,
   .agent-card,
   .local-footer {
     display: none;
+  }
+  .brand-mark {
+    display: block;
   }
   .side-rail nav {
     gap: 2px;
@@ -4959,4 +4929,94 @@ label.expand-network option {
 .graph-wrap:has(> .graph-svg[height]) {
   height: clamp(420px, 64vh, 760px);
   overflow: hidden;
+}
+
+/* ---------------------------------------------------------- start screen */
+/* Shown before any case is open: what FlowLens does, public wallets to try, and the
+   ways back into saved or agent-made cases. */
+.start-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 20px 32px;
+  margin: 0 var(--gutter) var(--gutter);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.start-intro h2 {
+  margin: 10px 0 8px;
+  color: var(--text-bright);
+  font-size: 20px;
+}
+.start-intro p {
+  max-width: 58ch;
+  margin: 0 0 10px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.start-intro .start-privacy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.start-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.start-examples .eyebrow {
+  margin-bottom: 4px;
+}
+.start-example {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--row);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  text-align: left;
+  cursor: pointer;
+}
+.start-example:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+}
+.start-example:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.start-example strong {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.start-example code {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.start-example svg {
+  color: var(--blue-light);
+}
+.start-links {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.start-links .text-button {
+  gap: 6px;
+}
+@media (max-width: 860px) {
+  .start-panel {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px var(--gutter);
+  }
 }

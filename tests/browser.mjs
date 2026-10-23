@@ -3,6 +3,8 @@ import { createDemoInvestigation } from "../src/domain/demo.ts";
 import { writeFile, mkdir } from "node:fs/promises";
 
 const base = process.env.FLOWLENS_URL || "http://127.0.0.1:4318";
+// The synthetic case is an offline test fixture; people only ever see live tracing.
+const synthetic = `${base}/?fixture=synthetic`;
 await mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
 const results = [];
@@ -15,6 +17,19 @@ try {
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base);
+  await expect(
+    page.getByRole("heading", { name: "Trace any Ethereum wallet" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("funding-graph")).toHaveCount(0);
+  await expect(page.getByLabel("Protocol evidence")).toBeDisabled();
+  await expect(
+    page.getByLabel("Data mode").locator('option[value="demo"]'),
+  ).toHaveCount(0);
+  await page.screenshot({ path: "artifacts/start.png", fullPage: true });
+  results.push(
+    "Default load opens the live start screen, with no synthetic case",
+  );
+  await page.goto(synthetic);
   await expect(page.getByTestId("funding-graph")).toBeVisible();
   await expect(
     page.getByText("31,300", { exact: false }).first(),
@@ -257,7 +272,7 @@ try {
     const ctx = await browser.newContext({ viewport, reducedMotion: "reduce" });
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
-    await p.goto(base);
+    await p.goto(synthetic);
     await expect(p.getByTestId("funding-graph")).toBeVisible();
     expect(
       await p.evaluate(
@@ -364,8 +379,10 @@ try {
     });
   });
   await live.goto(base);
-  await expect(live.getByTestId("funding-graph")).toBeVisible();
-  await live.getByLabel("Data mode").selectOption("live");
+  await expect(
+    live.getByRole("heading", { name: "Trace any Ethereum wallet" }),
+  ).toBeVisible();
+  await live.getByLabel("Wallet address").fill(fixture.root);
   await live.getByRole("button", { name: "Trace wallet" }).click();
   await expect(live.locator(".case-badge").first()).toHaveText("LOCAL");
   await live.getByRole("button", { name: /Investigations/ }).click();

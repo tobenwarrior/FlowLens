@@ -7,9 +7,16 @@ import { gzipSync } from "node:zlib";
 // Reviewed release metadata, deliberately independent of shell environment and file mtimes.
 const timestamp = "2026-10-21T00:00:00.000Z";
 const epoch = Date.parse(timestamp) / 1000;
-const screenshots = new Set([
-  "docs/images/demo-desktop.png",
-  "docs/images/demo-mobile.png",
+// Reviewed PNGs: live screenshots of public wallets, the logos and the app icons.
+const images = new Set([
+  "docs/images/live-desktop.png",
+  "docs/images/live-mobile.png",
+  "docs/images/flowlens-logo-dark.png",
+  "docs/images/flowlens-logo-light.png",
+  "public/apple-touch-icon.png",
+  "public/favicon.png",
+  "public/flowlens-mark.png",
+  "public/flowlens-wordmark-dark.png",
 ]);
 const required = new Set([
   "package.json",
@@ -43,9 +50,8 @@ const allowlist = [
   "package-lock.json",
   "tsconfig.json",
   "vite.config.ts",
-  "public/favicon.svg",
   "scripts/release.mjs",
-  ...screenshots,
+  ...images,
   "docs/architecture.md",
   "docs/bridge-internal-evidence.md",
   "docs/mcp.md",
@@ -90,6 +96,7 @@ const allowlist = [
   "src/components/Graph.tsx",
   "src/components/ProtocolEvidence.tsx",
   "src/components/Sidebar.tsx",
+  "src/components/StartPanel.tsx",
   "src/components/WorkspaceDialogs.tsx",
   "src/components/TransferTable.tsx",
   "src/components/AddressOverview.tsx",
@@ -197,12 +204,10 @@ function crc32(data) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-// Only explicitly reviewed browser screenshots are distributable binary assets.
+// Only explicitly reviewed PNG images are distributable binary assets.
 // Restrict them to image chunks; text, EXIF, profiles and trailing payloads stay out.
-function auditScreenshot(path, data) {
-  const reject = () => [
-    `${path}:1: PNG screenshot invalid or contains metadata`,
-  ];
+function auditImage(path, data) {
+  const reject = () => [`${path}:1: PNG image invalid or contains metadata`];
   if (
     !data.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
   )
@@ -253,7 +258,7 @@ function auditScreenshot(path, data) {
 }
 
 function audit(path, data) {
-  if (screenshots.has(path)) return auditScreenshot(path, data);
+  if (images.has(path)) return auditImage(path, data);
   const text = data.toString("utf8");
   if (text.includes("\0") || !Buffer.from(text).equals(data))
     return [`${path}:1: binary or invalid UTF-8 content`];
@@ -405,9 +410,9 @@ async function main() {
   const readme = files
     .find((file) => file.path === "README.md")
     .data.toString("utf8");
-  for (const path of screenshots)
+  for (const path of images)
     if (readme.includes(path) && !files.some((file) => file.path === path))
-      throw new Error(`${path}: referenced screenshot missing`);
+      throw new Error(`${path}: referenced image missing`);
   let pkg;
   try {
     pkg = JSON.parse(files.find((file) => file.path === "package.json").data);

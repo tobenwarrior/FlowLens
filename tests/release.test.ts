@@ -379,16 +379,16 @@ const screenshotPng = Buffer.from(
   "base64",
 );
 
-test("reviewed synthetic screenshots are included as exact PNG bytes with manifest checksums", () =>
+test("reviewed screenshots are included as exact PNG bytes with manifest checksums", () =>
   fixture(async (root) => {
     await put(
       root,
       "README.md",
-      "![Synthetic desktop](docs/images/demo-desktop.png)\n![Synthetic phone](docs/images/demo-mobile.png)\n",
+      "![Live desktop](docs/images/live-desktop.png)\n![Live phone](docs/images/live-mobile.png)\n",
     );
     for (const path of [
-      "docs/images/demo-desktop.png",
-      "docs/images/demo-mobile.png",
+      "docs/images/live-desktop.png",
+      "docs/images/live-mobile.png",
     ])
       await put(root, path, screenshotPng);
     await put(root, "docs/images/unreviewed.png", screenshotPng);
@@ -419,14 +419,14 @@ test("screenshot metadata, appended bytes and checksum corruption are refused", 
       Buffer.concat([screenshotPng, Buffer.from("private notes")]),
       corrupt,
     ]) {
-      await put(root, "docs/images/demo-desktop.png", png);
+      await put(root, "docs/images/live-desktop.png", png);
       const result = spawnSync(
         process.execPath,
         [releaseScript, "--root", root, "--check"],
         { encoding: "utf8" },
       );
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /docs\/images\/demo-desktop\.png.*PNG/);
+      assert.match(result.stderr, /docs\/images\/live-desktop\.png.*PNG/);
       assert.ok(!result.stderr.includes("private notes"));
     }
   }));
@@ -436,7 +436,7 @@ test("a public screenshot referenced by README must be present in the source exp
     await put(
       root,
       "README.md",
-      "![Synthetic demo](docs/images/demo-desktop.png)\n",
+      "![Live trace](docs/images/live-desktop.png)\n",
     );
     const result = spawnSync(
       process.execPath,
@@ -444,10 +444,7 @@ test("a public screenshot referenced by README must be present in the source exp
       { encoding: "utf8" },
     );
     assert.equal(result.status, 1);
-    assert.match(
-      result.stderr,
-      /demo-desktop\.png.*referenced screenshot missing/,
-    );
+    assert.match(result.stderr, /live-desktop\.png.*referenced image missing/);
   }));
 
 test("HTML screenshot references must also exist in the exported source", () =>
@@ -455,7 +452,7 @@ test("HTML screenshot references must also exist in the exported source", () =>
     await put(
       root,
       "README.md",
-      '<img src="docs/images/demo-mobile.png" alt="Synthetic phone">\n',
+      '<img src="docs/images/live-mobile.png" alt="Live phone">\n',
     );
     const result = spawnSync(
       process.execPath,
@@ -463,8 +460,5 @@ test("HTML screenshot references must also exist in the exported source", () =>
       { encoding: "utf8" },
     );
     assert.equal(result.status, 1);
-    assert.match(
-      result.stderr,
-      /demo-mobile\.png.*referenced screenshot missing/,
-    );
+    assert.match(result.stderr, /live-mobile\.png.*referenced image missing/);
   }));

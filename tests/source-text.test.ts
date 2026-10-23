@@ -56,7 +56,7 @@ test("source text keeps bidirectional control characters escaped", () => {
   for (const shipped of [
     join("server", "history-provider.ts"),
     join(".github", "workflows", "ci.yml"),
-    join("public", "favicon.svg"),
+    "index.html",
     "LICENSE",
   ])
     assert.ok(files.includes(shipped), shipped);

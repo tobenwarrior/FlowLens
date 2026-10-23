@@ -283,17 +283,21 @@ export const jsonSchema = {
         "Explicit bounded read-only query to fixed public providers, disclosing supplied identifiers. Optional live caseId merges private observations without changing graph totals. Runtime enforces per-kind options and budgets before outbound calls. Inspect errors, warnings, acquisition capability and component coverage even on success.",
     },
     ExpandRequest: {
-      ...requestExpansion([1, 8453, 42161], 100),
+      ...requestExpansion([1, 957, 8453, 42161], 100),
       description:
         "Use ExpandLiveRequest for live cases and ExpandDemoRequest for demo cases. Resume state is read from the case coverage record; raw cursors are not accepted by this API body.",
     },
-    ExpandLiveRequest: requestExpansion([1, 42161], 10),
+    ExpandLiveRequest: {
+      ...requestExpansion([1, 957, 42161], 10),
+      description:
+        "Live chain 957 (Derive Chain) is always served by keyless Blockscout at explorer.derive.xyz, which receives the expanded wallet; FLOWLENS_BLOCKSCOUT=off refuses it with PROVIDER_DISABLED. Chains 1 and 42161 follow the create routing.",
+    },
     ExpandDemoRequest: requestExpansion([1, 8453], 100),
     GraphFilters: shape(
       {
         chainId: {
           type: "string",
-          enum: ["1", "8453", "42161"],
+          enum: ["1", "957", "8453", "42161"],
           description:
             "HTTP query values are strings. Omit to include all loaded chains.",
         },
@@ -802,9 +806,9 @@ export const operationSchema = {
   operationsScope:
     "Operations of the shared agent boundary, each offered as an MCP tool. Not every operation has an HTTP route or CLI command, and contracts describes only some of those that do.",
   limits: {
-    chains: [1, 8453, 42161],
+    chains: [1, 957, 8453, 42161],
     demoChains: [1, 8453],
-    liveChains: [1, 42161],
+    liveChains: [1, 957, 42161],
     maxPagesPerExpansion: 3,
     maxNodes: 80,
     liveRowsPerStream: 10,
@@ -889,7 +893,7 @@ export const operationSchema = {
       path: "/api/status",
       cli: "status",
       description:
-        "Provider availability and limits; no secrets. liveAvailable is a boolean.",
+        "Provider availability and limits; no secrets. liveAvailable is a boolean. providers.live.routes names the provider serving each live chain: blockscout-v2 sends the traced wallet to eth.blockscout.com for chain 1 and to explorer.derive.xyz for chain 957.",
     },
     create: {
       method: "POST",

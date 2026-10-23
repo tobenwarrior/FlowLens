@@ -127,6 +127,7 @@ const allowlist = [
   "tests/server.test.ts",
   "tests/blockscout.test.ts",
   "tests/fixtures/blockscout-eth.json",
+  "tests/fixtures/blockscout-derive.json",
   "tests/release.test.ts",
   "tests/rpc.test.ts",
   "tests/bridge-provider.test.ts",

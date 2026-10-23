@@ -66,7 +66,7 @@ const tools = [
   {
     operation: "status",
     description:
-      "Report local provider availability, transport and bounded operation limits. No keys or grants are created.",
+      "Report local provider availability, transport and bounded operation limits. providers.live.routes names the indexed-history provider for each live chain; blockscout-v2 sends traced wallets to eth.blockscout.com (chain 1) or explorer.derive.xyz (chain 957). No keys or grants are created.",
     readOnly: true,
     input: z.object({}).strict(),
   },
@@ -87,7 +87,7 @@ const tools = [
   {
     operation: "create",
     description:
-      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Arbitrum needs the key. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
+      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Arbitrum needs the key. Derive Chain (957) is reached by expanding a wallet there. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
     readOnly: false,
     input: z
       .object({
@@ -108,7 +108,7 @@ const tools = [
   {
     operation: "expand",
     description:
-      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 80 graph nodes; no recursive fanout. Live accepts at most 10 rows per stream and uses the same provider routing as create, so without ETHERSCAN_API_KEY an Ethereum expansion goes to keyless Blockscout, which receives the expanded wallet. Coverage errors may be returned in a successful result with evidence preserved.",
+      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 80 graph nodes; no recursive fanout. Live accepts at most 10 rows per stream and uses the same provider routing as create, so without ETHERSCAN_API_KEY an Ethereum expansion goes to keyless Blockscout, which receives the expanded wallet. A Derive Chain (957) expansion always goes to keyless Blockscout at explorer.derive.xyz, key or not, and sends it the expanded wallet; FLOWLENS_BLOCKSCOUT=off refuses it with PROVIDER_DISABLED. Coverage errors may be returned in a successful result with evidence preserved.",
     readOnly: false,
     input: z
       .object({

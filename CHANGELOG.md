@@ -4,6 +4,7 @@
 
 - The app opens on a start screen for live tracing, with public organisation wallets to try. The synthetic case is now only an offline test fixture (`/?fixture=synthetic`), no longer the first thing people see.
 - New FlowLens logo, favicon and app icons. README and documentation screenshots are live traces of a public wallet, replacing the synthetic screenshots.
+- Derive Chain (957) history through Derive's keyless Blockscout explorer at `explorer.derive.xyz`, with or without an Etherscan key. Derive subaccount balances and trades are not wallet transfers and are not shown.
 - Blockscout pages keep their native and ERC20 transfers when only the internal-transaction stream is unavailable, and the internal stream resumes on the next page. The coverage footer and dialog now say which streams were loaded instead of always reporting internal transfers as excluded.
 
 ## 0.1.0 — local release candidate, 21 October 2026

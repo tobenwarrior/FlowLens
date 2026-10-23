@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>Free, open-source wallet tracing for people and their agents.</strong><br />
-  Follow the money on Ethereum, keep every transfer as evidence, and run it all on your own computer.
+  Follow the money on Ethereum and Derive Chain, keep every transfer as evidence, and run it all on your own computer.
 </p>
 
 ![FlowLens tracing the ENS DAO endowment live: gross inflow and outflow, the wallets that funded it on the left and the wallets it paid on the right](docs/images/live-desktop.png)
@@ -20,7 +20,7 @@ Blockchain data is public, but the tools that make it readable are often paid, h
 
 - **Free and open source** under the AGPL. No account, no subscription, no telemetry.
 - **Runs on your machine.** Your cases, notes and labels stay local.
-- **No API key needed** for Ethereum history.
+- **No API key needed** for Ethereum or Derive Chain history.
 - **Evidence first.** Every line on the graph opens the transfers behind it, with the transaction, block, time and source. Gaps in coverage are shown, not hidden.
 - **Built for agents too.** The same engine is available as a CLI, a local HTTP API and an MCP server, so an AI assistant can trace wallets and save its work where you can check it.
 
@@ -43,7 +43,7 @@ Open **http://127.0.0.1:4319**. Paste any Ethereum address and press **Trace wal
 ## Reading a trace
 
 1. **The funding graph.** Wallets that sent money to your focus wallet sit on the left; wallets it paid sit on the right. Each line groups the transfers between two wallets.
-2. **Follow a connection.** Select a wallet to see its inflows, outflows and counterparties, or select a line for the exact transfers. **Expand wallet** loads another page of that wallet's history, so you can walk the trail one hop at a time.
+2. **Follow a connection.** Select a wallet to see its inflows, outflows and counterparties, or select a line for the exact transfers. **Expand wallet** loads another page of that wallet's history, so you can walk the trail one hop at a time. Choose **Derive** as the expansion network to follow a wallet onto Derive Chain.
 3. **Filter what's loaded.** Narrow by network, asset, direction or date. Filters only work on history you have already loaded; they never fetch more behind your back.
 4. **Label what you learn.** Attach a name to a wallet with its source, date and confidence. FlowLens remembers it and fills it in on later traces.
 5. **Keep the case.** Add notes, save the investigation, or export it as JSON to share or reopen later.
@@ -66,16 +66,18 @@ A few habits keep a trace honest:
 
 ## What it can do today
 
-| Area           | What you get                                                                                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Wallet history | ETH, ERC-20 and internal transfers on Ethereum from Blockscout, no key needed. With your own Etherscan key: ETH and ERC-20 transfers on Ethereum and Arbitrum One |
-| Graph          | Directional funding graph with expansion, zoom and pan, pin, hide and restore, grouping by type, and network, asset, direction and date filters                   |
-| Wallet flows   | Per-asset gross in, gross out and net; counterparties; transfer history with inflow, outflow and swap views; cumulative net-flow chart                            |
-| Evidence       | Exact amounts, transaction hash, block, UTC time, provider and retrieval time for every transfer, with explorer links                                             |
-| Labels         | Wallet names with source, confidence and claim type, remembered across investigations                                                                             |
-| Prices         | Optional USD values from Uniswap V3 pools over a public RPC; prices at transfer time with your Etherscan key                                                      |
-| Protocol reads | On request: Safe configuration and history, Circle CCTP bridge transactions, and single-transaction call traces, kept separate from graph totals                  |
-| Agents         | JSON CLI, local HTTP API and 20 stdio MCP tools, all sharing one case store                                                                                       |
+| Area           | What you get                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wallet history | ETH, ERC-20 and internal transfers on Ethereum and Derive Chain from Blockscout, no key needed. With your own Etherscan key: ETH and ERC-20 transfers on Ethereum and Arbitrum One |
+| Graph          | Directional funding graph with expansion, zoom and pan, pin, hide and restore, grouping by type, and network, asset, direction and date filters                                    |
+| Wallet flows   | Per-asset gross in, gross out and net; counterparties; transfer history with inflow, outflow and swap views; cumulative net-flow chart                                             |
+| Evidence       | Exact amounts, transaction hash, block, UTC time, provider and retrieval time for every transfer, with explorer links                                                              |
+| Labels         | Wallet names with source, confidence and claim type, remembered across investigations                                                                                              |
+| Prices         | Optional USD values from Uniswap V3 pools over a public RPC; prices at transfer time with your Etherscan key                                                                       |
+| Protocol reads | On request: Safe configuration and history, Circle CCTP bridge transactions, and single-transaction call traces, kept separate from graph totals                                   |
+| Agents         | JSON CLI, local HTTP API and 20 stdio MCP tools, all sharing one case store                                                                                                        |
+
+On Derive Chain, subaccount collateral, positions and trades are records inside Derive's own contracts, not wallet transfers. A Derive trace shows the deposits, withdrawals and other transfers that touch the address, not subaccount balances or trading.
 
 FlowLens never connects a wallet, signs transactions or holds funds.
 
@@ -93,7 +95,7 @@ node server/cli.ts expand --file .local/endowment.json \
 node server/cli.ts inspect --file .local/endowment.json
 ```
 
-`create` won't overwrite an existing file; resume a case with `expand` or `inspect`. Exit code `2` means a provider failed but everything already loaded was kept, so check the coverage it reports.
+Use `--chain 957` with `expand` to follow a wallet on Derive Chain. `create` won't overwrite an existing file; resume a case with `expand` or `inspect`. Exit code `2` means a provider failed but everything already loaded was kept, so check the coverage it reports.
 
 For MCP, launch `node server/mcp.ts` from your MCP host. Start with `flowlens_status`, then create a case:
 
@@ -116,7 +118,7 @@ The browser, API and MCP server share cases in `.local/cases` and labels in `.lo
 
 FlowLens has no telemetry and no account. What does leave your computer:
 
-- **The address you trace** goes to Blockscout (`eth.blockscout.com`), or to Etherscan if you set your own key. Set `FLOWLENS_BLOCKSCOUT=off` to stop Blockscout queries.
+- **The address you trace** goes to Blockscout (`eth.blockscout.com`), or to Etherscan if you set your own key. Following a wallet on Derive Chain sends it to Derive's public explorer (`explorer.derive.xyz`), with or without a key. Set `FLOWLENS_BLOCKSCOUT=off` to stop queries to both explorers; Derive history is then unavailable.
 - **Price lookups**, only when you press **Load USD prices**, go to a public Ethereum RPC, and to Etherscan for prices at transfer time.
 - **Protocol reads** (Safe, CCTP, call traces) go to fixed public services, only when you ask for them.
 
@@ -124,7 +126,7 @@ Cases and browser storage are **not encrypted**. Exports can contain sensitive r
 
 ### Optional Etherscan key
 
-A key adds Arbitrum One, but it moves all live history to Etherscan, Ethereum included, and Etherscan returns ETH and ERC-20 transfers without internal ones. To use it, copy `.env.example` to `.env`, add your own Etherscan V2 key, and start the server with:
+A key adds Arbitrum One, but it also moves Ethereum history to Etherscan, which returns ETH and ERC-20 transfers without internal ones. Derive Chain stays on Blockscout, because Etherscan has no Derive history. To use it, copy `.env.example` to `.env`, add your own Etherscan V2 key, and start the server with:
 
 ```sh
 node --env-file=.env server/index.ts
@@ -136,7 +138,7 @@ The key stays on the server and is never sent to the browser. [Provider coverage
 
 FlowLens grows as we learn more about following funds on-chain. Next up:
 
-- **More chains**, starting with Derive Chain.
+- **More chains**, as their explorers open up keyless access.
 - **Better tracing techniques**, added as we learn them.
 
 If there's a wallet you can't follow, or a pattern FlowLens should recognise, [open an issue](https://github.com/tobenwarrior/FlowLens/issues).

@@ -15,7 +15,8 @@ import { buildEdges, formatUnits, nodeKey } from "../domain/engine.ts";
 
 export const short = (s: string) => `${s.slice(0, 6)}…${s.slice(-4)}`;
 export const chainName = (id: number) =>
-  ({ 1: "Ethereum", 8453: "Base", 42161: "Arbitrum" })[id] || `Chain ${id}`;
+  ({ 1: "Ethereum", 957: "Derive", 8453: "Base", 42161: "Arbitrum" })[id] ||
+  `Chain ${id}`;
 export const displayUnits = (
   raw: string,
   decimals: number,
@@ -31,6 +32,7 @@ export const explorer = (id: number, type: "tx" | "address", value: string) => {
   const origin = (
     {
       1: "https://etherscan.io",
+      957: "https://explorer.derive.xyz",
       8453: "https://basescan.org",
       42161: "https://arbiscan.io",
     } as Record<number, string>

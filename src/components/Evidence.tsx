@@ -379,13 +379,14 @@ export function EvidenceDrawer({
                 value={expansionChain}
                 onChange={(e) => setExpansionChain(Number(e.target.value))}
               >
-                {(investigation.mode === "demo" ? [1, 8453] : [1, 42161]).map(
-                  (id) => (
-                    <option key={id} value={id}>
-                      {chainName(id)}
-                    </option>
-                  ),
-                )}
+                {(investigation.mode === "demo"
+                  ? [1, 8453]
+                  : [1, 957, 42161]
+                ).map((id) => (
+                  <option key={id} value={id}>
+                    {chainName(id)}
+                  </option>
+                ))}
               </select>
             </label>
           )}

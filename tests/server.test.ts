@@ -658,10 +658,14 @@ test("API and CLI expose shared JSON Schema request and evidence contracts", asy
     assert.equal(defs.ExpandRequest.properties.maxPages.maximum, 3);
     assert.deepEqual(
       defs.ExpandLiveRequest.properties.chainId.enum,
-      [1, 42161],
+      [1, 957, 42161],
+    );
+    assert.match(
+      defs.ExpandLiveRequest.description,
+      /explorer\.derive\.xyz, which receives the expanded wallet/,
     );
     assert.equal(defs.ExpandLiveRequest.properties.pageSize.maximum, 10);
-    assert.deepEqual(schema.limits.liveChains, [1, 42161]);
+    assert.deepEqual(schema.limits.liveChains, [1, 957, 42161]);
     for (const field of [
       "id",
       "chainId",

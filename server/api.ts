@@ -370,8 +370,8 @@ export function createApiServer(options: ApiOptions) {
           if (!["all", "in", "out"].includes(direction))
             throw new Error("Direction must be all, in or out");
           const chain = url.searchParams.get("chainId");
-          if (chain !== null && !["1", "8453", "42161"].includes(chain))
-            throw new Error("Chain ID must be 1, 8453 or 42161");
+          if (chain !== null && !["1", "957", "8453", "42161"].includes(chain))
+            throw new Error("Chain ID must be 1, 957, 8453 or 42161");
           const transfers = filterTransfers(value.transfers, value.root, {
             ...(chain ? { chainId: Number(chain) } : {}),
             direction: direction as "all" | "in" | "out",
@@ -450,6 +450,7 @@ export function createApiServer(options: ApiOptions) {
                 CASE_BUSY: 409,
                 INVALID_EVIDENCE_CONFLICT: 409,
                 KEY_REQUIRED: 503,
+                PROVIDER_DISABLED: 503,
                 INPUT_TOO_LARGE: 413,
               } as Record<string, number>
             )[error.code]
@@ -466,7 +467,7 @@ export function createApiServer(options: ApiOptions) {
               ? 404
               : (error instanceof ProviderError ||
                     error instanceof AgentOperationError) &&
-                  error.code === "KEY_REQUIRED"
+                  ["KEY_REQUIRED", "PROVIDER_DISABLED"].includes(error.code)
                 ? 503
                 : 400);
       const code =

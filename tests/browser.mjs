@@ -391,6 +391,9 @@ try {
     .fill("Retain unsaved local notes");
   await live.getByLabel("Close dialog").click();
   await live.getByRole("button", { name: /^FOCUS WALLET/ }).click();
+  await expect(
+    live.getByLabel("Expansion network").locator('option[value="957"]'),
+  ).toHaveText("Derive");
   await live.getByLabel("Expansion network").selectOption("42161");
   await live
     .getByRole("button", { name: "Expand wallet", exact: true })

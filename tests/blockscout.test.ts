@@ -67,6 +67,112 @@ const failsWith =
     error.code === code &&
     error.retryable === retryable;
 
+// Synthetic values in recorded Derive Chain (957) v12 shapes: no items_count echo, callTracer traces.
+const derive = JSON.parse(
+  readFileSync(
+    new URL("./fixtures/blockscout-derive.json", import.meta.url),
+    "utf8",
+  ),
+);
+const DERIVE_ROOT = derive.root as Address;
+const DERIVE_WALLET = DERIVE_ROOT.toLowerCase();
+const hash = (c: string) => `0x${c.repeat(64)}`;
+type DeriveData = typeof derive;
+type Item = Record<string, number>;
+const position = (q: URLSearchParams) => [
+  Number(q.get("block_number")),
+  Number(q.get("index")),
+];
+const DERIVE_STREAMS: Record<
+  string,
+  {
+    data: "transactions" | "tokenTransfers" | "internalTransactions";
+    key: (item: Item) => number[];
+    after: (q: URLSearchParams) => number[];
+    next: (item: Item & { hash: string; fee: { value: string } }) => object;
+  }
+> = {
+  transactions: {
+    data: "transactions",
+    key: (r) => [r.block_number, r.position],
+    after: position,
+    next: (r) => ({
+      index: r.position,
+      value: r.value,
+      hash: r.hash,
+      inserted_at: "2026-10-06T13:50:54.589543Z",
+      block_number: r.block_number,
+      fee: r.fee.value,
+    }),
+  },
+  "token-transfers": {
+    data: "tokenTransfers",
+    key: (r) => [r.block_number, r.log_index],
+    after: position,
+    next: (r) => ({ index: r.log_index, block_number: r.block_number }),
+  },
+  "internal-transactions": {
+    data: "internalTransactions",
+    key: (r) => [r.block_number, r.transaction_index, r.index],
+    after: (q) => [
+      Number(q.get("block_number")),
+      Number(q.get("transaction_index")),
+      Number(q.get("index")),
+    ],
+    next: (r) => ({
+      index: r.index,
+      block_number: r.block_number,
+      transaction_index: r.transaction_index,
+      include_zero_value: true,
+    }),
+  },
+};
+const earlier = (a: number[], b: number[]) => {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i];
+  return false;
+};
+/** A v12 explorer like explorer.derive.xyz: keyset pages that honour items_count without echoing it. */
+function deriveExplorer(
+  edit: (data: DeriveData) => void = () => undefined,
+  respond?: (url: URL) => Response | undefined,
+) {
+  const data: DeriveData = structuredClone(derive);
+  edit(data);
+  const calls: URL[] = [];
+  const provider = createBlockscoutProvider({
+    intervalMs: 0,
+    fetch: async (input) => {
+      const url = new URL(String(input));
+      calls.push(url);
+      const custom = respond?.(url);
+      if (custom) return custom;
+      const path = url.pathname.replace("/api/v2/", "");
+      const trace = /^transactions\/(0x[0-9a-f]{64})\/raw-trace$/.exec(path);
+      if (trace) return Response.json(data.rawTraces[trace[1]] ?? {});
+      const stream = DERIVE_STREAMS[path.split("/")[2]];
+      if (!stream || path.split("/")[1] !== DERIVE_WALLET)
+        return new Response("missing", { status: 404 });
+      const q = url.searchParams;
+      const after = q.has("block_number") ? stream.after(q) : null;
+      const items = (data[stream.data].items as Item[]).filter(
+        (item) => !after || earlier(stream.key(item), after),
+      );
+      const page = items.slice(0, Number(q.get("items_count") ?? 50));
+      return Response.json({
+        items: page,
+        next_page_params:
+          items.length > page.length
+            ? stream.next(page[page.length - 1] as never)
+            : null,
+        ...(stream.data === "internalTransactions"
+          ? { meta: data.internalTransactions.meta }
+          : {}),
+      });
+    },
+  });
+  return { calls, data, provider };
+}
+
 test("keyless Blockscout pages normalize native, ERC20 and trace-checked internal evidence", async () => {
   const { calls, provider } = explorer();
   const page = await provider.fetchPage({ address: ROOT, chainId: 1 });
@@ -456,7 +562,222 @@ test("engine expansion records Blockscout coverage per stream and exhausts on te
   assert.deepEqual(value.coverage[0].streams, ["native", "erc20", "internal"]);
 });
 
-test("a key keeps Etherscan the default, Blockscout serves keyless Ethereum, and the switch turns it off", () => {
+test("Derive Chain history goes to explorer.derive.xyz with items_count and checks internal rows against callTracer trees", async () => {
+  const { calls, provider } = deriveExplorer();
+  const page = await provider.fetchPage({ address: DERIVE_ROOT, chainId: 957 });
+  const token = "0x3333333333333333333333333333333333333333";
+  const byId = Object.fromEntries(page.transfers.map((t) => [t.id, t]));
+  assert.deepEqual(Object.keys(byId).sort(), [
+    `957:${hash("1")}:native:0:native`,
+    `957:${hash("2")}:erc20:9:${token}`,
+    `957:${hash("2")}:internal:trace.1.1:native`,
+    `957:${hash("3")}:native:0:native`,
+    `957:${hash("4")}:erc20:4:${token}`,
+    `957:${hash("4")}:internal:trace.1:native`,
+  ]);
+  const internal = byId[`957:${hash("2")}:internal:trace.1.1:native`];
+  assert.equal(internal.rawAmount, "50000000000000000");
+  assert.equal(internal.to, DERIVE_WALLET);
+  assert.deepEqual(internal.asset, {
+    chainId: 957,
+    contract: null,
+    decimals: 18,
+    symbol: "ETH",
+  });
+  assert.equal(internal.source, "Blockscout API v2 (explorer.derive.xyz)");
+  assert.equal(page.exhausted, true);
+  assert.equal(page.cursor, null);
+  assert.ok(page.warnings.some((w) => w.includes("Derive Chain subaccounts")));
+  assert.ok(!page.warnings.some((w) => /was (omitted|excluded)/.test(w)));
+  assert.deepEqual(
+    calls.map((url) => `${url.host}${url.pathname}${url.search}`),
+    [
+      `explorer.derive.xyz/api/v2/addresses/${DERIVE_WALLET}/transactions?items_count=10`,
+      `explorer.derive.xyz/api/v2/addresses/${DERIVE_WALLET}/token-transfers?type=ERC-20&items_count=10`,
+      `explorer.derive.xyz/api/v2/addresses/${DERIVE_WALLET}/internal-transactions?items_count=10`,
+      `explorer.derive.xyz/api/v2/transactions/${hash("2")}/raw-trace`,
+      `explorer.derive.xyz/api/v2/transactions/${hash("4")}/raw-trace`,
+    ],
+  );
+});
+
+test("Derive pages resume strictly after the last row, repeating items_count beside next_page_params", async () => {
+  const { calls, data, provider } = deriveExplorer();
+  const pages = [
+    await provider.fetchPage({
+      address: DERIVE_ROOT,
+      chainId: 957,
+      pageSize: 1,
+    }),
+  ];
+  // A row indexed after the first page sits above the window and is never consumed.
+  data.transactions.items.unshift({
+    ...structuredClone(data.transactions.items[0]),
+    hash: hash("9"),
+    block_number: 46000400,
+  });
+  while (pages[pages.length - 1].cursor)
+    pages.push(
+      await provider.fetchPage({
+        address: DERIVE_ROOT,
+        chainId: 957,
+        cursor: pages[pages.length - 1].cursor,
+      }),
+    );
+  assert.deepEqual(
+    pages.map((page) => page.transfers.map((t) => `${t.kind}:${t.hash[2]}`)),
+    [
+      ["native:1", "erc20:2", "internal:2"],
+      ["erc20:4"],
+      ["native:3", "internal:4"],
+    ],
+    "the second native and internal rows are a zero-value call and a static call",
+  );
+  assert.equal(pages[2].exhausted, true);
+  const history = calls.filter((url) => !url.pathname.endsWith("/raw-trace"));
+  assert.ok(
+    history.every((url) => url.searchParams.get("items_count") === "1"),
+  );
+  const resumed = history.filter((url) => url.searchParams.has("block_number"));
+  assert.deepEqual(
+    Object.fromEntries(
+      resumed.find((url) => url.pathname.endsWith("/transactions"))!
+        .searchParams,
+    ),
+    {
+      index: "1",
+      value: "200000000000000000",
+      hash: hash("1"),
+      inserted_at: "2026-10-06T13:50:54.589543Z",
+      block_number: "46000305",
+      fee: "21000000000",
+      items_count: "1",
+    },
+  );
+  assert.equal(
+    resumed
+      .find((url) => url.pathname.endsWith("/internal-transactions"))!
+      .searchParams.get("include_zero_value"),
+    "true",
+  );
+  const before = calls.length;
+  await assert.rejects(
+    provider.fetchPage({
+      address: DERIVE_ROOT,
+      chainId: 1,
+      cursor: pages[0].cursor,
+    }),
+    failsWith("INVALID_CURSOR"),
+  );
+  assert.equal(calls.length, before);
+});
+
+test("Derive internal rows under a reverted callTracer frame are excluded; disagreements fail the page and a missing tree holds back only the internal stream", async () => {
+  for (const revert of [
+    (data: DeriveData) => (data.rawTraces[hash("2")].error = "reverted"),
+    (data: DeriveData) =>
+      (data.rawTraces[hash("2")].calls[1].error = "execution reverted"),
+  ]) {
+    const { provider } = deriveExplorer(revert);
+    const page = await provider.fetchPage({
+      address: DERIVE_ROOT,
+      chainId: 957,
+    });
+    assert.deepEqual(
+      page.transfers.filter((t) => t.kind === "internal").map((t) => t.hash),
+      [hash("4")],
+    );
+    assert.ok(page.warnings.some((w) => w.includes("reverted")));
+  }
+  const failures: [(data: DeriveData) => void, string][] = [
+    [
+      (data) => (data.rawTraces[hash("2")].calls[1].calls[1].value = "0x1"),
+      "TRACE_MISMATCH",
+    ],
+    // Index 3 is the delegatecall in pre-order, so a listing that points at it disagrees.
+    [
+      (data) => (data.internalTransactions.items[0].index = 3),
+      "TRACE_MISMATCH",
+    ],
+    [(data) => (data.rawTraces[hash("2")].calls = "0x"), "TRACE_MISMATCH"],
+  ];
+  for (const [edit, code] of failures) {
+    const { provider } = deriveExplorer(edit);
+    await assert.rejects(
+      provider.fetchPage({ address: DERIVE_ROOT, chainId: 957 }),
+      failsWith(code, true),
+    );
+  }
+  const { provider } = deriveExplorer(
+    (data) => (data.rawTraces[hash("2")] = {}),
+  );
+  const pending = await provider.fetchPage({
+    address: DERIVE_ROOT,
+    chainId: 957,
+  });
+  assert.equal(
+    pending.transfers.filter((t) => t.kind === "internal").length,
+    0,
+  );
+  assert.deepEqual(pending.streams, ["native", "erc20"]);
+  assert.ok(pending.cursor);
+});
+
+test("engine expansion on Derive records blockscout-v2 coverage for chain 957 across resumed pages", async () => {
+  const { provider } = deriveExplorer();
+  const value = await expandCase(
+    createInvestigation(DERIVE_ROOT, "live"),
+    { address: DERIVE_ROOT, chainId: 957, maxPages: 3, pageSize: 1 },
+    { demo: demoProvider, live: new Map([[957, provider]]) },
+  );
+  assert.equal(value.transfers.length, 6);
+  assert.ok(value.transfers.every((t) => t.chainId === 957));
+  assert.equal(value.coverage.length, 1);
+  assert.equal(value.coverage[0].chainId, 957);
+  assert.equal(value.coverage[0].provider, "blockscout-v2");
+  assert.equal(value.coverage[0].status, "exhausted");
+  assert.equal(value.coverage[0].pagesLoaded, 3);
+});
+
+test("FLOWLENS_BLOCKSCOUT=off keeps Derive expansions away from explorer.derive.xyz, key or not", async () => {
+  const saved = {
+    fetch: globalThis.fetch,
+    key: process.env.ETHERSCAN_API_KEY,
+    blockscout: process.env.FLOWLENS_BLOCKSCOUT,
+  };
+  const requests: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requests.push(String(input));
+    throw new TypeError("no network in tests");
+  }) as typeof fetch;
+  try {
+    for (const key of ["", "dummy-key"]) {
+      process.env.ETHERSCAN_API_KEY = key;
+      process.env.FLOWLENS_BLOCKSCOUT = "off";
+      await assert.rejects(
+        expandCase(
+          createInvestigation(DERIVE_ROOT, "live"),
+          { address: DERIVE_ROOT, chainId: 957 },
+          providersFromEnvironment(),
+        ),
+        (error: unknown) =>
+          failsWith("PROVIDER_DISABLED")(error) &&
+          (error as Error).message.includes("FLOWLENS_BLOCKSCOUT=off"),
+      );
+    }
+    assert.deepEqual(requests, []);
+  } finally {
+    globalThis.fetch = saved.fetch;
+    for (const [name, value] of [
+      ["ETHERSCAN_API_KEY", saved.key],
+      ["FLOWLENS_BLOCKSCOUT", saved.blockscout],
+    ] as const)
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+  }
+});
+
+test("a key keeps Etherscan the default on its chains, Blockscout serves keyless Ethereum and Derive, and the switch turns it off", () => {
   const saved = {
     key: process.env.ETHERSCAN_API_KEY,
     blockscout: process.env.FLOWLENS_BLOCKSCOUT,
@@ -469,9 +790,14 @@ test("a key keeps Etherscan the default, Blockscout serves keyless Ethereum, and
     );
   };
   try {
-    assert.deepEqual(routes("", ""), { 1: "blockscout-v2" });
+    assert.deepEqual(routes("", ""), {
+      1: "blockscout-v2",
+      957: "blockscout-v2",
+    });
+    // Etherscan has no Derive Chain history, so Derive stays on Blockscout with a key.
     assert.deepEqual(routes("dummy-key", ""), {
       1: "etherscan-v2",
+      957: "blockscout-v2",
       42161: "etherscan-v2",
     });
     assert.deepEqual(routes("dummy-key", "off"), {

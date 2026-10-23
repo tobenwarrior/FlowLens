@@ -39,6 +39,8 @@ const LICENSE_SHA256 =
 const allowlist = [
   ".env.example",
   "AGENTS.md",
+  "CLAUDE.md",
+  "skills/trace-wallet/SKILL.md",
   ".gitattributes",
   ".gitignore",
   ".repo-audit.toml",

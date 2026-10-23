@@ -2,6 +2,10 @@
 
 FlowLens is agent-first wallet tracing, built for humans too. Display branding is `FlowLens`; package, CLI and protocol names use `flowlens`.
 
+## Investigating a wallet
+
+To trace or attribute a wallet with FlowLens, rather than change FlowLens itself, follow `skills/trace-wallet/SKILL.md`. It drives the MCP tools or CLI, checks labels on free sources (explorer name tags, self-chosen names, X) before Arkham or Nansen, uses those only with the user's own access, and records every label with its source. The full method behind it is in `docs/tracing-guide.md`.
+
 ## Start and verify
 
 - Requires Node 24.12+ (current 24 LTS or 26 recommended). Install the lockfile with `npm ci --ignore-scripts`; run `npm start` after `npm run build` for the loopback UI/API.

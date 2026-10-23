@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>Free, open-source wallet tracing for people and their agents.</strong><br />
-  Follow the money on Ethereum and Derive Chain, keep every transfer as evidence, and run it all on your own computer.
+  Follow the money across EVM chains, keep every transfer as evidence, and run it all on your own computer.
 </p>
 
 ![FlowLens tracing the ENS DAO endowment live: gross inflow and outflow, the wallets that funded it on the left and the wallets it paid on the right](docs/images/live-desktop.png)
@@ -20,7 +20,7 @@ Blockchain data is public, but the tools that make it readable are often paid, h
 
 - **Free and open source** under the AGPL. No account, no subscription, no telemetry.
 - **Runs on your machine.** Your cases, notes and labels stay local.
-- **No API key needed** for Ethereum or Derive Chain history.
+- **Built for EVM chains.** Wallet history works today on Ethereum and Derive Chain with no API key, and on Arbitrum One with your own Etherscan key. More chains are on the [roadmap](#roadmap).
 - **Evidence first.** Every line on the graph opens the transfers behind it, with the transaction, block, time and source. Gaps in coverage are shown, not hidden.
 - **Built for agents too.** The same engine is available as a CLI, a local HTTP API and an MCP server, so an AI assistant can trace wallets and save its work where you can check it.
 
@@ -40,22 +40,49 @@ npm start
 
 Open **http://127.0.0.1:4319**. Paste any Ethereum address and press **Trace wallet**, or pick one of the public wallets on the start screen. The server only listens on your own computer.
 
-## Reading a trace
+## How it works
 
-1. **The funding graph.** Wallets that sent money to your focus wallet sit on the left; wallets it paid sit on the right. Each line groups the transfers between two wallets.
-2. **Follow a connection.** Select a wallet to see its inflows, outflows and counterparties, or select a line for the exact transfers. **Expand wallet** loads another page of that wallet's history, so you can walk the trail one hop at a time. Choose **Derive** as the expansion network to follow a wallet onto Derive Chain.
-3. **Filter what's loaded.** Narrow by network, asset, direction or date. Filters only work on history you have already loaded; they never fetch more behind your back.
-4. **Label what you learn.** Attach a name to a wallet with its source, date and confidence. FlowLens remembers it and fills it in on later traces.
-5. **Keep the case.** Add notes, save the investigation, or export it as JSON to share or reopen later.
+### 1. Start a trace
 
-On a phone, the **Evidence** view lists assets, net flow over time, counterparties and every transfer:
+Paste a wallet address into the bar and press **Trace wallet**, or pick one of the public wallets on the start screen. FlowLens loads the newest page of that wallet's history from Blockscout.
 
-<details>
-<summary>Phone view</summary>
+![The FlowLens start screen: an address bar, a short explanation of what is sent where, and three public organisation wallets to try](docs/images/how-start.png)
 
-<img src="docs/images/live-mobile.png" alt="The same live trace on a phone: per-asset gross in and out, cumulative net flow, counterparties and the transfer list" width="300" />
+### 2. Read the funding graph
 
-</details>
+The screenshot at the top of this page is a trace. Wallets that sent money to your focus wallet sit on the left, and wallets it paid sit on the right. Each line groups the transfers between two wallets. Above the graph, gross inflow, gross outflow and net are kept separate for each asset.
+
+### 3. Open the evidence behind a line
+
+Select a line and the drawer lists the transfers behind it: the amount, sender and recipient, network, UTC time, block, event index, the exact raw amount, the token contract and the transaction hash. It also says which provider supplied the record and when, and links to the block explorer so you can check it yourself.
+
+![Selecting the line from the ENS DAO endowment to a destination wallet opens the transfer evidence: 500 ETHx, sender, recipient, block, time, raw amount, token contract, transaction hash and provenance](docs/images/how-evidence.png)
+
+### 4. Inspect a wallet and follow it
+
+Select a wallet to see its full address, its label and its flows per asset. **Expand wallet** loads the next page of its history, so you can walk the trail one hop at a time; choose **Derive** as the expansion network to follow a wallet onto Derive Chain. **Add entity label** records a name with its source and confidence, and FlowLens fills it in on later traces.
+
+![The wallet inspector for a counterparty: its address, no attribution label yet, Expand wallet, and its gross in, gross out and net per asset](docs/images/how-wallet.png)
+
+### 5. Review the history
+
+The **Evidence** view lists every asset with gross in, gross out and net, a running net-flow chart, the top counterparties, and every transfer, with tabs for inflows, outflows and swaps. Narrow it by network, asset, direction or date. Filters only work on what is already loaded; they never fetch more behind your back.
+
+![The Evidence view: assets with gross and net flows, a cumulative net-flow chart, counterparties ranked by transfer count, and the transfer list with inflow, outflow and swap tabs](docs/images/how-history.png)
+
+### 6. Know what you can see
+
+**Sources & coverage** shows which provider served each wallet, which streams loaded (ETH, ERC-20 and internal transfers), how many pages, and the cursor that resumes the history. A trace is only as complete as its sources, and this is where it says so.
+
+![The Sources and coverage dialog: the live Blockscout ledger, one coverage row per wallet with its streams, pages and resume cursor, and what the graph does not include](docs/images/how-coverage.png)
+
+### 7. Hand it to an agent
+
+The same engine runs from a CLI, a local HTTP API and an MCP server, so an AI assistant can trace, inspect and save evidence for you to check. See [Use it from an agent](#use-it-from-an-agent).
+
+![The agent interfaces dialog: CLI commands to create, expand and inspect a live case, and the stdio MCP server](docs/images/how-agents.png)
+
+Save a case, add notes, or export it as JSON to share or reopen later.
 
 A few habits keep a trace honest:
 
@@ -138,7 +165,7 @@ The key stays on the server and is never sent to the browser. [Provider coverage
 
 FlowLens grows as we learn more about following funds on-chain. Next up:
 
-- **More chains**, as their explorers open up keyless access.
+- **More EVM chains**, as their explorers or providers allow it.
 - **Better tracing techniques**, added as we learn them.
 
 If there's a wallet you can't follow, or a pattern FlowLens should recognise, [open an issue](https://github.com/tobenwarrior/FlowLens/issues).

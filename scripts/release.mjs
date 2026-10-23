@@ -10,7 +10,12 @@ const epoch = Date.parse(timestamp) / 1000;
 // Reviewed PNGs: live screenshots of public wallets, the logos and the app icons.
 const images = new Set([
   "docs/images/live-desktop.png",
-  "docs/images/live-mobile.png",
+  "docs/images/how-start.png",
+  "docs/images/how-evidence.png",
+  "docs/images/how-wallet.png",
+  "docs/images/how-history.png",
+  "docs/images/how-coverage.png",
+  "docs/images/how-agents.png",
   "docs/images/flowlens-logo-dark.png",
   "docs/images/flowlens-logo-light.png",
   "public/apple-touch-icon.png",

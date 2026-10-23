@@ -61,6 +61,7 @@ const allowlist = [
   "docs/bridge-internal-evidence.md",
   "docs/mcp.md",
   "docs/workspace-controls.md",
+  "docs/tracing-guide.md",
   "docs/providers.md",
   "docs/research-notes.md",
   "docs/safe-evidence.md",

@@ -3874,6 +3874,11 @@ label.expand-network option {
 .evidence-drawer > .back-to-wallet {
   align-self: flex-start;
 }
+/* A full-width button stretches between the gutters; width: 100% plus both margins
+   pushed it past the drawer's right edge. */
+.evidence-drawer > .full {
+  width: auto;
+}
 
 .drawer-title {
   position: sticky;

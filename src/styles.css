@@ -5,7 +5,6 @@
  * navy ground, one blue accent, green/red reserved exclusively for flow direction, and
  * a monospace grid so addresses and amounts align down the column.
  */
-
 :root {
   --navy: #0a0d16;
   --light-navy: #14161f;
@@ -43,19 +42,16 @@
   --radius: 2px;
   --gutter: 12px;
 }
-
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
-
 html,
 body,
 #root {
   height: 100%;
 }
-
 body {
   margin: 0;
   background: var(--navy);
@@ -66,7 +62,6 @@ body {
   -webkit-font-smoothing: antialiased;
   font-variant-ligatures: none;
 }
-
 h1,
 h2,
 h3,
@@ -75,7 +70,6 @@ h4 {
   font-weight: 500;
   letter-spacing: 0.01em;
 }
-
 a {
   color: var(--blue-light);
   text-decoration: none;
@@ -83,12 +77,10 @@ a {
 a:hover {
   text-decoration: underline;
 }
-
 button {
   font: inherit;
   color: inherit;
 }
-
 /* Hashes and addresses have no natural break points; let them wrap rather than
    widen the page on a narrow viewport. */
 code,
@@ -99,20 +91,16 @@ samp {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-
 :focus-visible {
   outline: 1px solid var(--blue-light);
   outline-offset: 1px;
 }
-
 ::selection {
   background: var(--blue-dim);
 }
-
 ::placeholder {
   color: var(--placeholder);
 }
-
 /* Scrollbars read as part of the chrome rather than the OS. */
 * {
   scrollbar-width: thin;
@@ -129,7 +117,6 @@ samp {
 *::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -141,53 +128,16 @@ samp {
   white-space: nowrap;
   border: 0;
 }
-
 /* ---------------------------------------------------------------- shell */
-
 .app-shell {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   min-height: 100vh;
   background: var(--navy);
 }
-
-.side-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 0 0 14px;
-  border-right: 1px solid var(--border);
-  background: var(--light-navy);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-bright);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius);
-  background: var(--blue);
-  color: #fff;
-}
-
 .brand-period {
   color: var(--blue);
 }
-
 .workspace-label,
 .drawer-section-heading,
 .table-heading,
@@ -198,57 +148,18 @@ samp {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-
-.workspace-label {
-  justify-content: space-between;
-  padding: 0 14px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  padding: 0 14px;
-  height: 30px;
-  border: 0;
-  border-left: 2px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-.nav-item:hover {
-  background: var(--selected);
-  color: var(--text);
-}
-.nav-item.active {
-  border-left-color: var(--blue);
-  background: var(--selected-strong);
-  color: var(--text-bright);
-}
-.nav-item svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-.nav-count {
-  margin-left: auto;
-  color: var(--text-faint);
-  font-size: 10px;
-}
-
+/* Dots are often empty inline <span>s or <i>s, which need a box of their own. */
 .nav-dot,
 .status-dot,
 .demo-dot,
 .chain-dot {
+  display: inline-block;
+  vertical-align: middle;
   width: 6px;
   height: 6px;
   border-radius: 99px;
@@ -261,122 +172,36 @@ samp {
 .chain-8453 {
   background: var(--violet);
 }
-
-.rail-case {
-  padding: 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-
 .case-symbol {
   color: var(--text-bright);
   font-size: 12px;
 }
-
-.rail-bottom {
-  margin-top: auto;
-  padding: 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.agent-card {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-.agent-card strong {
-  display: block;
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 500;
-}
-.agent-card p,
-.agent-features {
-  display: block;
-  margin: 4px 0 0;
-  color: var(--text-faint);
-  font-size: 10px;
-  line-height: 1.5;
-}
-.agent-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  color: var(--blue-light);
-  font-size: 11px;
-}
-
 .local-footer,
 .local-only,
 .page-footer,
 .footer-detail {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.06em;
 }
-
 .main-workspace {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-
 /* ---------------------------------------------------------------- topbar */
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 48px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--light-navy);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text-faint);
-  font-size: 11px;
-}
-.breadcrumb strong {
-  color: var(--text);
-  font-weight: 400;
-}
-
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-faint);
-  font-size: 11px;
-}
-
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
   border: 1px solid var(--border);
-  border-radius: 99px;
+  border-radius: var(--radius);
   color: var(--text-dim);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-
 .user-avatar,
 .avatar {
   display: grid;
@@ -391,39 +216,19 @@ samp {
   letter-spacing: 0.04em;
   flex: none;
 }
-
 /* ---------------------------------------------------------------- canvas */
-
 .canvas-main {
   flex: 1;
   min-width: 0;
-  padding: 16px;
+  padding: var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--gutter);
 }
-
-.page-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-.page-heading h1 {
-  font-size: 18px;
-  letter-spacing: 0.01em;
-}
-.page-heading p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
 .new-trace {
   margin-left: auto;
 }
-
 /* ---------------------------------------------------------------- controls */
-
 .button,
 .text-button,
 .icon-button,
@@ -464,9 +269,15 @@ samp {
   color: var(--text-bright);
 }
 .button:disabled,
+.icon-button:disabled,
 .trace-submit:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.icon-button:disabled:hover {
+  border-color: var(--border-strong);
+  background: var(--card);
+  color: var(--text-dim);
 }
 .button svg,
 .icon-button svg,
@@ -474,7 +285,6 @@ samp {
   width: 13px;
   height: 13px;
 }
-
 .trace-submit,
 .button.primary {
   border-color: var(--blue);
@@ -487,63 +297,15 @@ samp {
   background: var(--blue-light);
   color: #fff;
 }
-
-.button.outlined {
-  background: transparent;
-}
-
 .icon-button {
   width: 28px;
   padding: 0;
 }
-
-.text-button {
-  height: auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--blue-light);
-}
-.text-button:hover {
-  background: none;
-  color: var(--blue-light);
-  text-decoration: underline;
-}
-
-.trace-command {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-.trace-command:focus-within {
-  border-color: var(--blue);
-}
-
-.command-input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-bright);
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-.command-input:focus {
-  outline: none;
-}
-
 .command-options {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .keycap {
   padding: 2px 5px;
   border: 1px solid var(--border-strong);
@@ -551,51 +313,7 @@ samp {
   color: var(--text-faint);
   font-size: 10px;
 }
-
 /* .filter-select is a <label> wrapping an icon, a <select> and a chevron. */
-.filter-select {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.filter-select:hover {
-  border-color: var(--border-strong);
-}
-.filter-select:focus-within {
-  border-color: var(--blue);
-}
-.filter-select select {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 11px;
-  cursor: pointer;
-}
-.filter-select select:focus {
-  outline: none;
-}
-.filter-select svg:last-child {
-  color: var(--text-faint);
-  flex: none;
-}
-.filter-select .asset-icon {
-  width: auto;
-  height: auto;
-  border: 0;
-  background: none;
-  color: var(--text-faint);
-}
-
 .mode-select,
 .date-row input,
 .modal input,
@@ -622,49 +340,20 @@ samp {
   border-color: var(--blue);
   outline: none;
 }
-
-/* The mode picker sits inside the command row and shares its ground. */
-.trace-command .mode-select {
-  border-color: transparent;
-  background: transparent;
-}
-
+/* A band of the case panel with one bottom rule, like the date row under it; its own
+   frame doubled the panel border. */
 .filterbar {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
+  padding: 8px var(--gutter);
+  border-bottom: 1px solid var(--border);
 }
 .filter-spacer {
   margin-left: auto;
 }
-
-.view-switch {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.view-switch button {
-  height: 26px;
-  padding: 0 11px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 11px;
-  cursor: pointer;
-}
-.view-switch button.active {
-  background: var(--selected-strong);
-  color: var(--text-bright);
-}
-
 /* --------------------------------------------------------------- surfaces */
-
 .investigation-panel,
 .wallet-card,
 .evidence-drawer,
@@ -678,32 +367,18 @@ samp {
   border-radius: var(--radius);
   background: var(--card);
 }
-
 .case-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 13px;
+  padding: 11px var(--gutter);
   border-bottom: 1px solid var(--border);
-}
-.case-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-bright);
-  font-size: 13px;
 }
 .case-subtitle,
 .case-line {
   color: var(--text-faint);
   font-size: 11px;
 }
-.case-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 7px;
-}
-
 .case-badge,
 .root-badge,
 .row-kind,
@@ -720,45 +395,6 @@ samp {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.case-badge {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
-.flow-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  padding: 13px;
-  border-bottom: 1px solid var(--border);
-}
-.metric-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-faint);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.flow-summary strong {
-  display: block;
-  margin-top: 3px;
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-.flow-summary .inflow strong {
-  color: var(--green);
-}
-.flow-summary .outgoing strong {
-  color: var(--red);
-}
-.flow-summary span.unit {
-  color: var(--text-faint);
-  font-size: 11px;
-}
-
 .demo-banner,
 .error-banner,
 .quiet-note,
@@ -777,10 +413,9 @@ samp {
   color: var(--text-muted);
   font-size: 11px;
 }
-.demo-banner {
-  border-color: #3a3012;
-  background: #1a1608;
-  color: #d8b74a;
+/* Narrow-screen hint; the 860px block shows it. */
+.mobile-graph-hint {
+  display: none;
 }
 .error-banner,
 .error-text {
@@ -788,16 +423,7 @@ samp {
   background: #1c0f0f;
   color: #e08585;
 }
-.warning-box {
-  padding: 9px 11px;
-  border-color: #3a3012;
-  background: #15120a;
-  color: #c9a844;
-  font-size: 11px;
-}
-
 /* ----------------------------------------------------------------- tables */
-
 .evidence-table,
 .data-table {
   width: 100%;
@@ -827,14 +453,11 @@ samp {
 .data-table tbody tr:hover td {
   background: var(--selected);
 }
-
 .table-numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-
 /* -------------------------------------------------- transaction history */
-
 .txpanel {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -846,7 +469,6 @@ samp {
      stretching the panel and pushing the whole page sideways. */
   overflow: hidden;
 }
-
 .txtabs {
   display: flex;
   align-items: stretch;
@@ -854,7 +476,6 @@ samp {
   min-width: 0;
   max-width: 100%;
 }
-
 .txtab {
   display: inline-flex;
   align-items: center;
@@ -873,6 +494,10 @@ samp {
   text-transform: uppercase;
   cursor: pointer;
 }
+/* The panel's own border closes the strip. */
+.txtab:last-child {
+  border-right: 0;
+}
 .txtab:hover {
   background: var(--selected);
   color: var(--text-dim);
@@ -885,7 +510,6 @@ samp {
   color: var(--text-faint);
   font-size: 10px;
 }
-
 .txpager {
   display: inline-flex;
   align-items: center;
@@ -911,26 +535,31 @@ samp {
   opacity: 0.3;
   cursor: default;
 }
-
 .txtools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: 6px 8px;
+  padding: 7px var(--gutter);
   border-bottom: 1px solid var(--border);
 }
-
+/* The unclassed "loaded evidence only" note. */
+.txtools > span:not([class]) {
+  white-space: nowrap;
+}
 .txchip {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 6px;
-  height: 21px;
+  height: 28px;
   padding: 0 8px;
   border: 1px solid var(--blue);
-  border-radius: 99px;
+  border-radius: var(--radius);
   background: var(--blue-dim);
   color: var(--text);
   font-size: 11px;
+  white-space: nowrap;
 }
 .txchip button {
   display: grid;
@@ -944,7 +573,6 @@ samp {
 .txchip button:hover {
   color: var(--text-bright);
 }
-
 .txchip-add {
   border-style: dashed;
   border-color: var(--border-strong);
@@ -956,49 +584,55 @@ samp {
   border-color: var(--blue);
   color: var(--text-dim);
 }
-
 .price-note {
   color: var(--text-faint);
   font-size: 10px;
   border-bottom: 1px dotted var(--border-strong);
   cursor: help;
 }
-
 .txtools-right {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px;
 }
-
 .txscroll {
   overflow-x: auto;
   min-height: 120px;
   min-width: 0;
   max-width: 100%;
 }
-
 .txtable {
   width: 100%;
   min-width: 720px;
   border-collapse: collapse;
   font-size: 11px;
 }
-
 .txtable thead th {
   height: var(--head);
   padding: 0 6px;
   border-bottom: 1px solid var(--border);
   background: var(--card);
-  color: var(--text-dim);
+  color: var(--text-muted);
+  font-size: 10px;
   font-weight: 400;
+  letter-spacing: 0.1em;
   text-align: left;
+  text-transform: uppercase;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
 }
-
+/* Outer cells sit on the gutter, in line with the tool row and footer. */
+.txtable thead th:first-child,
+.txtable tbody td:first-child {
+  padding-left: var(--gutter);
+}
+.txtable thead th:last-child,
+.txtable tbody td:last-child {
+  padding-right: var(--gutter);
+}
 .txsort {
   display: inline-flex;
   align-items: center;
@@ -1007,6 +641,8 @@ samp {
   background: none;
   color: inherit;
   font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   cursor: pointer;
   padding: 0;
 }
@@ -1023,7 +659,6 @@ samp {
   opacity: 1;
   color: var(--blue-light);
 }
-
 .txtable tbody td {
   height: var(--row);
   padding: 0 6px;
@@ -1040,17 +675,25 @@ samp {
 .txtable tbody tr.hidden-evidence td {
   opacity: 0.45;
 }
-
 .txtime {
   color: var(--blue-light);
   font-variant-numeric: tabular-nums;
 }
-
 .txparty {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 260px;
+}
+/* The transfer table has two party columns, so they narrow with the screen to keep
+   value, token and USD in view. */
+.transfers-table .txparty {
+  max-width: clamp(150px, 14vw, 260px);
+}
+/* With the drawer closed the table runs full width, so the names get more room.
+   :where() keeps this at (0,2,0) so the phone rule further down can override it. */
+:where(.canvas-and-drawer:not(.drawer-open)) .transfers-table .txparty {
+  max-width: clamp(150px, 18vw, 300px);
 }
 .txparty-name {
   overflow: hidden;
@@ -1059,10 +702,9 @@ samp {
   color: var(--text);
 }
 .txparty-addr {
-  color: var(--text-faint);
+  color: var(--text-muted);
   flex: none;
 }
-
 .txvalue {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1076,7 +718,6 @@ samp {
 .txvalue.self {
   color: var(--text-muted);
 }
-
 .txusd {
   text-align: right;
   color: var(--text);
@@ -1093,13 +734,11 @@ samp {
   margin-left: 3px;
   color: var(--blue-light);
 }
-
 .txtoken {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
-
 .txempty {
   padding: 36px 16px;
   text-align: center;
@@ -1112,23 +751,52 @@ samp {
   font-weight: 400;
   margin-bottom: 4px;
 }
-
 .txfoot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
+  gap: 2px 10px;
+  padding: 7px var(--gutter);
   border-top: 1px solid var(--border);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.04em;
 }
 .txfoot-right {
   margin-left: auto;
 }
-
+@media (max-width: 860px) {
+  /* The chain column goes (the Token cell keeps its dot) and each party stacks its
+     name and chip over the address, so the table fits a tablet card. */
+  .txtable.transfers-table {
+    min-width: 640px;
+  }
+  .transfers-table th:first-child,
+  .transfers-table td:first-child {
+    display: none;
+  }
+  .transfers-table th:nth-child(2),
+  .transfers-table td:nth-child(2) {
+    padding-left: var(--gutter);
+  }
+  .transfers-table .txparty {
+    display: inline-grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 6px;
+    line-height: 14px;
+  }
+  .transfers-table .txparty-addr {
+    grid-column: 1 / -1;
+  }
+}
+/* On a phone the table scrolls sideways anyway, so the names can be wider. */
+@media (max-width: 640px) {
+  .transfers-table .txparty {
+    max-width: 230px;
+  }
+}
 /* ------------------------------------------------------------- label chip */
-
 .labelchip {
   display: inline-flex;
   align-items: center;
@@ -1153,9 +821,7 @@ samp {
   border-color: var(--gold);
   color: var(--gold);
 }
-
 /* ------------------------------------------------------------------ graph */
-
 .graph-wrap,
 .graph-pan-surface {
   position: relative;
@@ -1163,44 +829,10 @@ samp {
     0 / 22px 22px;
   background-color: var(--navy);
 }
-.graph-svg {
-  display: block;
-  width: 100%;
-}
 .graph-lane {
   color: var(--text-faint);
 }
-.edge-line {
-  stroke: var(--border-strong);
-  fill: none;
-}
-.edge-hit {
-  stroke: transparent;
-  stroke-width: 12;
-  fill: none;
-  cursor: pointer;
-}
-.flow-edge:hover .edge-line {
-  stroke: var(--blue);
-}
 /* The label is a <g> of a pill <rect> and its <text>; they need separate fills. */
-.edge-count rect {
-  fill: var(--light-navy);
-  stroke: var(--border);
-  stroke-width: 1;
-}
-.edge-count text {
-  fill: var(--text-muted);
-  font-family: var(--mono);
-  font-size: 9px;
-}
-.flow-edge:hover .edge-count rect {
-  stroke: var(--blue);
-}
-.flow-edge:hover .edge-count text {
-  fill: var(--text-bright);
-}
-
 /* Faint rings behind the focus wallet, not filled discs. */
 .root-orbit {
   fill: none;
@@ -1212,101 +844,11 @@ samp {
   stroke: var(--border-strong);
   opacity: 0.4;
 }
-.lane-in .edge-line {
-  stroke: #2f5a3d;
-}
-.lane-out .edge-line {
-  stroke: #5a3030;
-}
-
-.root-card,
-.wallet-card {
-  background: var(--card-raised);
-}
-.root-card {
-  border-color: var(--blue);
-}
-.root-card-top,
-.root-card-bottom {
-  padding: 8px 10px;
-}
-
 /*
  * Graph node cards live in fixed-size foreignObjects (194x82), with the amount line
  * sitting under the card in the same box. Everything here is sized to that budget so
  * long entity names truncate instead of spilling out of the frame.
  */
-.graph-svg .wallet-card.counterparty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 58px;
-  padding: 0 9px;
-  width: 100%;
-  overflow: hidden;
-  cursor: pointer;
-}
-.graph-svg .wallet-card.counterparty:hover {
-  border-color: var(--border-strong);
-  background: var(--card);
-}
-.graph-svg .wallet-card.counterparty.selected {
-  border-color: var(--blue);
-}
-.graph-svg .cp-content {
-  min-width: 0;
-  flex: 1;
-}
-.graph-svg .cp-content strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-bright);
-  font-size: 11px;
-  font-weight: 500;
-}
-.graph-svg .cp-category {
-  border: 0;
-  padding: 0;
-  color: var(--text-faint);
-  font-size: 9px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.graph-svg .node-more {
-  color: var(--text-faint);
-  flex: none;
-}
-.node-amount {
-  display: block;
-  margin-top: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-faint);
-  font-size: 9px;
-}
-.node-actions {
-  display: flex;
-  gap: 4px;
-}
-.graph-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-.graph-legend {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  color: var(--text-faint);
-  font-size: 10px;
-}
 .graph-empty,
 .empty-state {
   padding: 30px 16px;
@@ -1314,9 +856,7 @@ samp {
   color: var(--text-faint);
   font-size: 11px;
 }
-
 /* ------------------------------------------------- evidence & drawer */
-
 .canvas-and-drawer {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1325,78 +865,12 @@ samp {
 .canvas-and-drawer.drawer-open {
   grid-template-columns: minmax(0, 1fr) 360px;
 }
-
-.evidence-drawer {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 13px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-bright);
-  font-size: 12px;
-}
-.evidence-hero {
-  padding: 13px;
-  border-bottom: 1px solid var(--border);
-}
 /*
  * The drawer's fields are `div > label + code|span` (plus an optional copy button),
  * not a definition list. Each row stacks its label over its value, and the copy button
  * sits beside the value rather than wrapping under it.
  */
-.evidence-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  padding: 12px 13px;
-  font-size: 11px;
-}
-.evidence-fields > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: 8px;
-  row-gap: 3px;
-}
-.evidence-fields label {
-  grid-column: 1 / -1;
-  display: block;
-  color: var(--text-faint);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.evidence-fields code,
-.evidence-fields > div > span {
-  min-width: 0;
-  color: var(--text);
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-.evidence-fields > div > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
 /* Two fields sharing one row. */
-.field-pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 11px;
-}
-.field-pair section {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
 /* provenance-box: icon beside a stack of strong / p / span / label / code. */
 .provenance-box {
   display: flex;
@@ -1425,7 +899,7 @@ samp {
   color: var(--text-dim);
 }
 .provenance-box span {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 10px;
 }
 .provenance-box label {
@@ -1439,14 +913,6 @@ samp {
   color: var(--text-dim);
   overflow-wrap: anywhere;
 }
-
-.address-block {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text);
-}
-
 .transfer-list {
   display: flex;
   flex-direction: column;
@@ -1466,61 +932,10 @@ samp {
 .transfer-row:hover {
   background: var(--selected);
 }
-.transfer-arrow {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  flex: none;
-}
-.transfer-arrow.in {
-  color: var(--green);
-}
-.transfer-arrow.out {
-  color: var(--red);
-}
-.transfer-arrow.path {
-  color: var(--text-faint);
-}
-.transfer-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  font-size: 11px;
-}
-.transfer-main strong {
-  color: var(--text-bright);
-  font-weight: 500;
-}
-.transfer-main > span {
-  color: var(--text-faint);
-}
 .row-to {
   color: var(--border-strong);
 }
-.transfer-meta {
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  color: var(--text-faint);
-  font-size: 10px;
-  flex: none;
-}
-
 /* ------------------------------------------------------- counterparties */
-
-.counterparty {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 11px;
-  border-bottom: 1px solid #1b1d25;
-}
-.counterparty:hover {
-  background: var(--selected);
-}
 .cp-icon,
 .wallet-icon,
 .scope-icon,
@@ -1536,12 +951,6 @@ samp {
   background: var(--card-raised);
   color: var(--text-muted);
   flex: none;
-}
-.cp-content {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 .counterparty-row-meta,
 .counterparty-provenance,
@@ -1570,9 +979,7 @@ samp {
 .counterparty-asset-name {
   color: var(--text-faint);
 }
-
 /* ------------------------------------------------------------- modals */
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1583,41 +990,8 @@ samp {
   background: #04060bcc;
   backdrop-filter: blur(2px);
 }
-.modal {
-  width: min(520px, 100%);
-  max-height: 84vh;
-  overflow-y: auto;
-  padding: 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--card);
-  box-shadow: 0 18px 48px #000000a0;
-}
-.modal h2 {
-  font-size: 13px;
-  color: var(--text-bright);
-}
-.modal label {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--text-faint);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
 /* A <label> wrapping its own textarea: stack them, or the field renders beside the
    caption and the placeholder overlaps it. */
-.notes-label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-top: 14px;
-}
-.notes-label textarea {
-  width: 100%;
-  min-height: 60px;
-}
-
 /* Case lists in the Investigations dialog: browser saves and the shared store. */
 .case-group-heading {
   display: flex;
@@ -1682,17 +1056,6 @@ samp {
   flex: none;
   color: var(--text-faint);
 }
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 7px;
-  margin-top: 14px;
-}
-.modal-close {
-  margin-left: auto;
-}
-
 .toast {
   position: fixed;
   right: 16px;
@@ -1706,26 +1069,6 @@ samp {
   font-size: 11px;
   box-shadow: 0 10px 30px #000000a0;
 }
-
-.code-example {
-  padding: 10px;
-  overflow-x: auto;
-  color: var(--text-dim);
-  font-size: 11px;
-  line-height: 1.6;
-}
-.code-example .boot {
-  color: var(--green);
-}
-
-.guide-steps {
-  margin: 0;
-  padding-left: 16px;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.8;
-}
-
 .spin {
   animation: spin 0.9s linear infinite;
 }
@@ -1734,23 +1077,19 @@ samp {
     transform: rotate(360deg);
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
-
 .address-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--gutter);
   min-width: 0;
 }
-
 /* ----------------------------------------------------- address overview */
-
 /*
  * Columns follow the space actually available, not the viewport: the evidence drawer
  * narrows this container without changing window width, and a viewport-based rule
@@ -1759,14 +1098,13 @@ samp {
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr));
-  gap: 14px;
+  gap: var(--gutter);
 }
-
 .panel-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 0 11px;
+  padding: 0 var(--gutter);
   height: var(--tab);
   border-bottom: 1px solid var(--border);
 }
@@ -1782,12 +1120,15 @@ samp {
   color: var(--text-faint);
   font-size: 10px;
 }
-
 .assets-table {
   min-width: 330px;
 }
 .counterparty-table {
   min-width: 340px;
+}
+/* One party column: the 260px cap from .txparty is for the two-party transfer table. */
+.counterparty-table .txparty {
+  max-width: none;
 }
 /* Counterparties carry a label plus three numeric columns, so they get their own row
    rather than being squeezed into a third of the width. */
@@ -1797,7 +1138,6 @@ samp {
 .counterparty-table tbody tr {
   cursor: pointer;
 }
-
 .chart-wrap {
   padding: 11px 6px 4px;
 }
@@ -1835,15 +1175,12 @@ samp {
   color: var(--text-faint);
   font-size: 11px;
 }
-
 /* -------------------------------------------------------------- responsive */
-
 @media (max-width: 1100px) {
   .canvas-and-drawer.drawer-open {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
 /*
  * Narrow viewports collapse the rail to icons rather than hiding it. Every nav
  * destination stays reachable and keeps its accessible name; only the labels go.
@@ -1851,32 +1188,6 @@ samp {
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 56px minmax(0, 1fr);
-  }
-  .brand {
-    justify-content: center;
-    padding: 0;
-  }
-  .brand > span:last-child,
-  .workspace-label,
-  .nav-item > span:not(.nav-count),
-  .rail-case,
-  .agent-card,
-  .local-footer {
-    display: none;
-  }
-  .nav-item {
-    justify-content: center;
-    padding: 0;
-    height: 38px;
-  }
-  .nav-count {
-    display: none;
-  }
-  .rail-bottom {
-    padding: 0;
-  }
-  .canvas-main {
-    padding: 12px;
   }
   /* Case actions drop to their own row rather than pushing the page sideways. */
   .case-header {
@@ -1888,17 +1199,21 @@ samp {
     width: 100%;
     flex-wrap: wrap;
   }
-  .page-heading {
-    flex-wrap: wrap;
-    row-gap: 8px;
-  }
   .new-trace {
     margin-left: 0;
+  }
+  .mobile-graph-hint {
+    display: flex;
+    margin: 8px var(--gutter) 0;
   }
   .txtab {
     flex: none;
     padding: 0 10px;
     font-size: 11px;
+  }
+  /* The tabs no longer fill the strip, so the last one needs its rule back. */
+  .txtab:last-child {
+    border-right: 1px solid var(--border);
   }
   .txtabs {
     overflow-x: auto;
@@ -1909,4 +1224,3739 @@ samp {
   .page-heading h1 {
     font-size: 16px;
   }
+}
+
+/* ============================================================================
+ * Restored component styles. The workspace rewrite dropped these rules while the
+ * components still rendered the markup they style.
+ * ========================================================================== */
+
+/* ---- Top chrome ---- */
+/* ------------------------------------------------------- top chrome: topbar */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gutter);
+  height: 48px;
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--border);
+  background: var(--light-navy);
+}
+
+/* "Workspace" is a bare text node, the slash a <span>, the page a <strong>. */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.breadcrumb > span {
+  color: var(--text-faint);
+}
+.breadcrumb strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-bright);
+  font-weight: 500;
+}
+
+.topbar-right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gutter);
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+/* Flex makes the inline .status-dot a flex item, so its 6px box actually renders. */
+.topbar-right .local-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.topbar-right .icon-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.topbar-right .icon-button:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+  color: var(--text-bright);
+}
+
+/* ------------------------------------------------------- top chrome: heading */
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--gutter);
+  margin: calc(var(--gutter) * 1.5) var(--gutter) var(--gutter);
+}
+.page-heading > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.page-heading h1 {
+  color: var(--text-bright);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+.page-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.page-heading .new-trace {
+  flex: none;
+  margin-left: auto;
+}
+
+/* --------------------------------------------- top chrome: trace command bar */
+
+/* section.trace-command > div.command-input (svg, input, kbd)
+                         + div.command-options (label.mode-select, button.trace-submit) */
+.trace-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--tab);
+  margin: 0 var(--gutter) var(--gutter);
+  padding: 0 5px 0 var(--gutter);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  transition: border-color 0.1s ease;
+}
+.trace-command:hover {
+  border-color: var(--border-strong);
+}
+/* After :hover so focus wins while both apply. */
+.trace-command:focus-within {
+  border-color: var(--blue);
+}
+
+/* The wrapper is a row, not the field: the <input> inside carries the text styles. */
+.command-input {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  align-self: stretch;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text-faint);
+}
+.command-input > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+  transition: color 0.1s ease;
+}
+.command-input:focus-within > svg {
+  color: var(--blue-light);
+}
+/* Focus is shown by the bar's :focus-within border, so the field itself has no ring
+   (this selector already outranks the global :focus-visible rule). */
+.command-input input {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-bright);
+  caret-color: var(--blue-light);
+  color-scheme: dark;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  appearance: none;
+  outline: none;
+}
+.command-input input::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+.command-input input:-webkit-autofill,
+.command-input input:-webkit-autofill:hover,
+.command-input input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-bright);
+  caret-color: var(--blue-light);
+  box-shadow: 0 0 0 1000px var(--card) inset;
+}
+.command-input kbd {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.command-input kbd svg {
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+
+.trace-command .command-options {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 8px;
+}
+
+/* label.mode-select wraps the native <select> and a chevron; the divider separates
+   the address field from the options. */
+.trace-command .mode-select {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.trace-command .mode-select select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0 26px 0 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  color-scheme: dark;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.1s ease;
+}
+.trace-command .mode-select select:focus-visible {
+  outline: 1px solid var(--blue-light);
+  outline-offset: -1px;
+}
+.trace-command .mode-select option {
+  background-color: var(--card-raised);
+  color: var(--text);
+}
+.trace-command .mode-select svg {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  color: var(--text-faint);
+  pointer-events: none;
+  transition: color 0.1s ease;
+}
+.trace-command .mode-select:hover select {
+  color: var(--text-bright);
+}
+.trace-command .mode-select:hover svg {
+  color: var(--text-dim);
+}
+.trace-command .mode-select:focus-within svg {
+  color: var(--blue-light);
+}
+
+.trace-command .trace-submit {
+  flex: none;
+  padding: 0 var(--gutter);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.trace-command .trace-submit:active:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue);
+}
+/* Disabled only while a trace runs: show progress, keep the spinner readable. */
+.trace-command .trace-submit:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* ------------------------------------------------------- top chrome: banners */
+
+/* Errors use orange: red is reserved for flow direction. Must sit after the
+   ".error-banner, .error-text" hex rule (or .error-banner must leave that list). */
+.error-banner {
+  border-color: var(--orange);
+  background: var(--light-navy);
+  color: var(--orange);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.error-banner > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--orange);
+}
+/* The workspace banner: icon, message, optional actions, dismiss. 5px inset matches
+   the command bar, so a row of 28px controls lands on var(--tab). */
+.main-workspace > .error-banner {
+  gap: 8px;
+  min-height: var(--tab);
+  margin: 0 var(--gutter) var(--gutter);
+  padding: 5px 5px 5px 11px;
+}
+.main-workspace > .error-banner > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.main-workspace > .error-banner > .button {
+  flex: none;
+}
+.main-workspace > .error-banner > .icon-button {
+  flex: none;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.main-workspace > .error-banner > .icon-button:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+  color: var(--text-bright);
+}
+
+/* div.demo-banner > span.demo-dot, strong, span, button */
+.demo-banner {
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: var(--head);
+  margin: 0 var(--gutter) var(--gutter);
+  padding: 7px var(--gutter);
+  border-color: var(--border);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+/* Gold for demo (matches the DEMO case badge), blue for live. */
+.demo-banner .demo-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+}
+.demo-banner .demo-dot.live {
+  background: var(--blue-light);
+}
+.demo-banner strong {
+  flex: none;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.demo-banner > span:not(.demo-dot) {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-muted);
+}
+.demo-banner > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--blue-light);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: inherit;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.demo-banner > button svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.1s ease;
+}
+.demo-banner > button:hover {
+  text-decoration: underline;
+}
+.demo-banner > button:hover svg {
+  transform: translateX(2px);
+}
+.demo-banner > button:active {
+  color: var(--blue);
+}
+
+/* div.warning-box > svg + p, between .coverage-list and .coverage-source in the
+   coverage dialog. Block-flow margins collapse with any the dialog adds. */
+.warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: var(--gutter) 0;
+  padding: 9px 11px;
+  border-color: var(--border);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.warning-box > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--gold);
+}
+.warning-box p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ----------------------------------------------- top chrome: boot and footer */
+
+/* Full-screen loading state rendered in place of .app-shell. */
+.boot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gutter);
+  min-height: 100vh;
+  padding: var(--gutter);
+  background: var(--navy);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.boot p {
+  margin: 0;
+}
+/* The mark holds a text node "f" and a <span>·</span>; the shared grid rule would
+   stack them as two rows overflowing the square, so lay them out in one row. */
+.boot .brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+}
+.boot .spin {
+  width: 16px;
+  height: 16px;
+  color: var(--blue-light);
+}
+
+.page-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px var(--gutter);
+  margin-top: auto;
+  padding: var(--gutter);
+}
+
+/* ------------------------------------------------- top chrome: responsive */
+
+@media (max-width: 1100px) {
+  .command-input kbd {
+    display: none;
+  }
+  /* Status and action share the first row; the explanation gets its own line
+     instead of squeezing into a narrow wrapping column. */
+  .demo-banner {
+    display: grid;
+    grid-template-columns: 6px minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+  /* Centred on the first 16px line of a status that may wrap. */
+  .demo-banner .demo-dot {
+    margin-top: 5px;
+  }
+  .demo-banner strong {
+    white-space: normal;
+  }
+  .demo-banner > span:not(.demo-dot) {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .demo-banner > button {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  /* Breadcrumb + status + agents button must fit 360px phones (56px rail,
+     24px padding) without truncating the page name. */
+  .topbar {
+    gap: 8px;
+  }
+  .breadcrumb {
+    gap: 4px;
+    letter-spacing: 0;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
+  .topbar-right .local-only {
+    gap: 4px;
+    letter-spacing: 0;
+  }
+  .topbar-right .user-avatar {
+    display: none;
+  }
+  /* Title and New trace share the first row; the subtitle takes the full width under
+     them instead of wrapping in a narrow column beside the button. */
+  .page-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 var(--gutter);
+    margin-top: var(--gutter);
+  }
+  .page-heading > div {
+    display: contents;
+  }
+  .page-heading .new-trace {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .page-heading p {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .page-heading h1 {
+    font-size: 16px;
+  }
+  /* The command bar stacks: address on top, mode and submit on a divided row. */
+  .trace-command {
+    flex-wrap: wrap;
+    gap: 0;
+    height: auto;
+    padding: 0;
+  }
+  .command-input {
+    flex: 1 1 100%;
+    height: 38px;
+    padding: 0 var(--gutter);
+  }
+  /* 2px + the select's 10px inset puts the mode text under the search icon. */
+  .trace-command .command-options {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    padding: 5px 5px 5px 2px;
+    border-top: 1px solid var(--border);
+  }
+  .trace-command .mode-select {
+    border-left: 0;
+  }
+  /* The trailing arrow is decorative; dropping it gives the mode label room. */
+  .trace-command .trace-submit > svg:last-child {
+    display: none;
+  }
+  /* Icon | message | dismiss on the first row; each action on its own row under
+     the message, aligned with its text. */
+  .main-workspace > .error-banner {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) 28px;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 5px;
+  }
+  .main-workspace > .error-banner > svg {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .main-workspace > .error-banner > span {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .main-workspace > .error-banner > .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .main-workspace > .error-banner > .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* A full 42-character address has to fit on a phone: drop the search icon and scale
+   the text to the field (42 mono characters are about 25.5em wide untracked). */
+@media (max-width: 460px) {
+  .command-input > svg {
+    display: none;
+  }
+  .command-input input {
+    font-size: min(11px, calc((100vw - 58px - var(--gutter) * 4) / 25.5));
+    letter-spacing: 0;
+  }
+}
+
+/* ---- Side rail ---- */
+/* ------------------------------------------------------------ side rail */
+
+/* The rail stays in view while the workspace scrolls. It scrolls by itself only
+   when the viewport is shorter than its content. */
+.side-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--light-navy);
+}
+.side-rail > * {
+  flex: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-bright);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.brand:hover {
+  text-decoration: none;
+}
+.brand:focus-visible {
+  outline-offset: -1px;
+}
+
+/* "f·" sits on one line inside the mark. As a grid, the dot stacked under the f. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius);
+  background: var(--blue);
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background 0.1s ease;
+}
+.brand-mark span {
+  margin-left: -1px;
+  opacity: 0.7;
+}
+.brand:hover .brand-mark {
+  background: var(--blue-light);
+}
+
+.workspace-label {
+  justify-content: space-between;
+  padding: var(--gutter) var(--gutter) 6px;
+  white-space: nowrap;
+}
+.workspace-label span {
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-rail nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Full-bleed rows. The 2px active bar counts toward the left padding, so the
+   icons line up with the brand mark on the 12px gutter. */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: var(--head);
+  padding: 0 var(--gutter) 0 calc(var(--gutter) - 2px);
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease,
+    border-color 0.1s ease;
+}
+.nav-item svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+/* The label takes the free width and truncates. Trailing dots, counts and
+   keycaps sit at the right edge. */
+.nav-item > svg + span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-item:hover:not(:disabled) {
+  background: var(--selected);
+  color: var(--text);
+}
+.nav-item:active:not(:disabled) {
+  background: var(--selected-strong);
+}
+.nav-item.active,
+.nav-item.active:hover:not(:disabled) {
+  border-left-color: var(--blue);
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+.nav-item.active svg {
+  color: var(--blue-light);
+}
+.nav-item:focus-visible {
+  outline-offset: -1px;
+}
+.nav-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.side-rail .nav-dot {
+  background: var(--blue-light);
+}
+
+.nav-count {
+  flex: none;
+  min-width: 20px;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The same 16px height as .nav-count, so trailing badges align across rows. */
+.nav-item .keycap {
+  flex: none;
+  padding: 2px 5px;
+  line-height: 1;
+}
+
+/* Status dots are often <i> or <span> in inline text, so they need a box of their own. */
+.status-dot {
+  display: inline-block;
+  vertical-align: middle;
+  background: var(--blue-light);
+}
+.status-dot.amber {
+  background: var(--gold);
+}
+.status-dot.red {
+  background: var(--red);
+}
+
+.rail-case {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin-top: var(--gutter);
+  padding: var(--gutter);
+  border-top: 1px solid var(--border);
+}
+.rail-case > strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--text-bright);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.rail-case > span:not(.eyebrow) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.rail-case .case-line {
+  flex: none;
+  width: 24px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--border-strong);
+}
+.rail-case p {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* No side padding here. The Field guide row runs full width like the nav above
+   it, and the card and footer carry the gutter themselves. */
+.rail-bottom {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: var(--gutter);
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 var(--gutter) 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease;
+}
+.agent-card .terminal-icon {
+  align-self: flex-start;
+  margin-bottom: 4px;
+  color: var(--blue-light);
+}
+.agent-card .terminal-icon svg {
+  width: 13px;
+  height: 13px;
+}
+.agent-card strong {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.agent-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  margin-top: 4px;
+  color: var(--blue-light);
+  font-size: 10px;
+}
+.agent-link svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  transition: transform 0.1s ease;
+}
+.agent-card:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+}
+.agent-card:hover:not(:disabled) strong {
+  color: var(--text-bright);
+}
+.agent-card:hover:not(:disabled) .agent-link svg {
+  transform: translateX(2px);
+}
+.agent-card:active:not(:disabled) {
+  border-color: var(--blue);
+}
+.agent-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* A 32px status bar that closes the rail, with the version at the right. */
+.local-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: var(--head);
+  margin-top: 6px;
+  padding: 0 var(--gutter);
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+}
+.local-footer > span:last-child {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------- agent & guide dialogs */
+
+/* Caption <span>s alternate with <code> commands, each on its own line. */
+.code-example {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: var(--gutter) 0;
+  padding: 10px var(--gutter);
+  background: var(--navy);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.code-example > span {
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.code-example > span:not(:first-child) {
+  margin-top: 8px;
+}
+/* A hanging indent keeps wrapped arguments clear of the prompt. */
+.code-example code {
+  display: block;
+  padding-left: 2ch;
+  text-indent: -2ch;
+  color: var(--text);
+  font-size: 11px;
+}
+.code-example code::before {
+  content: "$ ";
+  content: "$ " / "";
+  color: var(--text-faint);
+}
+
+.agent-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: var(--gutter) 0;
+}
+.agent-features > span {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.agent-features svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--blue-light);
+}
+
+/* Each step is `div > span(number) + section(strong + p)`, set as a ruled list. */
+.guide-steps {
+  display: flex;
+  flex-direction: column;
+  margin: var(--gutter) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+}
+.guide-steps > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--gutter);
+  align-items: start;
+  padding: 10px var(--gutter);
+}
+.guide-steps > div + div {
+  border-top: 1px solid var(--border);
+}
+.guide-steps > div > span {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--blue-light);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.guide-steps section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.guide-steps section strong {
+  color: var(--text-bright);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.guide-steps section p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Narrow viewports collapse the rail to icons. Every destination keeps its
+   accessible name; only the visible labels and the side panels go. */
+@media (max-width: 860px) {
+  .brand {
+    justify-content: center;
+    padding: 0;
+  }
+  .brand > span:last-child,
+  .workspace-label,
+  .nav-item > span,
+  .rail-case,
+  .agent-card,
+  .local-footer {
+    display: none;
+  }
+  .side-rail nav {
+    gap: 2px;
+    padding-top: 6px;
+  }
+  /* The right padding matches the 2px active bar, so the icon sits centred. */
+  .nav-item {
+    justify-content: center;
+    height: var(--tab);
+    padding: 0 2px 0 0;
+  }
+  .nav-item svg {
+    width: 16px;
+    height: 16px;
+  }
+  .rail-bottom {
+    padding: var(--gutter) 0 6px;
+  }
+  .agent-features {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-features > span {
+    align-items: center;
+  }
+}
+
+/* ---- Case header and filters ---- */
+/* ------------------------------------------------- case header (area) */
+
+/* div.case-title > span.case-symbol + div > (h2 > text + span.case-badge) + span.case-subtitle */
+.case-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gutter);
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-bright);
+  font-size: 13px;
+}
+.case-title .case-symbol {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-raised);
+  color: var(--blue-light);
+  flex: none;
+}
+.case-title .case-symbol svg {
+  width: 16px;
+  height: 16px;
+}
+.case-title > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+/* The h2 used to inherit the UA 1.5em size, so the 9px badge rode the baseline of a
+   ~20px line and looked high. Centre it on an explicit line box instead. Long titles
+   wrap rather than ellipsize so the DEMO / LOCAL badge is never clipped. */
+.case-title h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  color: var(--text-bright);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+.case-badge {
+  flex: none;
+  height: 16px;
+  padding: 0 5px;
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.case-subtitle {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.case-subtitle > span {
+  color: var(--text-faint);
+}
+
+.case-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  margin-left: auto;
+}
+.case-actions .button svg {
+  flex: none;
+}
+
+/* Ghost button: no chrome until hovered. */
+.button.subtle {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-dim);
+}
+.button.subtle:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+.button.subtle:active:not(:disabled) {
+  background: var(--selected);
+}
+.button.subtle:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-dim);
+}
+
+/* Confirmation state of "Save case": the accent, not green (green means inflow). */
+.button.saved,
+.button.saved:hover {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+  color: var(--text-bright);
+}
+.button.saved:hover {
+  border-color: var(--blue-light);
+}
+.button.saved svg {
+  color: var(--blue-light);
+}
+
+/* Icon buttons in the drawer (pin / hide): transparent with a frame; pinned = accent. */
+.outlined {
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+}
+.outlined:hover:not(:disabled) {
+  border-color: var(--text-faint);
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+.outlined.active,
+.outlined.active:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+  color: var(--blue-light);
+}
+
+/* a.button.primary.full (drawer explorer link) and button.button.primary.full (help dialog). */
+.full {
+  width: 100%;
+}
+a.button.full:hover {
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------- filters (area) */
+
+/*
+ * .filter-select is either a <label> (icon | <select> | chevron) or the date toggle
+ * <button> (icon | span | chevron). On the label the three children share one grid
+ * cell: the select fills the whole control (so clicking the icon or chevron opens
+ * it) and the icons sit over its padding with pointer-events off.
+ */
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-width: 0;
+  max-width: 240px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease,
+    border-color 0.1s ease;
+}
+.filter-select:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+  color: var(--text-dim);
+}
+/* Only the <label> variant: the date toggle is a button that Chrome focuses on click,
+   and a lingering blue border would read as its .active state. It keeps the global
+   :focus-visible ring instead. */
+label.filter-select:focus-within {
+  border-color: var(--blue);
+}
+.filter-select > svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+.filter-select > svg:last-child {
+  width: 12px;
+  height: 12px;
+  color: var(--text-faint);
+}
+.filter-select:hover > svg:last-child {
+  color: var(--text-dim);
+}
+.filter-select .asset-icon {
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+}
+
+label.filter-select {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
+  padding: 0;
+}
+label.filter-select > * {
+  grid-area: 1 / 1;
+}
+label.filter-select > :first-child {
+  justify-self: start;
+  margin-left: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+label.filter-select > svg:last-child {
+  justify-self: end;
+  margin-right: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+label.filter-select > select {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  /* 8px inset + 13px icon + 6px gap on the left; 8px + 12px chevron + 6px on the right. */
+  padding: 0 26px 0 27px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius);
+  appearance: none;
+  background: transparent;
+  color: var(--text);
+  color-scheme: dark;
+  font: inherit;
+  letter-spacing: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Size each select to its chosen option, not its longest one. */
+.trace-command .mode-select select,
+label.filter-select > select {
+  field-sizing: content;
+}
+label.filter-select:hover > select {
+  color: var(--text-bright);
+}
+label.filter-select > select:focus {
+  outline: none;
+}
+label.filter-select > select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* The span clips, so it needs a real line box; the inherited line-height: 1 would
+   shave glyph tops and descenders. */
+.date-toggle > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  line-height: 16px;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+.date-toggle:hover > span {
+  color: var(--text-bright);
+}
+.date-toggle.active,
+.date-toggle.active:hover {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+}
+.date-toggle.active > span {
+  color: var(--text-bright);
+}
+.date-toggle.active > svg:first-child {
+  color: var(--blue-light);
+}
+
+/* Segmented Graph | Evidence control; 28px tall like every other filter control. */
+.view-switch {
+  display: inline-flex;
+  align-items: stretch;
+  flex: none;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: hidden;
+}
+.view-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  margin: 0;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.view-switch button + button {
+  border-left: 1px solid var(--border);
+}
+.view-switch button svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+.view-switch button:hover {
+  background: var(--selected);
+  color: var(--text-dim);
+}
+.view-switch button:active {
+  background: var(--selected-strong);
+}
+.view-switch button.active,
+.view-switch button.active:hover {
+  background: var(--selected-strong);
+  color: var(--text-bright);
+  box-shadow: inset 0 -1px 0 var(--blue);
+}
+.view-switch button.active svg {
+  color: var(--blue-light);
+}
+/* The container clips overflow, so draw the focus ring inside the segment. */
+.view-switch button:focus-visible {
+  outline-offset: -2px;
+}
+
+/* div.date-row > label(text + input[type=date]) + span(→) + label + span.date-hint */
+.date-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px var(--gutter);
+  border-bottom: 1px solid var(--border);
+  background: var(--light-navy);
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.date-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.date-row > span:not(.date-hint) {
+  color: var(--text-faint);
+}
+.date-row input {
+  height: 28px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  color-scheme: dark;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: border-color 0.1s ease;
+}
+.date-row input:hover {
+  border-color: var(--border-strong);
+}
+.date-row input:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+.date-row input::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+.date-row input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+/* Inline hint, not a banner box. .error-text keeps its own colour. */
+.date-row .date-hint {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+}
+.date-row .date-hint:not(.error-text) {
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------- flow summary (area) */
+
+/* Duplicate of .scope-note for narrow screens; hidden while .scope-note is shown. */
+.summary-scope-mobile {
+  display: none;
+}
+
+/* div.flow-summary > div(span.metric-label + strong[.inflow|.net] > small) x3 + div.scope-note
+   The outflow <strong> carries no class; it is the second metric. */
+.flow-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 12px var(--gutter);
+  border-bottom: 1px solid var(--border);
+}
+.flow-summary > div:not(.scope-note) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.metric-label svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.flow-summary > div:nth-child(1) .metric-label svg {
+  color: var(--green);
+}
+.flow-summary > div:nth-child(2) .metric-label svg {
+  color: var(--red);
+}
+/* Clips with an ellipsis at every width, so one oversized amount can never push the
+   panel sideways. */
+.flow-summary > div > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-bright);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.flow-summary > div > strong.inflow {
+  color: var(--green);
+}
+.flow-summary > div:nth-child(2) > strong {
+  color: var(--red);
+}
+.flow-summary > div > strong small {
+  margin-left: 6px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* Quiet right-aligned caption, not a banner box. */
+.scope-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 360px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.scope-note .scope-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+}
+.scope-note .scope-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.scope-note p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+.scope-note p strong {
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scope-note p > span {
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+/* ------------------------------------------------ canvas heading (area) */
+
+/* div.canvas-heading > div(span.eyebrow + span.record-count?) + div(button.text-button...)
+   Overrides every property the shared eyebrow/label group sets on it. */
+.canvas-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 12px var(--gutter) 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.canvas-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* Each button has a 1px border plus 6px of side padding; pull the group out by 7px so
+   their text, not their hover box, lands on the gutter. */
+.canvas-heading > div:last-child {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: -7px;
+}
+.canvas-heading .eyebrow {
+  white-space: nowrap;
+}
+.canvas-heading .record-count {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Link-style button (base; the drawer's .text-button.back-to-wallet relies on it). */
+.text-button {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--blue-light);
+}
+.text-button svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+.text-button:hover:not(:disabled) {
+  background: none;
+  color: var(--blue-light);
+  text-decoration: underline;
+}
+.text-button:disabled,
+.text-button:disabled:hover {
+  background: none;
+  color: var(--blue-light);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* In the canvas heading they are quiet toolbar actions; the group toggle uses the accent. */
+.canvas-heading .text-button {
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+}
+.canvas-heading .text-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--selected);
+  color: var(--text-bright);
+  text-decoration: none;
+}
+.canvas-heading .text-button:active:not(:disabled) {
+  background: var(--selected-strong);
+}
+.canvas-heading .text-button:disabled,
+.canvas-heading .text-button:disabled:hover {
+  border-color: transparent;
+  background: none;
+  color: var(--text-muted);
+}
+.canvas-heading .text-button.active,
+.canvas-heading .text-button.active:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+  color: var(--text-bright);
+}
+.canvas-heading .text-button.active svg {
+  color: var(--blue-light);
+}
+
+/* ----------------------------------------------------- responsive (area) */
+
+@media (max-width: 1100px) {
+  .flow-summary {
+    column-gap: 20px;
+  }
+  .scope-note {
+    max-width: 240px;
+  }
+  .scope-note .scope-icon {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .case-title .case-symbol {
+    width: 28px;
+    height: 28px;
+  }
+  .case-title h2 {
+    font-size: 13px;
+  }
+  /* Keep every fact of the subtitle on a phone; wrap at the spaces. */
+  .case-subtitle {
+    white-space: normal;
+  }
+  /* Case actions drop to their own row rather than pushing the page sideways. */
+  .case-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-left: 0;
+  }
+  /* On their own row the actions share it evenly, and the ghost Export gets the
+     same frame as Save so the pair reads as two buttons. */
+  .case-actions > .button {
+    flex: 1 1 auto;
+  }
+  .case-actions > .button.subtle,
+  .case-actions > .button.subtle:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+
+  /* Filters become an even grid of controls that fill each wrapped row. The empty
+     spacer would only add a stray gap, and the view switch takes a full row. */
+  .filter-select {
+    flex: 1 1 140px;
+    max-width: none;
+  }
+  .filter-spacer {
+    display: none;
+  }
+  .view-switch {
+    flex: 1 1 100%;
+  }
+  .view-switch button {
+    flex: 1 1 0;
+  }
+
+  .date-row {
+    gap: 8px;
+  }
+  .date-row label {
+    flex: 1 1 220px;
+  }
+  .date-row input {
+    flex: 1 1 auto;
+  }
+  .date-row > span:not(.date-hint) {
+    display: none;
+  }
+  .date-row .date-hint {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .scope-note {
+    display: none;
+  }
+  .summary-scope-mobile {
+    display: block;
+    padding: 10px var(--gutter) 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+  }
+  /* One column on a phone, three on a tablet; a stacked phone column keeps 8px
+     between metric groups so the summary stays short. */
+  .flow-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px 12px;
+    padding: 8px var(--gutter) 12px;
+  }
+  .flow-summary > div > strong {
+    font-size: 15px;
+    line-height: 20px;
+  }
+}
+
+/* ---- Funding graph ---- */
+/* ------------------------------------------------ funding graph canvas */
+
+/*
+ * Graph.tsx sizes the SVG viewBox from the measured box of .graph-wrap. The SVG is
+ * the wrapper's only in-flow child and gets its height from CSS, so the measurement
+ * stays stable. Lanes, legend, controls and the empty note are overlays and do not
+ * add to that height. .graph-wrap must not gain its own height, padding, border or
+ * other in-flow children, or the ResizeObserver loop that grows the graph returns.
+ */
+.graph-svg {
+  display: block;
+  width: 100%;
+  height: clamp(440px, 62vh, 640px);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.graph-svg:active {
+  cursor: grabbing;
+}
+
+/* The arrowheads in <defs> have light-theme fill attributes. Use the direction colours. */
+.graph-svg #arrow-in path {
+  fill: var(--green);
+}
+.graph-svg #arrow-out path {
+  fill: var(--red);
+}
+
+/* Edges: g.flow-edge.in|out > path.edge-hit + path.edge-line + g.edge-count */
+.flow-edge .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  stroke-linecap: round;
+  cursor: pointer;
+}
+.flow-edge .edge-hit:focus {
+  outline: none;
+}
+/* Keyboard focus shows as a soft accent band under the line. A box outline would
+   wrap the curve's whole bounding box. */
+.flow-edge .edge-hit:focus-visible {
+  stroke: var(--blue-dim);
+  stroke-width: 8;
+}
+.flow-edge .edge-line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
+  stroke-opacity: 0.6;
+  pointer-events: none;
+  transition:
+    stroke-opacity 0.1s ease,
+    stroke-width 0.1s ease;
+}
+.flow-edge.in .edge-line {
+  stroke: var(--green);
+}
+.flow-edge.out .edge-line {
+  stroke: var(--red);
+}
+.flow-edge:hover .edge-line {
+  stroke-opacity: 1;
+  stroke-width: 1.75;
+}
+.flow-edge:has(.edge-hit:focus-visible) .edge-line {
+  stroke-opacity: 1;
+  stroke-width: 1.75;
+}
+
+/* The count label is a 64x23 <g>. Its text is centred at x=32, baseline y=15. The rect
+   is resized around that centre into a 2px-radius chip that fits "100 transfers". */
+.flow-edge .edge-count rect {
+  x: -6px;
+  y: 3px;
+  width: 76px;
+  height: 17px;
+  rx: 2px;
+  ry: 2px;
+  fill: var(--navy);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  transition: stroke 0.1s ease;
+}
+.flow-edge .edge-count text {
+  fill: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.flow-edge.in:hover .edge-count rect {
+  stroke: var(--green);
+}
+.flow-edge.out:hover .edge-count rect {
+  stroke: var(--red);
+}
+.flow-edge:hover .edge-count text {
+  fill: var(--text-bright);
+}
+
+/* Lane captions (div.graph-lane.lane-in|out) sit in the top corners over the canvas. */
+.lane-in,
+.lane-out {
+  position: absolute;
+  top: var(--gutter);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.lane-in {
+  left: var(--gutter);
+}
+.lane-out {
+  right: var(--gutter);
+}
+.lane-in svg,
+.lane-out svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.lane-in svg {
+  color: var(--green);
+}
+.lane-out svg {
+  color: var(--red);
+}
+
+/*
+ * Node cards are <button>s inside fixed foreignObjects. The focus box is 208x124 and
+ * each counterparty box is 194x82. Edges meet each card at its vertical centre, so a
+ * card's top margin plus half its height equals the box's centre: 11 + 100/2 = 61
+ * for the focus card and 11 + 56/2 = 39 for counterparties. The foreignObject clips
+ * anything drawn outside it, so the focus ring is drawn inside the card.
+ */
+.graph-svg .wallet-card {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 11px 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.1s ease,
+    background 0.1s ease;
+}
+.graph-svg .wallet-card:focus-visible {
+  outline: 1px solid var(--blue-light);
+  outline-offset: -3px;
+}
+
+/* Focus wallet: top row (icon + badge), the address, then the origin line. */
+.wallet-card.root-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100px;
+  padding: 10px var(--gutter);
+  border-color: var(--blue);
+  background: var(--card-raised);
+}
+.wallet-card.root-card:hover {
+  border-color: var(--blue-light);
+}
+.wallet-card.root-card.selected {
+  border-color: var(--blue-light);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+.wallet-card.root-card:active {
+  background: var(--card);
+}
+.root-card .root-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+}
+.root-card .wallet-icon {
+  width: 24px;
+  height: 24px;
+  border-color: var(--blue-dim);
+  background: var(--card);
+  color: var(--blue-light);
+}
+.root-card .wallet-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.root-card .root-badge {
+  border-color: var(--blue-dim);
+  color: var(--blue-light);
+}
+.root-card > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-bright);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.root-card .root-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.root-card .root-card-bottom > span {
+  color: var(--blue-light);
+  font-size: 8px;
+}
+
+/*
+ * Counterparty: icon | name over chain + short address | pin or arrow.
+ * Width budget (194px box): 2 border + 18 padding + 22 icon + 6 + 6 gaps + 10 trailing
+ * slot leaves 130px for the text column. "Arbitrum · 0x1234…abcd" at 9px mono needs
+ * about 126px (6 dot + 3 + 8ch + 3 + 13ch), so the short address does not truncate.
+ * The 9px padding puts the icon's outer edge 10px in, the same inset as .node-amount.
+ */
+.wallet-card.counterparty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 56px;
+  padding: 0 9px;
+  border-color: var(--border);
+  background: var(--card);
+}
+.wallet-card.counterparty:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+}
+.wallet-card.counterparty.selected {
+  border-color: var(--blue);
+  background: var(--card-raised);
+}
+.wallet-card.counterparty:active {
+  background: var(--card);
+}
+.counterparty .cp-icon {
+  width: 22px;
+  height: 22px;
+  border-color: var(--border);
+  background: var(--card-raised);
+  color: var(--text-muted);
+}
+.counterparty.incoming .cp-icon {
+  color: var(--green);
+}
+.counterparty.outgoing .cp-icon {
+  color: var(--red);
+}
+.counterparty .cp-icon svg {
+  width: 12px;
+  height: 12px;
+}
+.counterparty .cp-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.counterparty .cp-content > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.counterparty .cp-content > span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 13px;
+  white-space: nowrap;
+}
+.cp-content .cp-category {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+}
+/* The trailing arrow and the Pin glyph share one fixed 10px slot, so a pinned card
+   has the same text budget as an unpinned one. */
+.counterparty .node-more {
+  flex: none;
+  width: 10px;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  transition: color 0.1s ease;
+}
+.counterparty:hover .node-more {
+  color: var(--blue-light);
+}
+.counterparty > svg {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  color: var(--blue-light);
+}
+
+/* The transfer and asset caption under each counterparty card, in the same box.
+   Its 10px inset lines up with the card's icon edge (1px border + 9px padding). */
+.graph-svg .node-amount {
+  display: block;
+  margin-top: 2px;
+  padding: 0 10px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 12px;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Empty state: sits just under the focus card, which stays centred. */
+.graph-wrap > .graph-empty {
+  position: absolute;
+  top: calc(50% + 62px);
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--gutter));
+  padding: 0;
+  transform: translateX(-50%);
+  color: var(--text-faint);
+  font-size: 11px;
+  text-align: center;
+  pointer-events: none;
+}
+/* The Wallet icon repeats the focus card's wallet icon right above it. */
+.graph-empty > svg {
+  display: none;
+}
+.graph-empty strong {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.graph-empty span {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+/* Legend: bottom-left overlay, centred on the 32px control strip. It keeps clear of
+   the controls (about 135px wide) and the help text truncates on narrow canvases. */
+.graph-legend {
+  position: absolute;
+  bottom: var(--gutter);
+  left: var(--gutter);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--gutter);
+  height: 32px;
+  max-width: calc(100% - 172px);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.graph-legend > span:not(.legend-help) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.legend-in,
+.legend-out {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+}
+.legend-in::after,
+.legend-out::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-left: 5px solid currentColor;
+}
+.legend-in {
+  color: var(--green);
+}
+.legend-out {
+  color: var(--red);
+}
+.graph-legend .legend-help {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 0 0 var(--gutter);
+  overflow: hidden;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+}
+
+/* Zoom controls: bottom-right overlay with - | % | + | fit. */
+.graph-controls {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.graph-controls > button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.graph-controls > button:hover {
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+.graph-controls > button:active {
+  background: var(--selected);
+}
+.graph-controls > button:focus-visible {
+  outline-offset: -1px;
+}
+.graph-controls > button:disabled {
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.35;
+  cursor: default;
+}
+.graph-controls > button svg {
+  width: 14px;
+  height: 14px;
+}
+.graph-controls > span:not(.control-divider) {
+  min-width: 38px;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.control-divider {
+  flex: none;
+  width: 1px;
+  height: 14px;
+  margin: 0 3px;
+  background: var(--border);
+}
+
+/* Coverage status strip at the bottom of the investigation panel. */
+.canvas-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gutter);
+  min-height: 36px;
+  padding: 6px var(--gutter);
+  border-top: 1px solid var(--border);
+  background: var(--light-navy);
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.canvas-footer > span {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* No .amber rule exists anywhere else, so the dot fell back to the shared green. */
+.canvas-footer .status-dot.amber {
+  background: var(--orange);
+}
+.canvas-footer strong {
+  flex: none;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.canvas-footer .footer-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Same treatment as .text-button ("Wallet flows" in the canvas heading). */
+.canvas-footer > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue-light);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.canvas-footer > button:hover {
+  text-decoration: underline;
+}
+.canvas-footer > button svg {
+  flex: none;
+}
+
+/* Evidence drawer, wallet inspector: <label> wrapping caption text and a <select>.
+   Tag-qualified so it beats the shared button rules that also list .expand-network.
+   The drawer has no padding, so this block carries its own 12px gutter. */
+label.expand-network {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gutter);
+  max-width: 420px;
+  height: auto;
+  margin: var(--gutter) var(--gutter) 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: normal;
+  cursor: default;
+}
+label.expand-network:hover {
+  border-color: transparent;
+  background: none;
+  color: var(--text-faint);
+}
+label.expand-network select {
+  flex: none;
+  min-width: 112px;
+  height: 28px;
+  margin: 0;
+  padding: 0 24px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--card);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  appearance: none;
+  color-scheme: dark;
+  cursor: pointer;
+  transition: border-color 0.1s ease;
+}
+label.expand-network select:hover {
+  border-color: var(--border-strong);
+}
+label.expand-network select:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+label.expand-network select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+label.expand-network option {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* Evidence drawer: primary Expand/Load button followed by the Pin and Hide icon buttons. */
+.node-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
+  margin: var(--gutter);
+}
+.node-actions > .button {
+  flex: 1 1 auto;
+}
+/* The shared .button.primary:hover has no :not(:disabled), so a busy (disabled)
+   Expand button would still light up on hover. */
+.node-actions > .button.primary:disabled,
+.node-actions > .button.primary:disabled:hover {
+  border-color: var(--blue);
+  background: var(--blue);
+}
+.node-actions > .icon-button {
+  flex: none;
+}
+.node-actions > .icon-button.outlined {
+  background: transparent;
+}
+.node-actions > .icon-button.outlined:hover {
+  background: var(--card-raised);
+}
+.node-actions > .icon-button.active,
+.node-actions > .icon-button.active:hover {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+  color: var(--blue-light);
+}
+
+/* Keep this media block after the base rules above (append it, or merge it into the
+   existing 860px block as long as that block comes after these rules). No rule is
+   needed at 1100px: that breakpoint only stacks the drawer, which widens the graph. */
+@media (max-width: 860px) {
+  .graph-svg {
+    height: clamp(360px, 58vh, 480px);
+  }
+  .lane-in,
+  .lane-out {
+    gap: 4px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  /* Inflow and Outflow stack so the legend clears the controls at phone width. */
+  .graph-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 4px;
+    height: auto;
+    max-width: none;
+  }
+  .graph-legend .legend-help {
+    display: none;
+  }
+  .graph-controls > button {
+    width: 28px;
+    height: 28px;
+  }
+  .graph-controls > span:not(.control-divider) {
+    min-width: 34px;
+  }
+  .canvas-footer {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: 8px var(--gutter);
+  }
+  .canvas-footer > span {
+    flex: 1 1 220px;
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  /* The detail wraps under the status, indented past the dot (6px dot + 8px gap);
+     a wrapped "Review sources" link takes the same indent. */
+  .canvas-footer .footer-detail {
+    flex-basis: 100%;
+    padding-left: 14px;
+    white-space: normal;
+  }
+  .canvas-footer > button {
+    margin-left: 14px;
+  }
+}
+
+/* On a phone the 1100-unit graph would be fitted into ~280px and drawn at a quarter
+   scale. Draw it at full size instead, centred and clipped by the canvas; dragging
+   pans to the rest. */
+@media (max-width: 640px) {
+  .graph-wrap {
+    overflow: hidden;
+  }
+  .graph-svg {
+    width: 1100px;
+    max-width: none;
+    margin-left: calc(50% - 550px);
+  }
+}
+
+/* ---- Evidence drawer and transfer rows ---- */
+/* ------------------------------------------------- evidence & drawer */
+
+/*
+ * PLACEMENT: append after every existing rule in src/styles.css (after the existing
+ * @media blocks). Several classes here are still in grouped lists earlier in the file
+ * (surfaces, badges, controls, faint text, `.graph-empty, .empty-state`). These rules
+ * override them at equal or higher specificity, so they must come later in the file.
+ *
+ * The drawer is a sticky inspector card in the right column of .canvas-and-drawer.
+ * Its outer margins match .canvas-main's padding (the 12px gutter), so the card's top
+ * edge lines up with the graph. It scrolls inside itself, and .drawer-title stays
+ * pinned at the top while it does.
+ * Only `gap` is set here. Setting grid-template-columns at this point in the file
+ * would override the stacking rule in the existing 1100px media block.
+ */
+.canvas-and-drawer.drawer-open {
+  gap: 0;
+}
+
+.evidence-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+  min-width: 0;
+  padding-bottom: var(--gutter);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+/* (0,2,0) so it beats wallet.css, which loads later and sets width: 370px at >=1201px. */
+.canvas-and-drawer > .evidence-drawer {
+  position: sticky;
+  top: calc(48px + var(--gutter));
+  align-self: start;
+  width: auto;
+  /* Short enough to stay pinned below the topbar at the end of the page, where the
+     coverage strip and footer follow the grid. */
+  max-height: calc(100vh - 48px - var(--gutter) * 4 - var(--tab) * 2);
+  margin: var(--gutter) var(--gutter) var(--gutter) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Every child sits on the 12px gutter. The drawer's gap sets the vertical rhythm, so
+   wallet.css's margin-top on .back-to-wallet, .wallet-label-editor and
+   .wallet-flow-panel, and .provenance-box's own margin, no longer add to it. */
+.evidence-drawer > :not(.drawer-title) {
+  flex-shrink: 0;
+  margin: 0 var(--gutter);
+}
+.evidence-drawer > .back-to-wallet {
+  align-self: flex-start;
+}
+
+.drawer-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  height: var(--tab);
+  padding: 0 6px 0 var(--gutter);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-bright);
+  font-size: 12px;
+}
+.drawer-title .eyebrow {
+  min-width: 0;
+  color: var(--text-dim);
+}
+.drawer-title .icon-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.drawer-title .icon-button:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+  color: var(--text-bright);
+}
+.drawer-title .icon-button:active {
+  border-color: var(--blue);
+  background: var(--selected-strong);
+}
+
+/*
+ * Network picker: `label.expand-network > text + select`, a direct child of the drawer
+ * in the wallet inspector. The controls list styles this <label> as a 28px nowrap
+ * button. Its caption and the <select> are about 330px wide, more than the 318px
+ * content box, so the drawer scrolled sideways, and the <select> rendered with browser
+ * defaults. Here the label is a caption row and the select is themed like
+ * .modal select.
+ */
+.evidence-drawer > .expand-network {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  white-space: normal;
+  cursor: default;
+}
+.evidence-drawer > .expand-network:hover {
+  border-color: transparent;
+  background: none;
+  color: var(--text-faint);
+}
+.evidence-drawer > .expand-network select {
+  flex: none;
+  max-width: 60%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  color-scheme: dark;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.evidence-drawer > .expand-network select:hover {
+  border-color: var(--border-strong);
+}
+.evidence-drawer > .expand-network select:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+.evidence-drawer > .expand-network select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Hero: the direction tile beside a stack of amount, caption and status. */
+.evidence-hero {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--gutter);
+  row-gap: 4px;
+  min-width: 0;
+}
+.evidence-hero > .transfer-arrow {
+  grid-row: 1 / span 3;
+  align-self: start;
+}
+.evidence-hero > h2 {
+  grid-column: 2;
+  min-width: 0;
+  color: var(--text-bright);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.evidence-hero > h2 > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+.evidence-hero > p {
+  grid-column: 2;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.evidence-hero > .status-pill {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 2px;
+}
+
+/*
+ * The drawer's fields are `div > label + code|span` (plus an optional copy button),
+ * not a definition list. Each row stacks its label over its value, and the copy button
+ * sits beside the value instead of wrapping under it. The columns follow the drawer's
+ * width: one column in the 360px side drawer, two or more when the drawer stacks full
+ * width under the canvas.
+ * Evidence values (addresses, hashes, raw amounts) wrap and are never truncated: the
+ * whole value has to stay readable and checkable.
+ */
+.evidence-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  column-gap: calc(var(--gutter) * 2);
+  min-width: 0;
+  font-size: 11px;
+}
+/* align-content: start keeps label and value together when a taller neighbour in the
+   same row stretches the cell. */
+.evidence-fields > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  align-content: start;
+  column-gap: 8px;
+  row-gap: 3px;
+  min-width: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.evidence-fields label {
+  grid-column: 1 / -1;
+  display: block;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.evidence-fields code {
+  min-width: 0;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.evidence-fields > div > span,
+.field-pair section > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Two fields sharing one row. `.evidence-fields > div` (0,1,1) would otherwise give
+   the pair the value/copy-button track list and squeeze the second field. */
+.field-pair,
+.evidence-fields > .field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  column-gap: var(--gutter);
+}
+.field-pair section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Wallet inspector: the full address in a read-only well. At 10px a 42-character
+   address fits on one line beside the copy button in the 360px drawer. At 11px its
+   last character or two wrapped onto a second line. */
+.address-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 4px 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text);
+}
+.address-block code {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* A block card, not a badge. (0,2,0) beats the badge selector list, which still
+   includes .label-provenance, and wallet.css's .label-provenance a and p rules. */
+.evidence-drawer .label-provenance {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px var(--gutter);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.evidence-drawer .label-provenance > .eyebrow {
+  margin-bottom: 2px;
+}
+.evidence-drawer .label-provenance > strong {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.evidence-drawer .label-provenance > span:not(.eyebrow) {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.evidence-drawer .label-provenance p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.evidence-drawer .label-provenance a {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--blue-light);
+  font-size: 11px;
+}
+.evidence-drawer .label-provenance a svg {
+  flex: none;
+}
+
+/* One quiet status line: dot, pages loaded, and the cursor state pushed right. */
+.evidence-drawer .drawer-coverage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 20px;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.evidence-drawer .drawer-coverage > strong {
+  flex: none;
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.evidence-drawer .drawer-coverage > span:last-child {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The component gives this dot a class only on error, so the default .status-dot
+   green showed for "Coverage partial" and "More history available". The coverage
+   dialog uses amber for every non-error state, so this dot does too: gold by default,
+   orange on error. Red stays reserved for flow direction. */
+.evidence-drawer .drawer-coverage > .status-dot {
+  background: var(--gold);
+}
+.evidence-drawer .drawer-coverage > .status-dot.red {
+  background: var(--orange);
+}
+
+/* Copy: a ghost 22px icon button that shows its frame on hover. */
+.icon-button.copy-button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  flex: none;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.icon-button.copy-button:hover {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+  color: var(--text-bright);
+}
+.icon-button.copy-button:active {
+  border-color: var(--blue);
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+.icon-button.copy-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.icon-button.copy-button svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------------------------------------------------------- transfer rows */
+
+.transfer-arrow {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-raised);
+  color: var(--text-faint);
+}
+.transfer-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+.transfer-arrow.in {
+  color: var(--green);
+}
+.transfer-arrow.out {
+  color: var(--red);
+}
+.transfer-arrow.path {
+  color: var(--text-faint);
+}
+.transfer-arrow.large {
+  width: 32px;
+  height: 32px;
+  border-color: var(--border-strong);
+}
+.transfer-arrow.large svg {
+  width: 18px;
+  height: 18px;
+}
+
+.transfer-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.transfer-main strong {
+  overflow: hidden;
+  color: var(--text-bright);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-main strong > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+.transfer-main > span {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.transfer-meta > span:first-child {
+  color: var(--text-muted);
+}
+
+.row-chevron {
+  flex: none;
+  width: 12px;
+  color: var(--text-faint);
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+  transition: color 0.1s ease;
+}
+.transfer-row:hover .row-chevron,
+.transfer-row:focus-visible .row-chevron {
+  color: var(--blue-light);
+}
+
+/* Compact list: tighter rows, smaller tile, no chevron. */
+.transfer-list.compact .transfer-row {
+  gap: 8px;
+  padding: 6px 0;
+}
+.transfer-list.compact .transfer-arrow {
+  width: 18px;
+  height: 18px;
+}
+.transfer-list.compact .transfer-arrow svg {
+  width: 12px;
+  height: 12px;
+}
+.transfer-list.compact .row-chevron {
+  display: none;
+}
+
+/* ------------------------------------------------------------ empty states */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px var(--gutter);
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+.empty-state > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 2px;
+  color: var(--text-faint);
+}
+.empty-state > strong {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.empty-state > span {
+  max-width: 44ch;
+}
+/* In the Investigations dialog the empty state fills the list's reserved height, so
+   the dialog keeps the same size before and after cases load. */
+.saved-cases > .empty-state {
+  flex: 1 0 auto;
+  padding: 16px var(--gutter);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ------------------------------------------------- sources & coverage dialog */
+
+/* coverage-source: `div > (div > strong + .case-badge | strong) + p`. */
+.modal .coverage-source {
+  margin-top: var(--gutter);
+  padding: 10px var(--gutter);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.modal .coverage-source > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.modal .coverage-source strong {
+  display: block;
+  min-width: 0;
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+}
+.modal .coverage-source > div > strong {
+  flex: 1;
+}
+.modal .coverage-source .case-badge {
+  flex: none;
+}
+.modal .coverage-source p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* coverage-list: rows of `div > .status-dot + div > strong + span + p* + code`. */
+.modal .coverage-list {
+  display: flex;
+  flex-direction: column;
+  margin: var(--gutter) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+}
+.modal .coverage-list:empty {
+  display: none;
+}
+.modal .coverage-list > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px var(--gutter);
+}
+.modal .coverage-list > div + div {
+  border-top: 1px solid var(--border);
+}
+.modal .coverage-list .status-dot {
+  margin-top: 5px;
+}
+.modal .coverage-list .status-dot.amber {
+  background: var(--gold);
+}
+.modal .coverage-list .status-dot.red {
+  background: var(--orange);
+}
+.modal .coverage-list > div > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.modal .coverage-list strong {
+  overflow: hidden;
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal .coverage-list span:not(.status-dot) {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.modal .coverage-list p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.modal .coverage-list p:not(.error-text) {
+  color: var(--text-dim);
+}
+.modal .coverage-list p.error-text {
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--radius);
+}
+/* The resume cursor is an opaque, already-shortened token: one line is enough. */
+.modal .coverage-list code {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------- evidence & drawer: responsive */
+
+@media (max-width: 1100px) {
+  /* Below the two-column width the drawer slides over the content from the right,
+     under the topbar. Stacked under a long transfer table it opened out of sight, so
+     selecting a row looked like nothing happened. */
+  .canvas-and-drawer > .evidence-drawer {
+    position: fixed;
+    top: 48px;
+    right: 0;
+    z-index: 30;
+    width: min(400px, 100vw);
+    /* An explicit height: with top and bottom alone the sheet grew to its content. */
+    height: calc(100dvh - 48px);
+    max-height: none;
+    margin: 0;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-shadow: -24px 0 48px color-mix(in srgb, var(--navy) 60%, transparent);
+  }
+}
+
+@media (max-width: 860px) {
+  .canvas-and-drawer > .evidence-drawer {
+    width: 100vw;
+    border-left-width: 0;
+  }
+  /* Touch-sized copy targets. */
+  .icon-button.copy-button {
+    width: 28px;
+    height: 28px;
+  }
+  .evidence-hero {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .transfer-arrow.large {
+    width: 28px;
+    height: 28px;
+  }
+  .transfer-arrow.large svg {
+    width: 16px;
+    height: 16px;
+  }
+  .evidence-hero > h2 {
+    font-size: 15px;
+  }
+  .row-chevron {
+    display: none;
+  }
+  .empty-state {
+    padding: 20px var(--gutter);
+  }
+}
+
+/* ---- Dialogs ---- */
+.modal {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(var(--gutter) * 2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--navy) 62%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  color-scheme: dark;
+}
+.modal.wide {
+  width: min(640px, 100%);
+}
+.modal-close {
+  position: absolute;
+  top: calc(var(--gutter) * 2);
+  right: calc(var(--gutter) * 2);
+  z-index: 1;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.modal-close:hover {
+  border-color: var(--border);
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+/* Header: icon tile, eyebrow, title and intro, set like the Protocol dialog's. The
+   24px glyphs overflowed the shared 22px tile. */
+.modal > .modal-icon {
+  width: 30px;
+  height: 30px;
+  margin-bottom: var(--gutter);
+  color: var(--blue-light);
+}
+.modal > .modal-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.modal > h2 {
+  margin: 8px 0 10px;
+  color: var(--text-bright);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+.modal > p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.modal > .case-group-heading {
+  margin: calc(var(--gutter) * 1.5) 0 6px;
+}
+.modal > .saved-cases {
+  gap: 0;
+  min-height: 74px;
+  max-height: 162px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+}
+/* An empty list is drawn as one dashed frame, not a dashed box inside a solid one. */
+.modal > .saved-cases:has(> .empty-state) {
+  border-style: dashed;
+}
+/* A lone row fills the reserved height, so its content sits centred. */
+.modal > .saved-cases > .saved-case:only-child {
+  flex: 1 0 auto;
+}
+.modal .saved-case {
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px var(--gutter);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+}
+.modal .saved-case:last-child {
+  border-bottom: 0;
+}
+.modal .saved-case:hover {
+  border-color: var(--border);
+  background: var(--selected-strong);
+}
+.modal .saved-case:focus-visible {
+  outline-offset: -2px;
+}
+.modal .saved-case > span {
+  flex: 1;
+  min-width: 0;
+}
+.modal .saved-case strong,
+.modal .saved-case > span > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal .saved-case > svg {
+  width: 14px;
+  height: 14px;
+}
+.modal .saved-case > svg:last-child {
+  width: 12px;
+  height: 12px;
+}
+.modal .saved-case:hover > svg:last-child {
+  color: var(--text-bright);
+}
+.modal > .saved-cases > .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: var(--gutter);
+  border: 0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.modal > .saved-cases > .empty-state svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 2px;
+  color: var(--text-faint);
+}
+.modal > .saved-cases > .empty-state strong {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.notes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: calc(var(--gutter) * 1.5);
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.notes-label textarea {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 84px;
+  margin: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: normal;
+  text-transform: none;
+  resize: vertical;
+  transition: border-color 0.1s ease;
+}
+.notes-label textarea:hover {
+  border-color: var(--border-strong);
+}
+.notes-label textarea:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: var(--gutter);
+}
+.modal > .coverage-source {
+  margin-top: var(--gutter);
+  padding: 10px var(--gutter);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.modal > .coverage-source > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.modal > .coverage-source strong {
+  color: var(--text-bright);
+  font-weight: 500;
+}
+.modal > .coverage-source > p {
+  margin: 4px 0 0;
+}
+.modal > .coverage-list {
+  margin-top: var(--gutter);
+  background: var(--light-navy);
+}
+.modal > .coverage-list:empty {
+  display: none;
+}
+.modal > .coverage-list > div {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+  padding: 10px var(--gutter);
+}
+.modal > .coverage-list > div + div {
+  border-top: 1px solid var(--border);
+}
+.modal > .coverage-list .status-dot {
+  margin-top: 5px;
+}
+.modal .status-dot.amber {
+  background: var(--gold);
+}
+.modal .status-dot.red {
+  background: var(--orange);
+}
+.modal > .coverage-list > div > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.modal > .coverage-list strong {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+/* Each provider warning is its own note, so they are spaced apart. */
+.modal > .coverage-list p {
+  margin: 4px 0 0;
+}
+.modal > .coverage-list code {
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.modal > .warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: var(--gutter);
+  padding: 10px var(--gutter);
+  line-height: 1.6;
+}
+.modal > .warning-box > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+.modal > .warning-box > p {
+  margin: 0;
+}
+.modal > .code-example {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--gutter);
+  padding: var(--gutter);
+  background: var(--navy);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.modal > .code-example > span {
+  margin-top: 10px;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.modal > .code-example > span:first-child {
+  margin-top: 0;
+}
+.modal > .code-example > code {
+  color: var(--text);
+  font-size: 11px;
+}
+.modal > .code-example > code::before {
+  content: "$ ";
+  content: "$ " / "";
+  color: var(--blue-light);
+}
+.modal > .agent-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: var(--gutter) 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.modal > .agent-features > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.modal > .agent-features svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--blue-light);
+}
+.modal > .quiet-note {
+  align-items: flex-start;
+  margin-top: var(--gutter);
+  padding: 8px var(--gutter);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.modal > .button.full {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  margin-top: var(--gutter);
+}
+@media (max-width: 860px) {
+  /* The same 12px edge and 18px inset as the Protocol dialog at this width. */
+  .modal-backdrop {
+    padding: var(--gutter);
+  }
+  .modal {
+    max-height: calc(100vh - var(--gutter) * 2);
+    max-height: calc(100dvh - var(--gutter) * 2);
+    padding: calc(var(--gutter) * 1.5);
+  }
+  .modal-close {
+    top: var(--gutter);
+    right: var(--gutter);
+  }
+  .modal > h2 {
+    font-size: 16px;
+  }
+  /* Wrap the case meta line rather than cut off the updated date. */
+  .modal .saved-case > span > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .modal-actions > .button {
+    flex: 1 1 auto;
+  }
+  .modal > .agent-features {
+    flex-direction: column;
+  }
+}
+@media (max-width: 860px) and (pointer: coarse) {
+  .modal-close {
+    top: calc(var(--gutter) - 4px);
+    right: calc(var(--gutter) - 4px);
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* The case panel lines up with the command bar and banners above it, which sit on
+   the gutter rather than against the rail. */
+.main-workspace > .investigation-panel {
+  margin: 0 var(--gutter) var(--gutter);
+}
+
+/* A graph that sizes itself to its container (an explicit pixel height on the svg)
+   needs a bounded container, or each measurement grows it further. */
+.graph-wrap:has(> .graph-svg[height]) {
+  height: clamp(420px, 64vh, 760px);
+  overflow: hidden;
 }

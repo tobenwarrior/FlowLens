@@ -1,34 +1,75 @@
 .protocol-dialog {
-  border: 1px solid #dce5d2;
-  border-radius: 14px;
-  background: #fcfdf8;
-  color: #31412b;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  /* Native select popups, scrollbars and the details marker follow the dark ground. */
+  color-scheme: dark;
   padding: 0;
   width: 820px;
   max-width: calc(100vw - 32px);
   max-height: 88vh;
-  box-shadow: 0 24px 80px #24361c30;
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--navy) 70%, transparent);
 }
 .protocol-dialog::backdrop {
-  background: #27322266;
-  backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--navy) 80%, transparent);
+  backdrop-filter: blur(2px);
 }
+/* The same frame as the workspace dialogs (.modal): a 24px inset, with the shared
+   .modal-close placement pinning the close button to this box's corner. */
 .protocol-content {
-  padding: 30px;
+  padding: calc(var(--gutter) * 2);
   position: relative;
 }
+.protocol-content > .modal-close {
+  margin: 0;
+}
+/* The shared 22px icon tile is smaller than the 24px ShieldCheck, which overflows it;
+   give the tile room and size the glyph to fit. */
+.protocol-content > .modal-icon {
+  width: 30px;
+  height: 30px;
+  margin-bottom: var(--gutter);
+  color: var(--blue-light);
+}
+.protocol-content > .modal-icon svg {
+  width: 16px;
+  height: 16px;
+}
 .protocol-content > h2 {
-  font-family: "Avenir Next", sans-serif;
-  font-size: 28px;
+  font-family: var(--mono);
+  font-size: 18px;
   font-weight: 500;
-  letter-spacing: -1px;
+  letter-spacing: 0.01em;
+  color: var(--text-bright);
   margin: 8px 0 10px;
 }
+/* styles.css has no global paragraph reset, so every <p> here sets its own margin. */
 .protocol-content > p {
+  margin: 0;
   font-size: 12px;
-  color: #7a8c69;
+  color: var(--text-muted);
   line-height: 1.8;
   max-width: 600px;
+}
+.protocol-content > .error-banner {
+  margin-bottom: 16px;
+}
+/* Inline provider errors. .error-text alone paints a background with no padding, and
+   the surrounding paragraph colours would otherwise override its red. The text is
+   lifted toward white, as the app's own error text is, so 10px stays readable. */
+.protocol-content p.error-text {
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  color: color-mix(in srgb, var(--red) 65%, var(--text-bright));
+}
+.protocol-content .button:focus-visible,
+.protocol-content .icon-button:focus-visible,
+.protocol-content summary:focus-visible {
+  outline: 1px solid var(--blue-light);
+  outline-offset: 2px;
 }
 .protocol-actions {
   display: flex;
@@ -44,36 +85,38 @@
   text-align: center;
   gap: 14px;
   padding: 40px 30px;
-  color: #92a47d;
-  border: 1px dashed #dce6cf;
-  background: #f5f8ef;
-  border-radius: 8px;
+  color: var(--text-faint);
+  border: 1px dashed var(--border-strong);
+  background: var(--light-navy);
+  border-radius: var(--radius);
 }
 .protocol-empty strong {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 500;
-  color: #6c8558;
+  color: var(--text);
 }
 .protocol-empty p {
+  margin: 0;
   font-size: 12px;
   line-height: 1.9;
   max-width: 440px;
+  color: var(--text-muted);
 }
 .protocol-empty > span {
   font-size: 10px;
-  color: #9aab87;
+  color: var(--text-muted);
 }
 .protocol-mode {
   display: flex;
   gap: 12px;
   align-items: center;
   font-size: 10px;
-  color: #8a9c75;
+  color: var(--text-muted);
   padding: 13px 0;
-  border-top: 1px solid #e0e9d4;
+  border-top: 1px solid var(--border);
 }
 .protocol-section {
-  border-top: 1px solid #dfe8d3;
+  border-top: 1px solid var(--border);
   padding-top: 22px;
   margin-top: 13px;
 }
@@ -81,22 +124,23 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #7a9561;
+  color: var(--text-muted);
 }
 .protocol-section-title h3 {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: -0.3px;
+  letter-spacing: 0.01em;
+  color: var(--text-bright);
 }
 .protocol-section-title > span {
   margin-left: auto;
   font-size: 10px;
-  color: #9aad84;
+  color: var(--text-muted);
 }
 .protocol-section > p {
   font-size: 11px;
   line-height: 1.9;
-  color: #869b70;
+  color: var(--text-muted);
   margin: 10px 0 17px;
 }
 .protocol-row {
@@ -104,76 +148,89 @@
   grid-template-columns: 1.1fr 0.7fr 1fr 1.45fr;
   gap: 12px;
   padding: 14px 0;
-  border-bottom: 1px solid #e8efdf;
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
-  color: #799267;
-  align-items: center;
+  color: var(--text-dim);
+  /* Single-line cells sit on the first line of their two-line neighbours. */
+  align-items: baseline;
 }
 .protocol-row.table-label {
-  font-size: 8px;
-  letter-spacing: 0.7px;
-  color: #9bad88;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
   padding: 10px 0;
 }
 .protocol-row strong {
   font-size: 11px;
   font-weight: 500;
-  color: #607b4a;
+  color: var(--text-bright);
 }
 .protocol-row small {
   display: block;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.7;
   margin-top: 5px;
-  color: #91a57b;
+  color: var(--text-muted);
 }
 .protocol-observation {
   font-size: 10px;
   line-height: 1.8;
-  color: #8a9d74;
+  color: var(--text-muted);
 }
 .protocol-notes {
   padding: 14px;
-  border: 1px solid #e4ebd9;
-  background: #f4f8ed;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
+  border-radius: var(--radius);
   margin: 16px 0;
-  color: #91a279;
+  color: var(--text-muted);
   font-size: 10px;
   line-height: 1.9;
+}
+/* No configuration changes: no empty bordered box. */
+.protocol-notes:empty {
+  display: none;
+}
+.protocol-notes p {
+  margin: 0;
 }
 .protocol-notes p + p {
   margin-top: 6px;
 }
 .protocol-notes strong {
   font-weight: 500;
-  color: #75905d;
+  color: var(--text-dim);
   margin-right: 6px;
 }
 .bridge-observation {
-  border: 1px solid #e2e9d7;
-  background: #f8faf3;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
+  border-radius: var(--radius);
   padding: 13px;
   margin: 9px 0;
   min-width: 0;
 }
 .bridge-observation.unresolved {
-  border-color: #e8dfcc;
-  background: #fbf8ef;
+  border-color: color-mix(in srgb, var(--gold) 45%, transparent);
+  background: color-mix(in srgb, var(--gold) 6%, var(--light-navy));
 }
 .bridge-observation > div {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   font-size: 10px;
-  color: #839b6e;
+  color: var(--text-muted);
   align-items: center;
   margin-bottom: 9px;
 }
 .bridge-observation > div > strong {
   font-size: 11px;
   font-weight: 500;
+  color: var(--text-bright);
+}
+/* Plain --gold sits just under 4.5:1 on the tinted card; lift it slightly. */
+.bridge-observation.unresolved > div > strong {
+  color: color-mix(in srgb, var(--gold) 75%, var(--text-bright));
 }
 .bridge-observation > div > span {
   display: flex;
@@ -183,7 +240,7 @@
 }
 .bridge-observation code {
   font-size: 9px;
-  color: #8fa477;
+  color: var(--text-dim);
   overflow-wrap: anywhere;
   line-height: 1.8;
   display: block;
@@ -191,8 +248,8 @@
 .bridge-observation p {
   font-size: 10px;
   line-height: 1.8;
-  color: #8b9d75;
-  margin-top: 7px;
+  color: var(--text-muted);
+  margin: 7px 0 0;
 }
 .internal-reasons {
   display: flex;
@@ -200,53 +257,68 @@
   gap: 7px;
 }
 .internal-reasons > span {
-  border: 1px solid #e3ead8;
-  background: #f5f8ef;
-  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
+  border-radius: var(--radius);
   padding: 7px 9px;
   font-size: 10px;
-  color: #91a179;
+  color: var(--text-muted);
 }
 .internal-reasons strong {
   font-weight: 500;
   padding-left: 7px;
-  color: #6f8a55;
+  color: var(--text-bright);
+  font-variant-numeric: tabular-nums;
 }
 .protocol-coverage {
   padding: 15px 0;
-  border-bottom: 1px solid #e4ecd9;
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
-  color: #7c9464;
+  color: var(--text-dim);
+}
+/* The dot is an empty <span> in a block row; inline, its width and height do nothing. */
+.protocol-coverage .status-dot {
+  display: inline-block;
+  vertical-align: middle;
+}
+.protocol-coverage .status-dot.amber {
+  background: var(--orange);
 }
 .protocol-coverage strong {
   margin-left: 7px;
   font-weight: 500;
 }
 .protocol-coverage p {
+  margin: 0;
   font-size: 10px;
   line-height: 1.9;
-  color: #9aaa87;
+  color: var(--text-muted);
   padding: 7px 0 0 12px;
 }
 .protocol-json {
-  border: 1px solid #dfe8d0;
-  background: #f7faf1;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
   padding: 13px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   margin-top: 23px;
 }
 .protocol-json summary {
   font-size: 11px;
-  color: #81986a;
+  color: var(--text-muted);
   cursor: pointer;
+}
+.protocol-json summary:hover,
+.protocol-read-result summary:hover {
+  color: var(--text-bright);
 }
 .protocol-json pre {
   max-height: 300px;
   overflow: auto;
+  font-family: var(--mono);
   font-size: 9px;
   line-height: 1.8;
-  color: #88a06f;
-  margin-top: 16px;
+  color: var(--text-dim);
+  margin: 16px 0 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -258,9 +330,10 @@
   margin-top: 22px;
 }
 .protocol-bottom p {
+  margin: 0;
   font-size: 10px;
   line-height: 1.8;
-  color: #8fa17c;
+  color: var(--text-muted);
   max-width: 400px;
 }
 .protocol-bottom .button {
@@ -270,9 +343,9 @@
   font-size: 11px;
 }
 .protocol-read {
-  border: 1px solid #d9e3cf;
-  border-radius: 9px;
-  background: #f3f7ed;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
   padding: 18px;
   margin-bottom: 22px;
 }
@@ -285,7 +358,7 @@
 }
 .protocol-read-heading > span:last-child {
   font-size: 9px;
-  color: #7b8d6c;
+  color: var(--text-muted);
 }
 .protocol-read-controls {
   display: grid;
@@ -297,35 +370,80 @@
   flex-direction: column;
   gap: 7px;
   font-size: 10px;
-  font-weight: 500;
-  color: #627751;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
+/* Same 28px control height and 8px inset as .modal input/select and .button. */
 .protocol-read select,
 .protocol-read input {
-  color: #405333;
-  border: 1px solid #d5dfc9;
-  background: #fcfdf8;
-  border-radius: 5px;
-  padding: 10px 11px;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  background-color: var(--navy);
+  border-radius: var(--radius);
   width: 100%;
   min-width: 0;
   font: inherit;
   font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: border-color 0.1s ease;
+}
+/* A drawn caret replaces the native one so the control renders dark in every engine. */
+.protocol-read select {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.protocol-read option {
+  background-color: var(--card);
+  color: var(--text);
+}
+/* The colour above would otherwise hide that "Base" is unavailable for Safe reads. */
+.protocol-read option:disabled {
+  color: var(--text-faint);
+}
+/* The app-wide placeholder token is under 3:1 on --navy; this hint carries the
+   required format, so raise it one step. */
+.protocol-read input::placeholder {
+  color: var(--text-faint);
+}
+.protocol-read select:hover,
+.protocol-read input:hover {
+  border-color: var(--text-faint);
 }
 .protocol-read select:focus,
 .protocol-read input:focus {
-  outline: 2px solid #a5be8b;
-  outline-offset: 2px;
+  border-color: var(--blue);
+  outline: 1px solid var(--blue-dim);
+  outline-offset: 0;
+}
+.protocol-read select:disabled,
+.protocol-read input:disabled {
+  border-color: var(--border-strong);
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .protocol-subject-label {
   margin-top: 13px;
 }
 .protocol-read input {
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: var(--mono);
   font-size: 11px;
 }
 .protocol-read > p {
-  color: #748566;
+  color: var(--text-muted);
   font-size: 10px;
   line-height: 1.85;
   margin: 14px 0;
@@ -335,23 +453,24 @@
 }
 .protocol-read > .protocol-read-status {
   margin-bottom: 0;
-  color: #5b7650;
+  color: var(--text-dim);
 }
 .protocol-read-result {
   padding: 15px 17px;
-  border-left: 2px solid #9eb58c;
-  background: #f1f5e9;
-  color: #617a4e;
+  border-left: 2px solid var(--blue);
+  background: var(--light-navy);
+  color: var(--text-dim);
   font-size: 11px;
   margin-bottom: 20px;
 }
 .protocol-read-result > strong {
   font-weight: 500;
+  color: var(--text-bright);
 }
 .protocol-read-result p {
   font-size: 10px;
   line-height: 1.9;
-  margin-top: 7px;
+  margin: 7px 0 0;
   overflow-wrap: anywhere;
 }
 .protocol-read-result details {
@@ -359,6 +478,7 @@
   font-size: 10px;
 }
 .protocol-read-result summary {
+  color: var(--text-muted);
   cursor: pointer;
 }
 .protocol-read-result pre {
@@ -366,32 +486,34 @@
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-family: var(--mono);
   font-size: 9px;
   line-height: 1.7;
-  margin-top: 12px;
+  color: var(--text-dim);
+  margin: 12px 0 0;
 }
 .safe-configuration {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border: 1px solid #dfe7d5;
-  background: #f4f7ee;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
   padding: 13px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   margin: 12px 0;
   font-size: 10px;
-  color: #788c65;
+  color: var(--text-dim);
   overflow-wrap: anywhere;
 }
 .safe-configuration > strong {
   font-weight: 500;
   font-size: 12px;
-  color: #5e774b;
+  color: var(--text-bright);
 }
 .safe-configuration > small {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.8;
-  color: #889b77;
+  color: var(--text-muted);
 }
 .evidence-only-case .graph-empty {
   inset: auto 0 63px;
@@ -400,6 +522,19 @@
 }
 .evidence-only-case .graph-empty > svg {
   display: none;
+}
+/* The workspace dialogs (.modal) change frame and title size at 860px, so this
+   dialog does too: the same 12px edge, 18px inset and 16px title at every width. */
+@media (max-width: 860px) {
+  .protocol-dialog {
+    max-width: calc(100vw - var(--gutter) * 2);
+  }
+  .protocol-content {
+    padding: calc(var(--gutter) * 1.5);
+  }
+  .protocol-content > h2 {
+    font-size: 16px;
+  }
 }
 @media (max-width: 760px) {
   .protocol-read {
@@ -419,16 +554,17 @@
     font-size: 12px;
     min-height: 39px;
   }
+  /* Full width and allowed to wrap; height:auto lets a wrapped label grow the button
+     instead of overflowing the shared fixed 28px .button height. */
   .protocol-read > .button {
     width: 100%;
+    height: auto;
+    min-height: 39px;
+    padding: 6px 11px;
     justify-content: center;
     font-size: 10px;
-  }
-  .protocol-content {
-    padding: 23px 18px;
-  }
-  .protocol-content > h2 {
-    font-size: 25px;
+    white-space: normal;
+    text-align: center;
   }
   .protocol-content > p {
     font-size: 11px;
@@ -436,20 +572,23 @@
   .protocol-actions {
     gap: 6px;
   }
+  /* The actions fill each wrapped row, and the ghost Export gets a frame like its
+     neighbours. */
   .protocol-actions .button {
+    flex: 1 1 auto;
     font-size: 10px;
-    padding: 8px;
+    padding: 0 8px;
+  }
+  .protocol-actions .button.subtle,
+  .protocol-actions .button.subtle:hover:not(:disabled) {
+    border-color: var(--border-strong);
   }
   .protocol-mode {
-    font-size: 9px;
     gap: 9px;
     flex-wrap: wrap;
   }
   .protocol-section-title h3 {
-    font-size: 14px;
-  }
-  .protocol-section-title > span {
-    font-size: 9px;
+    font-size: 12px;
   }
   .protocol-section > p {
     font-size: 10px;
@@ -462,9 +601,19 @@
   .protocol-row.table-label {
     display: none;
   }
-  .protocol-row > span:nth-child(3),
-  .protocol-row > span:nth-child(4) {
-    font-size: 9px;
+  /* Two cells per line: the right-hand ones sit on the content edge, and the
+     threshold carries the label the hidden header row used to give it. */
+  .protocol-row > span:nth-child(2n) {
+    justify-self: end;
+    text-align: right;
+  }
+  .protocol-row:not(.table-label) > span:nth-child(2)::before {
+    content: "CONFIGURED";
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-faint);
+    font-size: 10px;
+    letter-spacing: 0.1em;
   }
   .protocol-empty {
     padding: 25px 15px;
@@ -481,7 +630,6 @@
     flex-wrap: wrap;
   }
   .protocol-notes {
-    font-size: 9px;
     padding: 11px;
   }
   .protocol-json summary {

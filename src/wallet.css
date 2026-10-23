@@ -1,7 +1,17 @@
+/*
+ * Wallet flows and the entity-label editor, both rendered inside the evidence
+ * drawer. The drawer itself has no padding, so every top-level block here carries
+ * the drawer's 13px gutter. Green and red mark flow direction only.
+ */
+
+/* ------------------------------------------------------------ wallet panel */
+
 .wallet-flow-panel {
-  margin-top: 24px;
-  border-top: 1px solid #e1e7d9;
-  padding-top: 19px;
+  min-width: 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding: 12px 13px 13px;
+  color-scheme: dark;
 }
 .wallet-section-title {
   display: flex;
@@ -10,44 +20,231 @@
   gap: 12px;
 }
 .wallet-section-title h3 {
-  font-size: 16px;
-  letter-spacing: -0.4px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-bright);
   margin: 0;
 }
 .wallet-section-title > span {
-  font-size: 11px;
-  color: #5f6d52;
+  font-size: 10px;
+  color: var(--text-faint);
 }
 .wallet-scope-note,
 .wallet-label-editor form > p {
   font-size: 11px;
-  line-height: 1.65;
-  color: #65715b;
+  line-height: 1.6;
+  color: var(--text-muted);
   margin: 9px 0 15px;
 }
+
+/* Toolbar: section caption plus the asset filter. */
+.wallet-flow-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.wallet-flow-toolbar > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.wallet-flow-toolbar select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60%;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.wallet-flow-toolbar select:hover,
+.wallet-list-controls select:hover {
+  border-color: var(--border-strong);
+}
+.wallet-flow-toolbar select:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+
+.wallet-inline-error {
+  margin: 10px 0 0;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: color-mix(in srgb, var(--red) 70%, var(--text-bright));
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------ asset totals */
+
+.wallet-summary-grid {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.wallet-total-head,
+.wallet-total-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  column-gap: 6px;
+  padding: 0 9px;
+}
+.wallet-total-head {
+  height: 26px;
+  color: var(--text-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.wallet-total-head > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wallet-total-head > span:not(:first-child) {
+  text-align: right;
+}
+.wallet-total-row {
+  min-height: 34px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-top: 1px solid var(--border);
+}
+.wallet-total-asset {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wallet-total-asset strong,
+.wallet-total-asset small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wallet-total-asset strong {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+}
+.wallet-total-asset small {
+  color: var(--text-faint);
+  font-size: 9px;
+}
+.wallet-total-row > [role="cell"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--text-dim);
+}
+.wallet-total-row > .inflow {
+  color: var(--green);
+}
+/* Cells are asset, gross in, gross out, net: the third is always outflow. */
+.wallet-total-row > [role="cell"]:nth-child(3) {
+  color: var(--red);
+}
+.wallet-total-row > .wallet-net {
+  color: var(--text-bright);
+}
+
+/* Disclosure rows share one marker: a small caret that turns when open. */
+.wallet-more-totals > summary,
+.counterparty-provenance > summary,
+.wallet-coverage-note > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.wallet-more-totals > summary::-webkit-details-marker,
+.counterparty-provenance > summary::-webkit-details-marker,
+.wallet-coverage-note > summary::-webkit-details-marker {
+  display: none;
+}
+.wallet-more-totals > summary::before,
+.counterparty-provenance > summary::before,
+.wallet-coverage-note > summary::before {
+  content: "";
+  flex: none;
+  width: 0;
+  height: 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-left: 4px solid currentColor;
+  transition: transform 0.1s ease;
+}
+.wallet-more-totals[open] > summary::before,
+.counterparty-provenance[open] > summary::before,
+.wallet-coverage-note[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.wallet-more-totals > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-top: 1px solid var(--border);
+  color: var(--blue-light);
+  font-size: 10px;
+}
+.wallet-more-totals > summary:hover {
+  background: var(--selected);
+}
+.wallet-totals-note {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* Legacy totals cards, kept for older markup. */
 .wallet-flow-totals {
   display: grid;
   gap: 9px;
 }
 .wallet-flow-totals > p {
-  color: #65715b;
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
   line-height: 1.6;
 }
 .wallet-asset-total {
-  border: 1px solid #e4e9dd;
-  border-radius: 9px;
-  padding: 12px;
-  background: #f6f8f1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: var(--light-navy);
 }
 .wallet-asset-total > strong {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  color: var(--text-bright);
   font-size: 12px;
+  font-weight: 500;
 }
 .wallet-asset-total > strong > span {
-  color: #6b775f;
+  color: var(--text-faint);
   font-size: 10px;
   font-weight: 400;
 }
@@ -63,235 +260,542 @@
   justify-content: space-between;
 }
 .wallet-asset-total dt {
-  font-size: 11px;
-  color: #5d6952;
+  font-size: 10px;
+  color: var(--text-faint);
 }
 .wallet-asset-total dd {
   margin: 0;
-  font-size: 13px;
+  color: var(--text);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   text-align: right;
 }
 .wallet-asset-total dd small {
   font-size: 10px;
-  color: #69765c;
+  color: var(--text-faint);
 }
 .wallet-list-controls {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 12px;
-  margin: 18px 0 13px;
+  margin: 14px 0 10px;
 }
 .wallet-list-controls label {
   display: flex;
   gap: 5px;
   flex-direction: column;
   font-size: 10px;
-  color: #5c6b51;
+  color: var(--text-faint);
 }
 .wallet-list-controls select {
-  background: white;
-  border: 1px solid #d9e1cf;
-  border-radius: 6px;
-  padding: 6px 8px;
+  height: 26px;
+  background: var(--light-navy);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 6px;
   font: inherit;
-  color: #34452c;
-  font-size: 12px;
+  color: var(--text);
+  font-size: 11px;
+}
+.wallet-list-controls select:focus {
+  border-color: var(--blue);
+  outline: none;
 }
 .wallet-list-controls > span {
   font-size: 10px;
-  color: #69765f;
+  color: var(--text-faint);
   padding-bottom: 7px;
 }
+
+/* ------------------------------------------------------- direction and lists */
+
+/* Both / In / Out: a segmented control, like the view switch. */
+.wallet-direction-tabs {
+  display: flex;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.wallet-direction-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.wallet-direction-tabs button:last-child {
+  border-right: 0;
+}
+.wallet-direction-tabs button:hover {
+  background: var(--selected);
+  color: var(--text);
+}
+.wallet-direction-tabs button.active {
+  background: var(--blue-dim);
+  color: var(--text-bright);
+}
+/* The group clips its corners, so keep the focus ring inside each segment. */
+.wallet-direction-tabs button:focus-visible {
+  outline-offset: -2px;
+}
+.wallet-direction-tabs button span {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.wallet-direction-tabs button.active span {
+  color: var(--text-dim);
+}
+
 .wallet-flow-tabs {
   display: flex;
-  border-bottom: 1px solid #dfe6d6;
+  margin-top: 8px;
+  border-bottom: 1px solid var(--border);
   gap: 18px;
 }
 .wallet-flow-tabs button {
+  margin-bottom: -1px;
   border: 0;
   border-bottom: 2px solid transparent;
-  padding: 9px 0;
+  padding: 8px 0;
   background: transparent;
-  color: #718065;
+  color: var(--text-muted);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
+.wallet-flow-tabs button:hover {
+  color: var(--text);
+}
 .wallet-flow-tabs button.active {
-  color: #344b2d;
-  border-color: #718c58;
+  color: var(--text-bright);
+  border-color: var(--blue);
 }
 .wallet-flow-tabs button span {
+  color: var(--text-faint);
   font-size: 10px;
   margin-left: 4px;
 }
+.wallet-flow-tabs button.active span {
+  color: var(--text-dim);
+}
+
+/* Search: a <label> wrapping an icon, the input and an optional clear button. */
+.wallet-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  margin-top: 10px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text-faint);
+  cursor: text;
+}
+.wallet-search:hover {
+  border-color: var(--border-strong);
+}
+.wallet-search:focus-within {
+  border-color: var(--blue);
+}
+.wallet-search > svg {
+  flex: none;
+}
+.wallet-search:focus-within > svg {
+  color: var(--blue-light);
+}
+.wallet-search input {
+  flex: 1;
+  align-self: stretch;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-bright);
+  font: inherit;
+  font-size: 11px;
+}
+.wallet-search input:focus {
+  outline: none;
+}
+/* The global --placeholder is ~2.7:1 on these fields; one step brighter. */
+.wallet-search input::placeholder,
+.wallet-label-editor input::placeholder,
+.wallet-label-editor textarea::placeholder {
+  color: var(--text-faint);
+}
+.wallet-search button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.wallet-search button:hover {
+  background: var(--selected-strong);
+  color: var(--text-bright);
+}
+
 .wallet-selection-actions {
   display: flex;
   gap: 11px;
   align-items: center;
-  padding: 12px 0;
+  padding: 9px 0;
 }
 .wallet-selection-actions > span {
   font-size: 10px;
-  color: #738268;
+  color: var(--text-faint);
   margin-right: auto;
 }
 .wallet-selection-actions button {
   background: none;
   border: 0;
   padding: 0;
-  color: #4b6939;
+  color: var(--blue-light);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+}
+.wallet-selection-actions button:hover:not(:disabled) {
+  text-decoration: underline;
 }
 .wallet-selection-actions button:disabled {
   opacity: 0.4;
   cursor: default;
 }
-.wallet-counterparty {
-  padding: 13px 0;
-  border-top: 1px solid #e7ecdf;
+
+.wallet-counterparties {
+  border-bottom: 1px solid var(--border);
 }
+.wallet-list-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 12px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.wallet-list-empty strong {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* ---------------------------------------------------------- counterparties */
+
+.wallet-counterparty {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+/* Shares a class with the uppercase section headings in styles.css; here it is a
+   row, so undo the caption treatment. */
 .counterparty-heading {
   display: flex;
   align-items: center;
   gap: 9px;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.visibility-toggle {
+  display: inline-flex;
+  flex: none;
+  cursor: pointer;
 }
 .wallet-flow-panel input[type="checkbox"] {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  accent-color: #59753f;
+  accent-color: var(--blue);
   cursor: pointer;
   margin: 0;
+}
+.wallet-flow-panel input[type="checkbox"]:disabled {
+  cursor: not-allowed;
 }
 .counterparty-inspect {
   display: flex;
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   text-align: left;
   border: 0;
   padding: 0;
   background: none;
+  color: inherit;
   font: inherit;
   cursor: pointer;
 }
 .counterparty-inspect strong {
   font-size: 12px;
-  color: #35472d;
+  font-weight: 500;
+  color: var(--text-bright);
   overflow-wrap: anywhere;
 }
+.counterparty-inspect:hover strong {
+  color: var(--blue-light);
+}
 .counterparty-inspect > span {
-  color: #718064;
+  color: var(--text-faint);
   font-size: 10px;
   overflow-wrap: anywhere;
 }
+.counterparty-label-status {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .counterparty-heading > svg {
-  color: #839871;
+  flex: none;
+  color: var(--text-faint);
 }
 .counterparty-counts {
-  color: #738168;
+  color: var(--text-faint);
   font-size: 10px;
   margin: 9px 0 5px 25px;
 }
+/* One line per asset, indented under the name (16px checkbox + 9px gap). */
 .counterparty-amounts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
   margin: 6px 0 0 25px;
   font-size: 10px;
-  color: #57694a;
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 .counterparty-amounts > span:first-child {
   font-weight: 600;
 }
+.counterparty-asset-flow {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  min-width: 0;
+}
+.counterparty-asset-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text);
+  font-weight: 500;
+}
+.counterparty-asset-name small {
+  color: var(--text-faint);
+  font-size: 9px;
+  font-weight: 400;
+}
+.counterparty-asset-flow > .inflow {
+  color: var(--green);
+}
+.counterparty-asset-flow > span:not(.counterparty-asset-name):not(.inflow) {
+  color: var(--red);
+}
+.counterparty-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 6px 0 0 25px;
+}
+.counterparty-provenance {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.counterparty-provenance > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue-light);
+}
+.counterparty-provenance > summary:hover {
+  text-decoration: underline;
+}
+.counterparty-provenance > div {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.counterparty-provenance strong {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 500;
+}
+.counterparty-provenance a {
+  justify-self: start;
+  color: var(--blue-light);
+}
+.counterparty-provenance p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+}
 .is-hidden .counterparty-inspect,
+.is-hidden .counterparty-amounts,
 .wallet-transfer-row.is-hidden > button {
   opacity: 0.5;
 }
+
+/* --------------------------------------------------------------- transfers */
+
 .wallet-transfer-row {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 12px 0;
-  border-top: 1px solid #e5ebdc;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
 }
 .wallet-transfer-row > button {
   display: flex;
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
   text-align: left;
   border: 0;
   padding: 0;
   background: none;
+  color: inherit;
   font: inherit;
   cursor: pointer;
 }
 .wallet-transfer-row strong {
-  color: #3f5234;
+  color: var(--text-bright);
   font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+.wallet-transfer-row > button:hover strong {
+  color: var(--blue-light);
+}
+/* "In" / "Out" / "Self" tag before the amount; 4ch fits the longest in mono. */
 .wallet-transfer-row strong > span {
   display: inline-block;
-  min-width: 23px;
+  min-width: 4ch;
+  margin-right: 6px;
   font-size: 10px;
-  color: #87749b;
+  font-weight: 400;
+  color: var(--text-muted);
 }
 .wallet-transfer-row strong > span.inflow {
-  color: #527c63;
+  color: var(--green);
 }
 .wallet-transfer-row button > span,
 .wallet-transfer-row small {
-  color: #718164;
+  color: var(--text-faint);
   font-size: 10px;
 }
 .wallet-transfer-row > svg {
-  color: #839871;
+  flex: none;
+  color: var(--text-faint);
 }
 .wallet-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 14px 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
   font-size: 10px;
-  color: #718064;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
 }
 .wallet-pagination button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 29px;
-  height: 29px;
-  border: 1px solid #dce5d1;
-  border-radius: 6px;
-  background: #fff;
-  color: #526a3f;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-dim);
   cursor: pointer;
+}
+.wallet-pagination button:hover:not(:disabled) {
+  background: var(--card-raised);
+  color: var(--text-bright);
 }
 .wallet-pagination button:disabled {
   opacity: 0.4;
   cursor: default;
 }
+
+/* ---------------------------------------------------------------- coverage */
+
 .wallet-coverage-note {
-  padding: 13px;
-  border: 1px solid #e3e7d8;
-  background: #f8f8ef;
-  border-radius: 8px;
-  display: grid;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
+  border-radius: var(--radius);
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.wallet-coverage-note > summary {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  margin-top: 14px;
-  color: #727458;
+  padding: 7px 10px;
+  color: var(--text-dim);
+}
+.wallet-coverage-note > summary:hover {
+  color: var(--text-bright);
+}
+.wallet-coverage-note > summary > span {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.wallet-coverage-note > div {
+  display: grid;
+  gap: 5px;
+  padding: 0 10px 9px;
+}
+.wallet-coverage-note p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.6;
 }
 .wallet-coverage-note strong {
   font-size: 10px;
@@ -299,22 +803,23 @@
 }
 .wallet-coverage-note > span {
   font-size: 10px;
-  line-height: 1.65;
+  line-height: 1.6;
 }
+
+/* ------------------------------------------------------------ label editor */
+
 .wallet-label-editor {
-  margin-top: 14px;
-}
-.wallet-label-editor > button {
-  padding-left: 0;
+  margin: 12px 13px 0;
+  color-scheme: dark;
 }
 .wallet-label-editor form {
   display: grid;
-  gap: 11px;
-  padding: 14px;
-  background: #f3f6ed;
-  border: 1px solid #dfe6d5;
-  border-radius: 9px;
-  margin-top: 7px;
+  gap: 10px;
+  padding: 12px;
+  background: var(--light-navy);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 8px;
 }
 .wallet-label-editor form > p {
   margin: 0;
@@ -323,7 +828,9 @@
   display: grid;
   gap: 5px;
   font-size: 10px;
-  color: #5d6d50;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .wallet-label-editor input,
 .wallet-label-editor select,
@@ -331,17 +838,41 @@
   display: block;
   min-width: 0;
   width: 100%;
-  border: 1px solid #d6dfca;
-  border-radius: 5px;
-  background: #fff;
-  color: #354a29;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-bright);
   font: inherit;
   font-size: 12px;
-  padding: 8px;
+  letter-spacing: normal;
+  text-transform: none;
+  padding: 0 8px;
   box-sizing: border-box;
 }
+.wallet-label-editor select {
+  cursor: pointer;
+}
+.wallet-label-editor input:hover,
+.wallet-label-editor select:hover,
+.wallet-label-editor textarea:hover {
+  border-color: var(--border-strong);
+}
+.wallet-label-editor input:focus,
+.wallet-label-editor select:focus,
+.wallet-label-editor textarea:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+.wallet-label-editor input:user-invalid,
+.wallet-label-editor textarea:user-invalid {
+  border-color: var(--red);
+}
 .wallet-label-editor textarea {
+  height: auto;
   min-height: 65px;
+  padding: 7px 8px;
+  line-height: 1.5;
   resize: vertical;
 }
 .label-form-actions {
@@ -353,31 +884,48 @@
 .label-form-actions button {
   font-size: 11px;
 }
+
+/* ------------------------------------------------------- drawer extras */
+
 .label-provenance a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #5e764a;
+  color: var(--blue-light);
   font-size: 10px;
   margin-top: 8px;
 }
 .label-provenance p {
   overflow-wrap: anywhere;
 }
+/* A flex item of the drawer column: keep it at its own width, in the gutter. */
 .back-to-wallet {
-  margin-top: 10px;
+  align-self: flex-start;
+  margin: 10px 13px 0;
 }
+/* Widen the drawer track itself; widening the drawer alone overflowed it. */
 @media (min-width: 1201px) {
-  .evidence-drawer {
-    width: 370px;
+  .canvas-and-drawer.drawer-open {
+    grid-template-columns: minmax(0, 1fr) 370px;
   }
 }
 @media (max-width: 760px) {
   .wallet-list-controls select,
+  .wallet-flow-toolbar select,
+  .wallet-search input,
   .wallet-label-editor input,
   .wallet-label-editor select,
   .wallet-label-editor textarea {
     font-size: 16px;
+  }
+  .wallet-flow-toolbar select,
+  .wallet-search,
+  .wallet-label-editor input,
+  .wallet-label-editor select {
+    height: 36px;
+  }
+  .wallet-direction-tabs button {
+    height: 32px;
   }
   .wallet-asset-total dd {
     font-size: 14px;

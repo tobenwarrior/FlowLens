@@ -6,21 +6,20 @@ FlowLens is licensed under [AGPL-3.0-only](LICENSE). Contributions are accepted 
 
 ## Run and check a change
 
-Read [README.md](README.md), [architecture](docs/architecture.md) and the relevant provider contract first. Run a live trace of a public wallet to see the product as people use it. Tests stay offline: they use synthetic fixtures (the browser test opens `/?fixture=synthetic`) and injected provider responses, so most development needs no network or key.
+Read [README.md](README.md), [architecture](docs/architecture.md) and the relevant provider contract first. Run a live trace of a public wallet to see the product as people use it. The test suite is kept outside this repository; the checks below run from a clone.
 
 ```sh
 npm ci --ignore-scripts
 npm run lint
 npm run typecheck
-npm test
 npm run format:check
 npm run build
 npm run release:check
 ```
 
-For a UI change, run the local production server and `FLOWLENS_URL=http://127.0.0.1:4319 npm run test:browser` with Google Chrome installed. Check a desktop and a narrow viewport, keyboard access, loading/error states and the evidence drawer. Use synthetic data in screenshots.
+For a UI change, run the local production server and check a desktop and a narrow viewport, keyboard access, loading/error states and the evidence drawer. Use public wallets or synthetic data in screenshots, never a private investigation.
 
-Add focused tests when changing normalization, accounting, identity, pagination, persistence or a boundary that can lose evidence. Tests should verify observable behavior through the shared engine or caller; avoid assertions that merely mirror an implementation. Provider tests should inject bounded synthetic responses rather than depend on a live service.
+Changes to normalization, accounting, identity, pagination, persistence or a boundary that can lose evidence need focused tests in the maintainer's suite. Describe the behavior a change should keep in the pull request, so it can be tested through the shared engine or caller with bounded synthetic provider responses.
 
 ## Preserve the contract
 

@@ -5,8 +5,8 @@ FlowLens is agent-first wallet tracing, built for humans too. Display branding i
 ## Start and verify
 
 - Requires Node 24.12+ (current 24 LTS or 26 recommended). Install the lockfile with `npm ci --ignore-scripts`; run `npm start` after `npm run build` for the loopback UI/API.
-- Use `npm run lint`, `npm run typecheck`, `npm test`, `npm run format:check`, and `npm run build` for source checks.
-- Run `FLOWLENS_URL=http://127.0.0.1:4319 npm run test:browser` with the production server and Chrome available.
+- Use `npm run lint`, `npm run typecheck`, `npm run format:check`, and `npm run build` for source checks.
+- The test suite in `tests/` is git-ignored and kept out of the public repository. Where a local copy exists, also run `npm test`, and `FLOWLENS_URL=http://127.0.0.1:4319 npm run test:browser` with the production server and Chrome available. Never commit `tests/`.
 - Run `npm run release:check` and `npm run release:source` for the explicit sanitized source export. Review its manifest.
 - Read README.md, docs/architecture.md, docs/acquisition.md and docs/mcp.md before changing shared operations.
 

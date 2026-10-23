@@ -4,7 +4,7 @@ This prepares a source handoff for the owner. It does not create a remote, commi
 
 ## Local checks
 
-Use Node 24.12 or newer (current 24 LTS or 26 recommended) and the checked-in lockfile:
+Use Node 24.12 or newer (current 24 LTS or 26 recommended) and the checked-in lockfile. The test suite (`tests/`) is git-ignored and not published, so `npm test` and the browser suite run only from a checkout that has a local copy:
 
 ```sh
 npm ci --ignore-scripts
@@ -17,7 +17,7 @@ npm run release:check
 npm run release:source
 ```
 
-The CI file checks the same source on Node 24 and 26 after an authorized push. It grants read-only repository contents permission and does not upload or publish artifacts. Both matrix jobs passed for the latest code changes in the private repository. Refer to the repository workflow for later commits. The configuration follows the official [setup-node guidance](https://github.com/actions/setup-node) and [TypeScript ESLint quickstart](https://typescript-eslint.io/getting-started/).
+The CI file checks the same source, without the unpublished tests, on Node 24 and 26 after an authorized push. It grants read-only repository contents permission and does not upload or publish artifacts. Both matrix jobs passed for the latest code changes in the private repository. Refer to the repository workflow for later commits. The configuration follows the official [setup-node guidance](https://github.com/actions/setup-node) and [TypeScript ESLint quickstart](https://typescript-eslint.io/getting-started/).
 
 Run the browser suite separately with the local production server listening at port 4319:
 

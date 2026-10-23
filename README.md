@@ -150,13 +150,12 @@ For development, keep `npm start` running for the API and run `npm run dev` in a
 ```sh
 npm run lint
 npm run typecheck
-npm test
 npm run format:check
 npm run build
 npm run release:check
 ```
 
-With the production server running and Google Chrome installed, `FLOWLENS_URL=http://127.0.0.1:4319 npm run test:browser` checks desktop, tablet and phone layouts. To stay offline and repeatable, the browser test uses a synthetic case (open `/?fixture=synthetic`) and mocked provider responses; it is not a substitute for live checks, which are recorded in [live verification](docs/live-verification.md).
+The test suite is kept outside this repository. Live checks are recorded in [live verification](docs/live-verification.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing how evidence is counted, and [architecture](docs/architecture.md) for how the pieces fit.
 

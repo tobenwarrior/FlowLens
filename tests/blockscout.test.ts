@@ -278,6 +278,91 @@ test("HTTP failures stay explicit: throttles are retryable, browser challenges a
   }
 });
 
+test("an unavailable internal stream keeps native and ERC20 rows and resumes internal from its start", async () => {
+  const internalOf = (page: { transfers: { kind: string }[] }) =>
+    page.transfers.filter((t) => t.kind === "internal").length;
+  const healthy = await explorer().provider.fetchPage({
+    address: ROOT,
+    chainId: 1,
+  });
+  assert.ok(internalOf(healthy) > 0);
+  const outages: (() => Response)[] = [
+    () => {
+      throw new TypeError("fetch failed");
+    },
+    () => new Response("gateway timeout", { status: 504 }),
+    () => new Response("slow down", { status: 429 }),
+  ];
+  for (const outage of outages) {
+    let down = true;
+    const { calls, provider } = explorer(undefined, (url) =>
+      down && url.pathname.endsWith("/internal-transactions")
+        ? outage()
+        : undefined,
+    );
+    const page = await provider.fetchPage({ address: ROOT, chainId: 1 });
+    assert.equal(internalOf(page), 0);
+    assert.equal(
+      page.transfers.length,
+      healthy.transfers.length - internalOf(healthy),
+    );
+    assert.deepEqual(page.streams, ["native", "erc20"]);
+    assert.ok(page.warnings.some((w) => w.includes("did not answer")));
+    assert.ok(page.cursor);
+    down = false;
+    const resumed = await provider.fetchPage({
+      address: ROOT,
+      chainId: 1,
+      cursor: page.cursor,
+    });
+    assert.equal(internalOf(resumed), internalOf(healthy));
+    const retried = calls.filter((url) =>
+      url.pathname.endsWith("/internal-transactions"),
+    );
+    assert.equal(retried.length, 2);
+    assert.ok(!retried[1].searchParams.has("block_number"));
+  }
+  // Catching up later, the internal stream stays inside the first page's window.
+  let up = false;
+  const late = explorer(undefined, (url) =>
+    !up && url.pathname.endsWith("/internal-transactions")
+      ? new Response("down", { status: 503 })
+      : undefined,
+  );
+  const first = await late.provider.fetchPage({ address: ROOT, chainId: 1 });
+  const end = JSON.parse(
+    Buffer.from(first.cursor!, "base64url").toString(),
+  ).end;
+  const newer = structuredClone(late.data.internalTransactions.items[0]);
+  newer.block_number = end + 100;
+  late.data.internalTransactions.items.unshift(newer);
+  up = true;
+  const caught = await late.provider.fetchPage({
+    address: ROOT,
+    chainId: 1,
+    cursor: first.cursor!,
+  });
+  const internal = caught.transfers.filter((t) => t.kind === "internal");
+  assert.equal(internal.length, internalOf(healthy));
+  assert.ok(internal.every((t) => t.blockNumber <= end));
+  // With the other streams already finished there is nothing to keep, so the failure stands.
+  const { provider } = explorer(undefined, (url) =>
+    url.pathname.endsWith("/internal-transactions")
+      ? new Response("down", { status: 503 })
+      : undefined,
+  );
+  const one = await provider.fetchPage({ address: ROOT, chainId: 1 });
+  const two = await provider.fetchPage({
+    address: ROOT,
+    chainId: 1,
+    cursor: one.cursor!,
+  });
+  await assert.rejects(
+    provider.fetchPage({ address: ROOT, chainId: 1, cursor: two.cursor! }),
+    failsWith("PROVIDER_HTTP_ERROR", true),
+  );
+});
+
 test("internal transfers inside reverted calls are excluded and trace disagreements fail the page", async () => {
   for (const frame of [0, 1]) {
     const { provider } = explorer((data) => {
@@ -300,13 +385,19 @@ test("internal transfers inside reverted calls are excluded and trace disagreeme
     mismatched.provider.fetchPage({ address: ROOT, chainId: 1 }),
     failsWith("TRACE_MISMATCH", true),
   );
+  // A trace not yet indexed holds back only the internal stream, which resumes later.
   const missing = explorer((data) => {
     data.rawTraces[CALL] = [];
   });
-  await assert.rejects(
-    missing.provider.fetchPage({ address: ROOT, chainId: 1 }),
-    failsWith("TRACE_UNAVAILABLE", true),
+  const pending = await missing.provider.fetchPage({
+    address: ROOT,
+    chainId: 1,
+  });
+  assert.equal(
+    pending.transfers.filter((t) => t.kind === "internal").length,
+    0,
   );
+  assert.deepEqual(pending.streams, ["native", "erc20"]);
   const oversized = explorer(undefined, (url) =>
     url.pathname.endsWith(`${CALL}/raw-trace`)
       ? Response.json([], { headers: { "content-length": "4000001" } })

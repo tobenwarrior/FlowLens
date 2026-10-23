@@ -45,6 +45,13 @@ const ORDER: Record<Stream, string[]> = {
   erc20: ["block_number", "log_index"],
   internal: ["block_number", "transaction_index", "index"],
 };
+// Availability failures, as opposed to bad data, that leave the other streams usable.
+const UNAVAILABLE = new Set([
+  "NETWORK_ERROR",
+  "PROVIDER_HTTP_ERROR",
+  "RATE_LIMITED",
+  "TRACE_UNAVAILABLE",
+]);
 const MOVING = new Set(["call", "create", "create2", "selfdestruct"]);
 const NONMOVING = new Set(["delegatecall", "staticcall", "callcode"]);
 const WARNINGS = [
@@ -348,6 +355,10 @@ export function createBlockscoutProvider(
         };
     const warnings = [...WARNINGS];
     const transfers: Transfer[] = [];
+    const pending = STREAMS.filter((stream) => !cursor[stream].done);
+    // A stream that starts after the first page, such as an internal stream that was
+    // unavailable then, stays inside the first page's window instead of reading newer rows.
+    const windowEnd = query.cursor ? cursor.end : 0;
     const retrievedAt = new Date().toISOString();
     let newest = 0;
     const read = async (stream: Stream): Promise<Row[]> => {
@@ -391,9 +402,11 @@ export function createBlockscoutProvider(
       newest = Math.max(newest, rows[0]?.key[0] ?? 0);
       // Re-reading a provider page resumes strictly after the last consumed row, so newly indexed rows cannot shift it.
       const after = state.after;
-      const remaining = after
-        ? rows.filter((r) => compare(r.key, after) < 0)
-        : rows;
+      const remaining = rows.filter(
+        (r) =>
+          (!after || compare(r.key, after) < 0) &&
+          (!windowEnd || r.key[0] <= windowEnd),
+      );
       const slice = remaining.slice(0, size);
       if (slice.length) state.after = slice[slice.length - 1].key;
       if (remaining.length <= size) {
@@ -503,104 +516,133 @@ export function createBlockscoutProvider(
         }
       }
     }
+    // Blockscout's internal-transaction listing is its slowest endpoint and the one that
+    // goes down on its own. When only it is unavailable, the page keeps its native and
+    // ERC-20 rows and the internal cursor stays where it was, so a resume asks again.
+    // Integrity failures, such as a trace that disagrees with the listing, still fail the page.
+    const streams: TransferKind[] = ["native", "erc20", "internal"];
     if (!cursor.internal.done) {
-      const listed: {
-        record: Row;
-        hash: string;
-        index: number;
-        type: string;
-        from: Address;
-        to: Address;
-        value: string;
-      }[] = [];
-      for (const record of await read("internal")) {
-        // Index 0 is the transaction's own call, already the native stream's evidence.
+      const before = {
+        state: structuredClone(cursor.internal),
+        warnings: warnings.length,
+        newest,
+      };
+      try {
+        const found: Transfer[] = [];
+        const listed: {
+          record: Row;
+          hash: string;
+          index: number;
+          type: string;
+          from: Address;
+          to: Address;
+          value: string;
+        }[] = [];
+        for (const record of await read("internal")) {
+          // Index 0 is the transaction's own call, already the native stream's evidence.
+          if (
+            record.index === 0 ||
+            record.value === "0" ||
+            record.success === false ||
+            NONMOVING.has(record.type as string)
+          )
+            continue;
+          try {
+            if (
+              record.success !== true ||
+              record.error != null ||
+              !MOVING.has(record.type as string)
+            )
+              throw new Error();
+            const from = party(record.from);
+            const to = party(record.to ?? record.created_contract);
+            if (from !== wallet && to !== wallet) throw new Error();
+            listed.push({
+              record,
+              hash: txHash(record.transaction_hash),
+              index: record.index as number,
+              type: record.type as string,
+              from,
+              to,
+              value: uint(record.value),
+            });
+          } catch {
+            warnings.push("A malformed internal provider row was omitted.");
+          }
+        }
+        // One bounded trace read per transaction on this page; there is no recursive fanout.
+        const traces = new Map<string, Row[] | null>();
+        for (const hash of new Set(listed.map((l) => l.hash))) {
+          let frames: unknown;
+          try {
+            frames = await request(
+              explorer.api,
+              `transactions/${hash}/raw-trace`,
+              null,
+            );
+          } catch (error) {
+            if (
+              !(error instanceof ProviderError) ||
+              error.code !== "PROVIDER_RESPONSE_TOO_LARGE"
+            )
+              throw error;
+            traces.set(hash, null);
+            continue;
+          }
+          if (!Array.isArray(frames) || !frames.length)
+            throw new ProviderError(
+              "TRACE_UNAVAILABLE",
+              "Blockscout has no call trace yet for a listed internal transfer; no page was committed. Resume later using the saved cursor.",
+              true,
+            );
+          traces.set(hash, frames.length > MAX_FRAMES ? null : frames.map(row));
+        }
+        for (const entry of listed) {
+          const frames = traces.get(entry.hash);
+          const checked: Frame = frames
+            ? checkFrame(frames, entry)
+            : {
+                omitted:
+                  "An internal transfer whose call trace exceeds the response budget was omitted; it remains uncovered.",
+              };
+          if ("omitted" in checked) {
+            warnings.push(checked.omitted);
+            continue;
+          }
+          found.push(
+            make(
+              entry.record,
+              "internal",
+              entry.hash,
+              checked.eventIndex,
+              entry.value,
+              null,
+              18,
+              explorer.native,
+              entry.from,
+              entry.to,
+            ),
+          );
+        }
+        transfers.push(...found);
+      } catch (error) {
         if (
-          record.index === 0 ||
-          record.value === "0" ||
-          record.success === false ||
-          NONMOVING.has(record.type as string)
+          !(error instanceof ProviderError) ||
+          !UNAVAILABLE.has(error.code) ||
+          pending.length === 1
         )
-          continue;
-        try {
-          if (
-            record.success !== true ||
-            record.error != null ||
-            !MOVING.has(record.type as string)
-          )
-            throw new Error();
-          const from = party(record.from);
-          const to = party(record.to ?? record.created_contract);
-          if (from !== wallet && to !== wallet) throw new Error();
-          listed.push({
-            record,
-            hash: txHash(record.transaction_hash),
-            index: record.index as number,
-            type: record.type as string,
-            from,
-            to,
-            value: uint(record.value),
-          });
-        } catch {
-          warnings.push("A malformed internal provider row was omitted.");
-        }
-      }
-      // One bounded trace read per transaction on this page; there is no recursive fanout.
-      const traces = new Map<string, Row[] | null>();
-      for (const hash of new Set(listed.map((l) => l.hash))) {
-        let frames: unknown;
-        try {
-          frames = await request(
-            explorer.api,
-            `transactions/${hash}/raw-trace`,
-            null,
-          );
-        } catch (error) {
-          if (
-            !(error instanceof ProviderError) ||
-            error.code !== "PROVIDER_RESPONSE_TOO_LARGE"
-          )
-            throw error;
-          traces.set(hash, null);
-          continue;
-        }
-        if (!Array.isArray(frames) || !frames.length)
-          throw new ProviderError(
-            "TRACE_UNAVAILABLE",
-            "Blockscout has no call trace yet for a listed internal transfer; no page was committed. Resume later using the saved cursor.",
-            true,
-          );
-        traces.set(hash, frames.length > MAX_FRAMES ? null : frames.map(row));
-      }
-      for (const entry of listed) {
-        const frames = traces.get(entry.hash);
-        const checked: Frame = frames
-          ? checkFrame(frames, entry)
-          : {
-              omitted:
-                "An internal transfer whose call trace exceeds the response budget was omitted; it remains uncovered.",
-            };
-        if ("omitted" in checked) {
-          warnings.push(checked.omitted);
-          continue;
-        }
-        transfers.push(
-          make(
-            entry.record,
-            "internal",
-            entry.hash,
-            checked.eventIndex,
-            entry.value,
-            null,
-            18,
-            explorer.native,
-            entry.from,
-            entry.to,
-          ),
+          throw error;
+        cursor.internal = before.state;
+        warnings.length = before.warnings;
+        newest = before.newest;
+        streams.pop();
+        warnings.push(
+          "Blockscout's internal-transaction stream did not answer for one page, which kept only its native and ERC-20 transfers; the internal stream continues from where it stopped on the next page.",
         );
       }
     }
-    if (!query.cursor) cursor.end = newest;
+    // Set by the first page that sees any row, so a resumed stream has a window to stay inside.
+    if (!cursor.end) cursor.end = newest;
     warnings.push(
       `History window: each stream starts at the newest rows Blockscout returned for the first page (through block ${cursor.end}); activity indexed later needs a new investigation.`,
     );
@@ -634,7 +676,7 @@ export function createBlockscoutProvider(
       nodes,
       cursor: next,
       warnings: [...new Set(warnings)],
-      streams: ["native", "erc20", "internal"],
+      streams,
       exhausted,
     };
   }

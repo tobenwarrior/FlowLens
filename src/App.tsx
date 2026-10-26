@@ -385,16 +385,19 @@ export default function App() {
         setProvider(
           ethereum === "blockscout-v2"
             ? "Blockscout"
-            : ethereum ||
-                s?.providers?.etherscan?.available ||
-                s?.liveAvailable ||
-                s?.etherscan?.available ||
-                s?.providers?.some?.(
-                  (p: { id: string; available: boolean }) =>
-                    p.id.includes("etherscan") && p.available,
-                )
+            : ethereum === "etherscan-v2"
               ? "Etherscan"
-              : null,
+              : ethereum
+                ? "Live provider"
+                : s?.providers?.etherscan?.available ||
+                    s?.liveAvailable ||
+                    s?.etherscan?.available ||
+                    s?.providers?.some?.(
+                      (p: { id: string; available: boolean }) =>
+                        p.id.includes("etherscan") && p.available,
+                    )
+                  ? "Etherscan"
+                  : null,
         );
       })
       .catch(() => {});

@@ -11,6 +11,7 @@ import {
 } from "./price-provider.ts";
 import { createPublicRpcClient } from "./rpc.ts";
 import type { PublicRpcOptions, RpcClient } from "./rpc.ts";
+import { boundedJson } from "./history-provider.ts";
 
 /**
  * Prices read at the block a transfer actually settled on.
@@ -311,7 +312,7 @@ export async function fetchHistoricalPrices(
           `Provider returned HTTP ${response.status}.`,
           response.status >= 500,
         );
-      return readLogPage(await response.json());
+      return readLogPage(await boundedJson(response, 2_000_000));
     } catch (error) {
       return {
         kind: "refused",

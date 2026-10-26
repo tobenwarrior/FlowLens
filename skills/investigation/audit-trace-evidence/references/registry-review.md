@@ -20,6 +20,6 @@ Install counts and automated registry audit badges were not treated as proof of 
 
 ## Local contract verification
 
-Instructions were checked against `server/cli.ts`, `server/mcp.ts`, `server/schema.ts`, `src/domain/types.ts`, `src/domain/wallet-flows.ts`, `AGENTS.md`, `docs/mcp.md` and `docs/tracing-guide.md`. CLI help was executed on Node 26.8.1. The companion test uses a temporary synthetic demo case, runs every documented CLI example, checks exact event identity/schema and pagination-revision behavior, verifies local reads leave the case unchanged, and checks local Markdown links. It performs no live wallet/provider requests.
+Instructions were checked against `server/cli.ts`, `server/mcp.ts`, `server/schema.ts`, `src/domain/types.ts`, `src/domain/wallet-flows.ts`, `AGENTS.md`, `docs/mcp.md` and `skills/investigation/trace-wallet/references/tracing-method.md`. CLI help was executed on Node 26.8.1. The companion test uses a temporary synthetic demo case, runs every documented CLI example, checks exact event identity/schema and pagination-revision behavior, verifies local reads leave the case unchanged, and checks local Markdown links. It performs no live wallet/provider requests.
 
 This file is methodology/source-review documentation, not findings about any real wallet. Private findings belong under `.local/investigations/`, not this directory. Public-source packaging is a separate reviewed allowlist decision; this lane does not change release policy.

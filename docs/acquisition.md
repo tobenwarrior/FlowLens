@@ -84,4 +84,4 @@ Acquisitions are retained as `protocolEvidence`, separate from the indexed trans
 
 Export with `flowlens_export`, the HTTP export route or CLI `export`; reimport validates structure and provenance flags, not source truth. Keep exports private until their contents and data-use rights are reviewed. If a response is lost or too large after a mutation, inspect the durable case before repeating it. There is no scheduled background expansion.
 
-CLI exit code 2 means acquisition returned provider errors; any attached observations/coverage were still preserved. RPC unsupported capability can therefore produce useful JSON without a successful trace. The [live verification record](live-verification.md) distinguishes actual public checks from injected contract tests.
+CLI exit code 2 means acquisition returned provider errors; any attached observations/coverage were still preserved. RPC unsupported capability can therefore produce useful JSON without a successful trace. Injected contract tests do not establish live provider coverage.

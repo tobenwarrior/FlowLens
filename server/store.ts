@@ -63,7 +63,10 @@ export async function readBoundedJsonFile(
   path: string,
   label = "Investigation",
 ): Promise<unknown> {
-  const file = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
+  const file = await open(
+    path,
+    constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
+  );
   try {
     const info = await file.stat();
     if (!info.isFile())

@@ -1,0 +1,17 @@
+# Public deployment identifiers, not credentials. Keep every default detector enabled.
+# Verified against https://developers.circle.com/stablecoins/usdc-contract-addresses
+# on 2026-10-26. No commit-wide, path-only, or all-address exemptions.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Circle public native-USDC contract IDs in reviewed registry/test fields"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = [
+  '^server/bridge-provider\.ts$',
+  '^tests/bridge-provider\.test\.ts$',
+]
+regexes = [
+  '(?i)^0x(?:a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48|833589fcd6edb6e08f4c7c32d4f71b54bda02913|af88d065e77c8cc2239327c5edb3a432268e5831)$',
+]

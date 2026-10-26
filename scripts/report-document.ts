@@ -48,6 +48,7 @@ import {
 import { walletFlows } from "../src/domain/wallet-flows.ts";
 import type { Investigation, Transfer } from "../src/domain/types.ts";
 import { writeReportFile } from "./report-investigation.ts";
+import { isCredentialParameterName } from "../src/domain/source-url.ts";
 
 export const LIMITS = {
   manifestBytes: 1_000_000,
@@ -77,8 +78,6 @@ const STATUS = {
 } as const;
 export type AssessmentStatus = keyof typeof STATUS;
 
-const CREDENTIAL_KEY =
-  /^(?:api[_-]?key|access[_-]?token|token|authorization|password|secret|signature|credential|key)$/i;
 /** http(s) only, without userinfo or credential-like query or fragment keys. */
 export function safeUrl(value: string): string | undefined {
   let url: URL;
@@ -92,7 +91,7 @@ export function safeUrl(value: string): string | undefined {
   const fragment = new URLSearchParams(url.hash.slice(1));
   if (
     [...url.searchParams.keys(), ...fragment.keys()].some((key) =>
-      CREDENTIAL_KEY.test(key),
+      isCredentialParameterName(key),
     )
   )
     return undefined;

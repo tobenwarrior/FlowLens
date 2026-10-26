@@ -37,7 +37,7 @@ An extension should introduce explicit claim/evidence relations for these domain
 
 ## Release work still required
 
-FlowLens is licensed [AGPL-3.0-only](../LICENSE). Before public release, the owner must confirm source/data-use rights, review the final archive and choose its destination/visibility. Follow the [release checklist](release-checklist.md). Live provider acceptance is optional and remains distinct from source readiness; [live verification](live-verification.md) records the narrow observations made so far.
+FlowLens is licensed [AGPL-3.0-only](../LICENSE). Release checks and source/data-use review are covered in [contributing](../CONTRIBUTING.md). Fixture tests do not establish live provider availability or complete coverage.
 
 Remaining product limits include reorg reconciliation, current-window refresh, account-wide cross-process rate budgeting, richer protocol adapters, arbitrary grouping/manual layout, complete Safe historical authorization, contract/approved-hash signature validation and independently authenticated chain evidence. Public hosting would additionally need authentication and a different network/security model.
 

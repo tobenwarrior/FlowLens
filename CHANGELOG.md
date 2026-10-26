@@ -3,13 +3,15 @@
 ## Unreleased — open-source launch
 
 - The app opens on a start screen for live tracing, with public organisation wallets to try. The synthetic case is now only an offline test fixture (`/?fixture=synthetic`), no longer the first thing people see.
-- New FlowLens logo, favicon and app icons. README and documentation screenshots are live traces of a public wallet, replacing the synthetic screenshots.
+- New FlowLens logo, favicon and app icons. README and documentation screenshots now use public-wallet examples instead of the synthetic screenshots from the 0.1.0 snapshot. The lead image documents Blockscout retrieval on 23 October 2026; capture dates for other images are not recorded. See [image provenance](docs/images/README.md).
 - Derive Chain (957) history through Derive's keyless Blockscout explorer at `explorer.derive.xyz`, with or without an Etherscan key. Derive subaccount balances and trades are not wallet transfers and are not shown.
 - Blockscout pages keep their native and ERC20 transfers when only the internal-transaction stream is unavailable, and the internal stream resumes on the next page. The coverage footer and dialog now say which streams were loaded instead of always reporting internal transfers as excluded.
 
 ## 0.1.0 — local release candidate, 21 October 2026
 
 Unreleased publicly. Development commits are in the private repository. Licensed under AGPL-3.0-only from 21 October 2026.
+
+This section records the 21 October 2026 release-candidate snapshot. Its synthetic-screenshot statements predate the later public-wallet screenshot update above.
 
 ### Implemented
 
@@ -31,7 +33,7 @@ Unreleased publicly. Development commits are in the private repository. Licensed
 
 ### Readiness hardening
 
-- Consistent FlowLens branding, separate human/agent quickstarts, mobile agent help and two reviewed synthetic screenshots.
+- Consistent FlowLens branding, separate human/agent quickstarts, mobile agent help and two reviewed synthetic screenshots in the 21 October 2026 snapshot; later Unreleased changes replace those screenshots with public-wallet examples.
 - Hook-free lockfile installation, `npm start`, a Node 24.12+ requirement and immutable CI action references.
 - A 2 MB Etherscan response cap, atomic rejection of conflicting event identities and bounded regular-file JSON imports.
 - Configuration-only Safe reads can add and resume history while preserving earlier evidence and provenance.
@@ -42,11 +44,11 @@ Unreleased publicly. Development commits are in the private repository. Licensed
 - Explicit archive allowlist, redacted credential scan, empty environment-template check and symlink rejection.
 - Release checklist, nonbinding license comparison and preserved selected dependency notices.
 
-The destination and fresh source-archive install passed 224/224 tests, lint, typecheck, formatting and build. Both Node 24 and Node 26 CI jobs passed. Chrome QA passed 9 regression scenarios plus 15 human/agent usability checks across desktop, tablet and phone. The [public live verification record](docs/live-verification.md) documents observed provider capability separately from fixture tests.
+Historical results for the 21 October 2026 private release-candidate snapshot: the destination and fresh source-archive install passed 224/224 tests, lint, typecheck, formatting and build; both Node 24 and Node 26 CI jobs passed; Chrome QA passed 9 regression scenarios plus 15 human/agent usability checks across desktop, tablet and phone. These results do not verify a later or public snapshot. Live provider availability requires separate verification.
 
 ### Release limitations
 
-FlowLens is licensed AGPL-3.0-only, copyright tobenwarrior; data-use rights remain owner decisions. The source archive contains no private case exports, private/temporary QA artifacts, credentials or installed dependencies; the two reviewed synthetic documentation screenshots are included. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
+For the 21 October 2026 private release-candidate snapshot, FlowLens was licensed AGPL-3.0-only; data-use rights remain owner decisions. Its source archive was recorded as excluding private case exports, private/temporary QA artifacts, credentials and installed dependencies, and including two reviewed synthetic documentation screenshots. Later Unreleased changes replace those screenshots with public-wallet examples. A successful build does not establish provider completeness, source authenticity, ownership attribution or redistribution permission for imported data.
 
 ## Wallet flows and local attribution
 

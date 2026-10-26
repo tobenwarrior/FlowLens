@@ -14,6 +14,8 @@
 
 _A live trace of the ENS DAO endowment ([endowment.ensdao.eth](https://eth.blockscout.com/address/0x4F2083f5fBede34C2714aFfb3105539775f7FE64)), loaded from Blockscout's public explorer with no API key on 23 October 2026._
 
+The screenshots below use public organization-wallet examples, not private investigations. They show partial provider history and do not establish ownership or endorsement. See the [image provenance and rights notes](docs/images/README.md) for source context, known and unknown dates, and remaining owner review.
+
 ## Why FlowLens
 
 Blockchain data is public, but the tools that make it readable are often paid, hosted and closed. If you used a hosted tracer such as Arkham and want something free that you control, FlowLens is for you.
@@ -182,11 +184,12 @@ For development, keep `npm start` running for the API and run `npm run dev` in a
 npm run lint
 npm run typecheck
 npm run format:check
+npm test
 npm run build
 npm run release:check
 ```
 
-The test suite is kept outside this repository. Live checks are recorded in [live verification](docs/live-verification.md).
+`npm test` runs offline synthetic smoke checks. If a local ignored `tests/` suite is present, it runs too. Tests do not certify live provider availability or complete wallet coverage.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing how evidence is counted, and [architecture](docs/architecture.md) for how the pieces fit.
 
@@ -196,4 +199,4 @@ FlowLens is free software: you can redistribute it and/or modify it under the te
 
 If you run a modified FlowLens and let other people use it over a network, AGPL section 13 requires you to offer them the source of your version. That is deliberate: a hosted or paid fork has to stay open.
 
-The code license covers FlowLens itself. It does not grant rights to provider responses, third-party labels (Arkham's included), anyone's investigations or label packs; a public blockchain record does not settle a provider dataset's terms. FlowLens includes no Arkham data and does not scrape any service. Dependency licenses and required notices are in [third-party notices](THIRD_PARTY_NOTICES.md), and the reasoning behind the choice is in the [license decision](docs/license-options.md).
+The code license covers FlowLens itself. It does not grant rights to provider responses, third-party labels (Arkham's included), anyone's investigations or label packs; a public blockchain record does not settle a provider dataset's terms. FlowLens includes no Arkham data and does not scrape any service. Dependency licenses and required notices are in [third-party notices](THIRD_PARTY_NOTICES.md).

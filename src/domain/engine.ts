@@ -15,6 +15,7 @@ import type {
   TransferKind,
   WalletNode,
 } from "./types.ts";
+import { isCredentialParameterName } from "./source-url.ts";
 
 const MAX_SNAPSHOT_BYTES = 5_000_000;
 const KINDS: TransferKind[] = ["native", "erc20", "internal"];
@@ -157,14 +158,12 @@ export function parseLabel(input: unknown): Label {
     } catch {
       throw new Error("Invalid label URL");
     }
-    const credential =
-      /^(?:api[_-]?key|access[_-]?token|token|authorization|password|secret|signature|credential)$/i;
     const fragment = new URLSearchParams(parsed.hash.slice(1));
     if (
       parsed.username ||
       parsed.password ||
       [...parsed.searchParams.keys(), ...fragment.keys()].some((key) =>
-        credential.test(key),
+        isCredentialParameterName(key),
       )
     )
       throw new Error("Label URL must not contain credentials");

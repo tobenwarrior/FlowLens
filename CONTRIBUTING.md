@@ -2,7 +2,7 @@
 
 FlowLens is an agent-first wallet tracing workspace with a human interface over the same engine. A contribution should make the evidence easier to obtain, resume or assess without weakening its meaning.
 
-FlowLens is licensed under [AGPL-3.0-only](LICENSE). Contributions are accepted under the same license: by submitting one, you agree it is licensed under AGPL-3.0-only. Any production dependency you add must be AGPL-compatible — MIT, Apache-2.0, ISC and BSD are; GPL-2.0-only, SSPL, BUSL, non-commercial and proprietary licenses are not. The [license decision](docs/license-options.md) explains why.
+FlowLens is licensed under [AGPL-3.0-only](LICENSE). Contributions are accepted under the same license: by submitting one, you agree it is licensed under AGPL-3.0-only. Any production dependency you add must be AGPL-compatible — MIT, Apache-2.0, ISC and BSD are; GPL-2.0-only, SSPL, BUSL, non-commercial and proprietary licenses are not.
 
 ## Run and check a change
 
@@ -46,4 +46,4 @@ A public blockchain response does not automatically grant redistribution rights 
 
 Describe the concrete problem, resulting behavior, validation and remaining limits. Identify any contract, data format or dependency change. Preserve the repository's existing license decisions and user work; do not add credentials, telemetry, paid services, global agent configuration or hosted exposure as a side effect.
 
-Use the [release checklist](docs/release-checklist.md) before proposing a public release. Source packaging uses an explicit allowlist: include new public source/test/documentation files deliberately, then inspect the archive and checksums. Keep private data and generated test artifacts excluded. Dependency notices must match the final lockfile.
+Before a release, run `npm run release:check` and `npm run release:source`; inspect the archive, manifest and checksums for private data, credentials and local tooling. Add public source/documentation files to the explicit allowlist deliberately; keep `tests/` and generated artifacts excluded. Match dependency notices to the final lockfile, confirm publication/data-use rights and verify the private reporting route in [SECURITY.md](SECURITY.md).

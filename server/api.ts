@@ -3,7 +3,7 @@ import { analyzeProtocolEvidence } from "../src/domain/protocols.ts";
 import { visibleTransfers } from "../src/domain/wallet-flows.ts";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import {
   aggregateFlows,
@@ -417,7 +417,16 @@ export function createApiServer(options: ApiOptions) {
           ".png": "image/png",
           ".woff2": "font/woff2",
         };
-        const bytes = await readFile(file);
+        const [realDirectory, realFile] = await Promise.all([
+          realpath(directory),
+          realpath(file),
+        ]);
+        if (
+          realFile !== realDirectory &&
+          !realFile.startsWith(`${realDirectory}${sep}`)
+        )
+          throw new HttpError(403, "INVALID_PATH", "Invalid asset path.");
+        const bytes = await readFile(realFile);
         res.writeHead(200, {
           "content-type": types[extname(file)] ?? "application/octet-stream",
           "x-content-type-options": "nosniff",
@@ -480,13 +489,11 @@ export function createApiServer(options: ApiOptions) {
             ? "NOT_FOUND"
             : "INVALID_REQUEST";
       const message =
-        error instanceof HttpError || error instanceof ProviderError
+        error instanceof HttpError
           ? error.message
           : missing
             ? "Investigation or asset not found."
-            : error instanceof Error
-              ? error.message
-              : "Request failed.";
+            : "Request failed.";
       send(res, status, {
         error: {
           code,

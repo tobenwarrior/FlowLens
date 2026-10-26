@@ -2,11 +2,15 @@
 
 Read [the report skill](../SKILL.md) before preparing real evidence. All paths below describe local private inputs; source URLs are citations only, never remote image-fetch requests. Input paths default to the manifest directory; explicit `--bundle-root DIR` makes case/image references relative to that confined root. Unknown keys are rejected. This is a contract reference, not a public investigation or a template filled with real addresses/brands.
 
-## Brief authoring is the agent default
+## Default: an evidence-complete report
+
+Default to the detailed report without `--brief`, with a short executive summary and all material evidence, transaction tables, source citations, timestamps, readable screenshots and inventories in the delivered report. Do not omit evidence for a page cap or hide material proof in an unattached appendix. Briefs are opt-in only.
+
+## Optional brief authoring
 
 Use the same v1 schema for the concise brief; `--brief` is a CLI flag, not an extra manifest key. Curate a separate `brief-manifest.json` without modifying the complete audit manifest or research ledger. Keep page 1 to 150–250 words maximum (never more than 250): conclusion first, exactly 3 decisive cited facts and 1 scope/ownership caveat. Material unresolved or contrary evidence belongs in those facts/caveat, not silently removed. There is no hard minimum: do not pad or invent confidence.
 
-Use `assessment.conclusion` for the verdict, a non-repetitive `summary`, one focused section of 3 decisive facts, and a concise material limitation. Include at most 2 essential readable screenshots for an optional second page. Captions stay short with source ID/link, capture date or unknown status and material redaction disclosure. Keep exact contract/hash ledgers, full source inventories and checksums in a separate private appendix. Request detailed audit output explicitly when needed; preserve the full inputs so no evidence is lost. Rendering/word/page checks still apply; a flag cannot decide which facts are material.
+Use `assessment.conclusion` for the verdict, a non-repetitive `summary`, one focused section of 3 decisive facts, and a concise material limitation. Include at most 2 essential readable screenshots for an optional second page. Captions stay short with source ID/link, capture date or unknown status and material redaction disclosure. Keep exact contract/hash ledgers, full source inventories and checksums in a separate private appendix. Detailed audit output is the default; preserve the full inputs so no evidence is lost. Rendering/word/page checks still apply; a flag cannot decide which facts are material.
 
 ## Shipped `--brief` bounds (separate from the word policy)
 

@@ -8,6 +8,55 @@ permissions:
   contents: read
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan Git history with verified Gitleaks
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks_8.30.1_linux_x64.tar.gz"
+          binary="$RUNNER_TEMP/gitleaks"
+          report="$RUNNER_TEMP/gitleaks-report.json"
+          log="$RUNNER_TEMP/gitleaks.log"
+          ignore_file="$RUNNER_TEMP/gitleaks.ignore"
+          config="$RUNNER_TEMP/gitleaks.toml"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$archive" \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          printf '%s  %s\n' \
+            551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb \
+            "$archive" | sha256sum --check --status
+          tar -xzf "$archive" -C "$RUNNER_TEMP" --no-same-owner --no-same-permissions -- gitleaks
+          if [[ ! -f "$binary" || -L "$binary" ]]; then
+            echo "::error::Secret scanner installation failed."
+            exit 1
+          fi
+          chmod 700 "$binary"
+          : > "$ignore_file"
+          if [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$BASE_SHA:.gitleaks.toml" 2>/dev/null; then
+            git show "$BASE_SHA:.gitleaks.toml" > "$config"
+          else
+            printf '[extend]\nuseDefault = true\n' > "$config"
+          fi
+          if "$binary" git --config "$config" \
+            --gitleaks-ignore-path "$ignore_file" \
+            --ignore-gitleaks-allow --redact=100 \
+            --report-format json --report-path "$report" \
+            --log-opts="--all --full-history" > "$log" 2>&1; then
+            echo "Secret scan passed."
+          else
+            echo "::error::Secret scan failed; redacted report retained only in the ephemeral runner."
+            exit 1
+          fi
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -28,5 +77,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - run: npm run build
+      - run: npm test
       - run: npm run release:check
       - run: npm run release:source

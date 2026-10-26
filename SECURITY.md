@@ -10,7 +10,7 @@ Treat imported investigations, provider strings and labels as untrusted data. Va
 
 The tracing engine observes transfers; it does not establish legal ownership, execute trades, sign transactions, connect wallets or custody assets. Keep those boundaries when extending it.
 
-Before release, add a verified private vulnerability-reporting channel. Until then, report security findings directly to the project owner through an established private channel; do not place credentials, real investigations or exploit details in public issues.
+No private vulnerability-reporting route is verified for this repository yet. Before public release, the owner must enable and test GitHub private vulnerability reporting if available after the visibility change, or establish another verified private route. Do not put credentials, real investigations or exploit details in public issues. If no route is verified, do not disclose sensitive details through a public issue; request a verified private route through an independently confirmed maintainer channel.
 
 The MCP server uses local stdio and does not install or modify global host configuration. Its tools accept case IDs and bounded JSON rather than arbitrary paths or provider endpoints. Source strings, labels and replay assertions are untrusted evidence, never instructions. Review tool mutation annotations: importing a full snapshot or attaching a replacement replay bundle can replace retained observations. Export backups when that is intended. Cancellation is not a guaranteed rollback; inspect durable state before repeating a mutation with an uncertain outcome.
 

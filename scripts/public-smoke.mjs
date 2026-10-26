@@ -4,6 +4,7 @@ import {
   DEMO_ROOT,
   demoProvider,
 } from "../src/domain/demo.ts";
+import { inspectDerive } from "../server/derive-provider.ts";
 
 const investigation = await createDemoInvestigation();
 assert.equal(investigation.mode, "demo");
@@ -40,3 +41,28 @@ assert.ok(
 console.log(
   "Public synthetic smoke checks passed (offline demo and pagination).",
 );
+
+let deriveRequests = 0;
+const deriveResult = await inspectDerive(
+  { kind: "account", wallet: DEMO_ROOT },
+  {
+    fetch: async (url, init) => {
+      deriveRequests++;
+      assert.equal(url, "https://api.derive.xyz/v3/public/get_subaccounts");
+      assert.equal(init.method, "POST");
+      assert.deepEqual(JSON.parse(init.body), { wallet: DEMO_ROOT });
+      return new globalThis.Response(
+        JSON.stringify({
+          result: { wallet: DEMO_ROOT, subaccount_ids: [123] },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    },
+  },
+);
+assert.equal(deriveRequests, 1);
+assert.equal(deriveResult.kind, "account");
+assert.deepEqual(deriveResult.data.subaccount_ids, [123]);
+assert.equal(deriveResult.coverage.status, "complete");
+
+console.log("Public synthetic smoke checks passed (demo and injected Derive).");

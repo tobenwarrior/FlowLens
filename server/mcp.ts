@@ -356,6 +356,35 @@ const tools = [
       })
       .strict(),
   },
+  {
+    operation: "derive",
+    description:
+      "Read one page of Derive public account, margin or trade data. Sends the supplied wallet/subaccount ID to Derive; no case or graph mutation. Trades return one requested page only. Reuse coverage.nextQuery as the next page request; it carries the same coverage.toTimestamp fence. If the fence is omitted, the provider freezes a new current-time fence for that call. Terminal page alone is not complete history unless page 1 of 1.",
+    readOnly: true,
+    input: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("account"), wallet: address }).strict(),
+      z
+        .object({ kind: z.literal("margin"), subaccountId: positiveInteger })
+        .strict(),
+      z
+        .object({
+          kind: z.literal("trades"),
+          subaccountId: positiveInteger,
+          page: positiveInteger.optional(),
+          pageSize: z.number().int().min(1).max(100).optional(),
+          toTimestamp: z
+            .number()
+            .int()
+            .min(0)
+            .max(Number.MAX_SAFE_INTEGER)
+            .describe(
+              "Unix milliseconds. Reuse coverage.toTimestamp on every subsequent page.",
+            )
+            .optional(),
+        })
+        .strict(),
+    ]),
+  },
 ] as const;
 
 const outputSchema = {
@@ -496,6 +525,7 @@ function outputFor(operation: string) {
       },
       required: ["version", "mode", "analysis"],
     },
+    derive: reference("DeriveInspectionResult"),
     acquire: {
       type: "object",
       properties: {
@@ -628,9 +658,15 @@ export function createMcpServer(
   const definitions: Tool[] = tools.map((tool) => ({
     name: `flowlens_${tool.operation}`,
     description: tool.description,
-    inputSchema: z.toJSONSchema(tool.input, {
-      target: "draft-7",
-    }) as Tool["inputSchema"],
+    inputSchema:
+      tool.operation === "derive"
+        ? ({
+            ...jsonSchema.$defs.DeriveQuery,
+            $defs: { Address: jsonSchema.$defs.Address },
+          } as Tool["inputSchema"])
+        : (z.toJSONSchema(tool.input, {
+            target: "draft-7",
+          }) as Tool["inputSchema"]),
     outputSchema: outputFor(tool.operation),
     annotations: {
       readOnlyHint: tool.readOnly,
@@ -651,6 +687,7 @@ export function createMcpServer(
         "acquire",
         "prices",
         "prices_at_blocks",
+        "derive",
       ].includes(tool.operation),
     },
   }));

@@ -6,12 +6,13 @@ No provider credential is required for these bounded public reads. Availability,
 
 ## Choose the right no-key workflow
 
-| Goal                                               | Operation                                    | Network behavior                                                                                           |
-| -------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Learn the interface or test an agent               | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                                           |
-| Preserve chosen evidence without indexing a wallet | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                                            |
-| Fetch a known Safe or transaction scope            | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter                  |
-| Enumerate supported wallet history                 | Indexed live case and expansion              | Keyless Blockscout on Ethereum and Derive Chain, or your own Etherscan key; only configured streams/chains |
+| Goal                                                    | Operation                                    | Network behavior                                                                                           |
+| ------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Learn the interface or test an agent                    | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                                           |
+| Preserve chosen evidence without indexing a wallet      | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                                            |
+| Fetch a known Safe or transaction scope                 | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter                  |
+| Enumerate supported wallet history                      | Indexed live case and expansion              | Keyless Blockscout on Ethereum and Derive Chain, or your own Etherscan key; only configured streams/chains |
+| Inspect a Derive account, margin snapshot or trade page | Standalone `derive` operation                | One public Derive API request; separate from wallet history and graph totals                               |
 
 “No key” does not mean “offline” for public acquisition. `mode: "private"` describes retained non-demo investigation evidence; it does not certify a provider's truth, grant redistribution rights or make a public identifier confidential.
 
@@ -85,3 +86,18 @@ Acquisitions are retained as `protocolEvidence`, separate from the indexed trans
 Export with `flowlens_export`, the HTTP export route or CLI `export`; reimport validates structure and provenance flags, not source truth. Keep exports private until their contents and data-use rights are reviewed. If a response is lost or too large after a mutation, inspect the durable case before repeating it. There is no scheduled background expansion.
 
 CLI exit code 2 means acquisition returned provider errors; any attached observations/coverage were still preserved. RPC unsupported capability can therefore produce useful JSON without a successful trace. Injected contract tests do not establish live provider coverage.
+
+## Inspect Derive venue data
+
+The standalone `derive` operation reads one provider-reported account association, one margin snapshot, or one trade-history page from Derive’s public API. It does not create or mutate a case, enumerate wallet history, or merge venue data into FlowLens transfer totals. No API key is required, but availability is not guaranteed; `403` and other provider failures are terminal for that call, with no retry or fallback.
+
+```sh
+node server/cli.ts derive --kind account --address "$WALLET"
+node server/cli.ts derive --kind margin --subaccount "$SUBACCOUNT_ID"
+node server/cli.ts derive --kind trades --subaccount "$SUBACCOUNT_ID" \\
+  --page 1 --page-size 100 --to-timestamp "$TO_TIMESTAMP_MS"
+```
+
+The CLI prints one standalone provider result as JSON; it has no `--file` option. The loopback HTTP API exposes the same operation at `POST /api/derive` with a bare flat JSON body; it is guarded by the local API’s normal JSON/body limits and returns no-store. There is no generic HTTP agent-operation route. The shared operation payload is flat: `{ "kind": "account", "wallet": "…" }`, `{ "kind": "margin", "subaccountId": 123 }`, or `{ "kind": "trades", "subaccountId": 123, "page": 1, "pageSize": 100, "toTimestamp": 1792540800000 }`. `page` defaults to 1, `pageSize` to 100 and is locally capped at 100. `toTimestamp` is Unix milliseconds; if omitted, the provider sets a current fence and returns it. A trade result covers only the requested page; `coverage.nextPage` gives the next numeric page and `coverage.toTimestamp` is the frozen timestamp fence. Carry that fence unchanged on the next call; when present, `coverage.nextQuery` provides the ready-made flat query. No automatic pagination or complete-history claim is made.
+
+Account data is a Derive-provider association, not proof of on-chain control or beneficial ownership. Margin data is one provider-calculated snapshot, not cash or graph totals. Numeric financial fields stay exact decimal strings; no conversion to floating-point totals is implied. Inspect `sourceUrl`, request parameters, retrieval time and coverage in every response. `flowlens_status.liveAvailable` describes indexed wallet-history routes, not a health check for the standalone Derive API.

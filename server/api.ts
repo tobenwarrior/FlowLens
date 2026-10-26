@@ -27,6 +27,7 @@ import {
 import type { Providers } from "./operations.ts";
 import { ProviderError } from "./etherscan.ts";
 import type { Acquirer } from "./acquire.ts";
+import type { inspectDerive } from "./derive-provider.ts";
 
 class HttpError extends Error {
   status: number;
@@ -108,6 +109,7 @@ export interface ApiOptions {
   distDir?: string;
   providers?: Providers;
   acquirer?: Acquirer;
+  deriveInspector?: typeof inspectDerive;
 }
 /** Local only; caller must bind to 127.0.0.1. Browser mutations are same-local-origin JSON. */
 export function createApiServer(options: ApiOptions) {
@@ -118,6 +120,7 @@ export function createApiServer(options: ApiOptions) {
     labelFile: options.labelFile,
     providers,
     acquirer: options.acquirer,
+    deriveInspector: options.deriveInspector,
   });
   const locks = new Map<string, Promise<unknown>>();
   async function exclusive<T>(
@@ -179,6 +182,12 @@ export function createApiServer(options: ApiOptions) {
           res,
           200,
           await agentService.call("prices", await body(req)),
+        );
+      if (method === "POST" && url.pathname === "/api/derive")
+        return send(
+          res,
+          200,
+          await agentService.call("derive", await body(req)),
         );
       if (method === "POST" && url.pathname === "/api/acquire")
         return send(

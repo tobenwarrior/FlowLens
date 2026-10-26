@@ -109,6 +109,7 @@ const allowlist = [
   "server/acquire.ts",
   "server/safe-provider.ts",
   "server/trace-provider.ts",
+  "server/derive-provider.ts",
   "server/label-store.ts",
   "server/price-provider.ts",
   "server/historical-price.ts",

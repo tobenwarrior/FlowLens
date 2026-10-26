@@ -94,7 +94,7 @@ Case IDs and evidence IDs are stable identifiers. Creation time, revision time a
 
 ## Tools
 
-The server advertises 20 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
+The server advertises 21 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
 
 `flowlens_wallet`, `flowlens_annotate` and `flowlens_visibility` share the [wallet controls and attribution contracts](workspace-controls.md). They do not fetch history or label providers. Wallet transfer pages after offset zero require the returned revision guard.
 
@@ -117,11 +117,28 @@ Import and replay tools are marked as potentially destructive because they can r
 | `flowlens_import`           | `investigation`                                                                                    | Validates and persists supplied investigation JSON                                                                                                                            |
 | `flowlens_replay`           | Exactly one `bundle` or `fixture`; optional `caseId`                                               | Analyses supplied protocol observations; optionally attaches them                                                                                                             |
 | `flowlens_acquire`          | `kind`, `chainId`, per-kind `address` or `hash`, optional budgets and live `caseId`                | Acquires one bounded scope through fixed public providers; optionally merges observations into a live case                                                                    |
+| `flowlens_derive`           | `kind` plus `wallet` or `subaccountId`; trades also accept `page`, `pageSize`, `toTimestamp`       | Reads one standalone Derive public account, margin snapshot or trade page; does not merge venue values into transfer totals                                                   |
 | `flowlens_prices`           | `chainId`, `assets`, optional `maxAssets` (1–10, default 6)                                        | Spot USD quotes, each from one named Uniswap V3 pool over the public RPC; no key. Stablecoins are taken as one dollar and marked unverified                                   |
 | `flowlens_prices_at_blocks` | `chainId`, `transfers`, optional `maxLookups` (1–40, default 12)                                   | USD at each transfer's own block from the pool's last swap at or before it, via Etherscan logs; needs `ETHERSCAN_API_KEY`. Unpriced pairs keep the spot rate and are reported |
 | `flowlens_label_put`        | `chainId`, `address`, `label`                                                                      | Remembers a source-bearing label in the local label store for later traces; an `ai` label cannot claim verified confidence or evidence                                        |
 | `flowlens_label_search`     | optional `query`, `chainId`, `address`, `kind`, `limit`                                            | Searches remembered labels with their provenance; no external label provider                                                                                                  |
 | `flowlens_label_forget`     | `chainId`, `address`                                                                               | Removes one remembered label; cases that recorded it keep their own copy                                                                                                      |
+
+### Standalone Derive inspection
+
+`flowlens_derive` reads one page/snapshot from Derive’s public API at `api.derive.xyz`; it does not create a case or add venue values to transfer totals. The loopback HTTP API exposes the same shared operation at `POST /api/derive` with the bare flat query as its JSON body; there is no generic HTTP agent-operation route. It is separate from indexed Derive Chain history and from `flowlens_acquire`. `flowlens_status.liveAvailable` describes indexed history, not the health of this API method. Public access is unauthenticated but not guaranteed; access errors are returned without retries or fallback providers.
+
+Arguments are flat:
+
+```json
+{ "kind": "account", "wallet": "0x1111111111111111111111111111111111111111" }
+{ "kind": "margin", "subaccountId": 123 }
+{ "kind": "trades", "subaccountId": 123, "page": 1, "pageSize": 100, "toTimestamp": 1792540800000 }
+```
+
+`account` reports Derive’s wallet/subaccount association, not on-chain control or beneficial ownership. `margin` is one provider-calculated snapshot; its values are not cash, graph balances or transfer totals. Trade amounts/prices remain exact decimal strings. Trades query one page only; the local page-size ceiling is 100. `coverage.nextPage` is the next numeric page; carry `coverage.toTimestamp` unchanged to keep the timestamp fence fixed. When another page exists, `coverage.nextQuery` also provides the ready-made flat query with that same fence. Without `toTimestamp`, the provider sets a current millisecond timestamp fence and returns it for continuation. No operation exhausts all trade history automatically.
+
+Each result includes `kind`, `source`, `sourceUrl`, `retrievedAt`, `httpStatus`, exact request parameters, `data` and provider-scoped `coverage`. A returned `complete` account result means only that the endpoint’s association response was read, not complete wallet history.
 
 `expand.maxPages` is 1–3, with an 80-node case budget. Live page size is 1–10 rows per stream; demo accepts up to 100. Defaults preserve existing resume behavior. Provider cursors are saved in case coverage, not passed as arbitrary expansion parameters.
 

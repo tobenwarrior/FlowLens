@@ -39,16 +39,23 @@ import {
   parseAcquisitionInput,
   AcquisitionError,
 } from "./acquire.ts";
+import { pathToFileURL } from "node:url";
+import { parseDeriveQuery } from "./derive-provider.ts";
+import type { DeriveQuery } from "./derive-provider.ts";
+import { realpathSync } from "node:fs";
 
 const args = process.argv.slice(2),
   command = args.shift() ?? "help";
 const allowed = new Set([
   "--file",
   "--address",
+  "--subaccount",
   "--mode",
   "--chain",
   "--pages",
   "--page-size",
+  "--page",
+  "--to-timestamp",
   "--title",
   "--id",
   "--asset",
@@ -96,6 +103,8 @@ async function main() {
       operations: {
         status: "No arguments; provider availability and limits.",
         schema: "No arguments; machine contract.",
+        derive:
+          "--kind account --address EVM | --kind margin --subaccount ID | --kind trades --subaccount ID [--page N] [--page-size 1..100] [--to-timestamp UNIX_MS]; one read-only Derive public API request, no case file, retries or fallback.",
         create:
           "--mode demo|live --file PATH [--address EVM] [--title TEXT] [--history-mode indexed|evidence-only]",
         expand:
@@ -205,6 +214,11 @@ async function main() {
       });
     }
     if (result.errors.length) process.exitCode = 2;
+    return;
+  }
+  if (command === "derive") {
+    const query = deriveQueryFromFlags(flags);
+    print(await createAgentService({ providers }).call("derive", query));
     return;
   }
   if (command === "replay") {
@@ -490,20 +504,96 @@ async function main() {
       : {}),
   });
 }
-main().catch((error) => {
-  const code =
-    error instanceof ProviderError ||
-    error instanceof RpcProviderError ||
-    error instanceof AcquisitionError ||
-    error instanceof CaseBusyError ||
-    error instanceof EvidenceConflictError ||
-    error instanceof JsonFileError ||
-    error instanceof AgentOperationError
-      ? error.code
-      : "INVALID_OPERATION";
-  const message = error instanceof Error ? error.message : "Operation failed";
-  process.stderr.write(
-    `${JSON.stringify({ error: { code, message: message.slice(0, 500), retryable: error instanceof CaseBusyError || (error instanceof AgentOperationError && error.retryable) || ((error instanceof ProviderError || error instanceof RpcProviderError || error instanceof AcquisitionError) && error.retryable) } })}\n`,
-  );
-  process.exitCode = 1;
-});
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+)
+  main().catch((error) => {
+    const code =
+      error instanceof ProviderError ||
+      error instanceof RpcProviderError ||
+      error instanceof AcquisitionError ||
+      error instanceof CaseBusyError ||
+      error instanceof EvidenceConflictError ||
+      error instanceof JsonFileError ||
+      error instanceof AgentOperationError
+        ? error.code
+        : "INVALID_OPERATION";
+    const message = error instanceof Error ? error.message : "Operation failed";
+    process.stderr.write(
+      `${JSON.stringify({ error: { code, message: message.slice(0, 500), retryable: error instanceof CaseBusyError || (error instanceof AgentOperationError && error.retryable) || ((error instanceof ProviderError || error instanceof RpcProviderError || error instanceof AcquisitionError) && error.retryable) } })}\n`,
+    );
+    process.exitCode = 1;
+  });
+export function deriveQueryFromFlags(
+  flags: Record<string, string>,
+): DeriveQuery {
+  const supportedFlags = new Set([
+    "--kind",
+    "--address",
+    "--subaccount",
+    "--page",
+    "--page-size",
+    "--to-timestamp",
+  ]);
+  if (Object.keys(flags).some((flag) => !supportedFlags.has(flag)))
+    throw new Error(
+      "Derive accepts only --kind, --address, --subaccount, --page, --page-size and --to-timestamp",
+    );
+  const kind = flags["--kind"];
+  const has = (flag: string) => flags[flag] !== undefined;
+  const positive = (flag: string): number => {
+    const value = flags[flag];
+    if (
+      !value ||
+      !/^[0-9]+$/.test(value) ||
+      !Number.isSafeInteger(Number(value)) ||
+      Number(value) < 1
+    )
+      throw new Error(`${flag} must be a positive safe integer`);
+    return Number(value);
+  };
+  const nonnegative = (flag: string): number => {
+    const value = flags[flag];
+    if (
+      !value ||
+      !/^[0-9]+$/.test(value) ||
+      !Number.isSafeInteger(Number(value))
+    )
+      throw new Error(`${flag} must be a nonnegative safe integer`);
+    return Number(value);
+  };
+  if (kind === "account") {
+    if (!has("--address"))
+      throw new Error("Derive account inspection requires --address");
+    if (["--subaccount", "--page", "--page-size", "--to-timestamp"].some(has))
+      throw new Error(
+        "Derive account inspection accepts only --kind account --address",
+      );
+    return parseDeriveQuery({ kind, wallet: flags["--address"] });
+  }
+  if (kind === "margin" || kind === "trades") {
+    if (!has("--subaccount"))
+      throw new Error(`Derive ${kind} inspection requires --subaccount`);
+    if (has("--address"))
+      throw new Error(`Derive ${kind} inspection does not accept --address`);
+    const subaccountId = positive("--subaccount");
+    if (kind === "margin") {
+      if (["--page", "--page-size", "--to-timestamp"].some(has))
+        throw new Error(
+          "Derive margin inspection accepts only --kind margin --subaccount",
+        );
+      return parseDeriveQuery({ kind, subaccountId });
+    }
+    return parseDeriveQuery({
+      kind,
+      subaccountId,
+      ...(has("--page") ? { page: positive("--page") } : {}),
+      ...(has("--page-size") ? { pageSize: positive("--page-size") } : {}),
+      ...(has("--to-timestamp")
+        ? { toTimestamp: nonnegative("--to-timestamp") }
+        : {}),
+    });
+  }
+  throw new Error("--kind must be account, margin or trades");
+}

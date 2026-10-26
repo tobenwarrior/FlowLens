@@ -759,6 +759,117 @@ export const jsonSchema = {
       ["root", "transfers", "edges", "flows", "coverage"],
       "allowed",
     ),
+    DeriveQuery: {
+      type: "object",
+      description:
+        "Strict read-only Derive query. Trades fetch one page per call; reuse the returned coverage.toTimestamp unchanged for every nextPage. An omitted fence is frozen anew for each call.",
+      oneOf: [
+        {
+          type: "object",
+          properties: { kind: { const: "account" }, wallet: ref("Address") },
+          required: ["kind", "wallet"],
+          additionalProperties: false,
+        },
+        {
+          type: "object",
+          properties: { kind: { const: "margin" }, subaccountId: integer(1) },
+          required: ["kind", "subaccountId"],
+          additionalProperties: false,
+        },
+        {
+          type: "object",
+          properties: {
+            kind: { const: "trades" },
+            subaccountId: integer(1),
+            page: integer(1),
+            pageSize: {
+              ...integer(1, 100),
+              description:
+                "FlowLens adapter limit per page; not a documented Derive API maximum.",
+            },
+            toTimestamp: {
+              ...integer(),
+              description:
+                "Optional Unix epoch milliseconds. Reuse the response coverage.toTimestamp exactly on each subsequent page.",
+            },
+          },
+          required: ["kind", "subaccountId"],
+          additionalProperties: false,
+        },
+      ],
+    },
+    DeriveInspectionResult: {
+      type: "object",
+      description:
+        "One read-only Derive provider result. Trades contain only the requested page; only page 1 of 1 is complete history. Other pages remain partial even when terminal.",
+      properties: {
+        version: { const: 1 },
+        source: { const: "Derive public API" },
+        sourceUrl: { type: "string", format: "uri" },
+        retrievedAt: ref("Timestamp"),
+        httpStatus: integer(100, 599),
+        request: {
+          type: "object",
+          properties: {
+            method: { const: "POST" },
+            url: { type: "string", format: "uri" },
+            parameters: {
+              type: "object",
+              additionalProperties: { type: ["string", "number"] },
+            },
+          },
+          required: ["method", "url", "parameters"],
+          additionalProperties: false,
+        },
+        kind: { enum: ["account", "margin", "trades"] },
+        data: { type: "object" },
+        coverage: {
+          type: "object",
+          properties: {
+            status: { enum: ["complete", "partial", "snapshot"] },
+            scope: text(500),
+            page: integer(1),
+            pageSize: integer(1, 100),
+            toTimestamp: integer(),
+            terminalPage: { type: "boolean" },
+            returned: integer(),
+            nextPage: { anyOf: [integer(1), { type: "null" }] },
+            nextQuery: {
+              type: "object",
+              properties: {
+                kind: { const: "trades" },
+                subaccountId: integer(1),
+                page: integer(1),
+                pageSize: integer(1, 100),
+                toTimestamp: integer(),
+              },
+              required: [
+                "kind",
+                "subaccountId",
+                "page",
+                "pageSize",
+                "toTimestamp",
+              ],
+              additionalProperties: false,
+            },
+          },
+          required: ["status", "scope", "returned", "nextPage"],
+          additionalProperties: false,
+        },
+      },
+      required: [
+        "version",
+        "source",
+        "sourceUrl",
+        "retrievedAt",
+        "httpStatus",
+        "request",
+        "kind",
+        "data",
+        "coverage",
+      ],
+      additionalProperties: false,
+    },
     ErrorResponse: {
       type: "object",
       additionalProperties: false,
@@ -794,6 +905,7 @@ export const operationSchema = {
     "import",
     "replay",
     "acquire",
+    "derive",
     "annotate",
     "visibility",
     "wallet",

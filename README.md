@@ -28,7 +28,7 @@ Blockchain data is public. Your investigation should stay under your control.
 - **Local-first.** Run on your computer; keep cases, notes and labels local. No telemetry.
 - **Evidence you can inspect.** Open a connection to see the transfers, exact amounts, source and transaction links behind it.
 - **Coverage you can see.** Missing streams, partial history and provider errors stay visible.
-- **Human and agent workflows.** Use the visual workspace, JSON CLI, local HTTP API or 20-tool MCP server.
+- **Human and agent workflows.** Use the visual workspace, JSON CLI, local HTTP API or stdio MCP server (21 stdio MCP tools).
 - **Free and open source.** AGPL-3.0-only. No wallet connection, signing or custody.
 
 ## Get started
@@ -69,7 +69,7 @@ Ethereum and Derive Chain history need **no API key**. The server listens on you
 
 An Etherscan key also switches Ethereum history to Etherscan, without internal transfers. Derive stays on Blockscout. [Provider coverage and limits](docs/providers.md).
 
-Derive subaccount collateral, positions and trades are not wallet transfers; a wallet trace does not reconstruct those balances or trading activity.
+Derive subaccount collateral, positions and trades are not wallet transfers; a wallet trace does not reconstruct those balances or trading activity. The standalone Derive inspector can read one public account association, margin snapshot or bounded trade page.
 
 > **A trace is evidence of movement, not proof of ownership.** Gross flow is not profit. Loaded history is partial, and labels or shared counterparties do not establish who controls a wallet.
 
@@ -128,7 +128,7 @@ Use `--chain 957` to expand on Derive. `create` will not overwrite a case; resum
 
 ### MCP
 
-Launch `node server/mcp.ts` from your MCP host and start with `flowlens_status`. The [MCP guide](docs/mcp.md) covers setup and all 20 tool contracts.
+Launch `node server/mcp.ts` from your MCP host and start with `flowlens_status`. The [MCP guide](docs/mcp.md) covers setup and all 21 tool contracts.
 
 Cases live in `.local/cases`; labels in `.local/labels.json`. If the host launches outside the repository, set absolute `FLOWLENS_DATA_DIR` and `FLOWLENS_LABEL_FILE` paths.
 
@@ -150,6 +150,7 @@ Start at the [skill index](skills/README.md), or read the [tracing method](skill
 - **Wallet history:** Blockscout on Ethereum and Derive; Etherscan when configured on Ethereum or Arbitrum.
 - **USD prices:** public Ethereum RPC and, for historical prices, Etherscan. Lookups run when you select **Load USD prices**.
 - **Protocol reads:** fixed public RPC and protocol services, only when requested.
+- **Derive inspection:** the public Derive API receives the submitted wallet address or subaccount ID.
 
 Cases and browser storage are **not encrypted**. Exports can contain sensitive research; review them before sharing. Set `FLOWLENS_BLOCKSCOUT=off` to disable both Blockscout history routes; Derive history is then unavailable. See [SECURITY.md](SECURITY.md).
 

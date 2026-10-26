@@ -40,6 +40,7 @@ import {
   AcquisitionError,
 } from "./acquire.ts";
 import type { Acquirer } from "./acquire.ts";
+import { inspectDerive, parseDeriveQuery } from "./derive-provider.ts";
 
 export class AgentOperationError extends Error {
   code: string;
@@ -139,6 +140,7 @@ export interface AgentServiceOptions {
   labelFile?: string;
   providers?: Providers;
   acquirer?: Acquirer;
+  deriveInspector?: typeof inspectDerive;
 }
 /** One service boundary shared by MCP and local replay API; never accepts arbitrary paths or endpoints. */
 export function createAgentService(options: AgentServiceOptions = {}) {
@@ -172,6 +174,10 @@ export function createAgentService(options: AgentServiceOptions = {}) {
       throw new AgentOperationError(
         "INPUT_TOO_LARGE",
         "Tool arguments exceed the 5 MB limit.",
+      );
+    if (operation === "derive")
+      return await (options.deriveInspector ?? inspectDerive)(
+        parseDeriveQuery(input),
       );
     if (operation === "status")
       return {
@@ -212,6 +218,13 @@ export function createAgentService(options: AgentServiceOptions = {}) {
             chains: [1, 8453, 42161],
             protocols: ["CCTP v1", "CCTP v2"],
             scope: "supplied transaction receipts only",
+          },
+          derive: {
+            available: true,
+            credentials: false,
+            scopes: ["account", "margin", "trades"],
+            scope:
+              "explicit public venue reads; access is not guaranteed; no transfer or case mutation",
           },
           arkham: { available: false },
         },

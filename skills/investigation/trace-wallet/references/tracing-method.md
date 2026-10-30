@@ -99,6 +99,16 @@ These techniques generate leads, not an automatic cluster of wallets owned by on
 
 **In FlowLens:** **Protocol evidence** reads a Safe's configuration and recent history (`flowlens_acquire` with `kind: "safe"`, an optional `blockNumber`, `includeHistory` and `verifySignatures`), and a single transaction's call tree (`kind: "internal"`, where the public RPC supports tracing). These observations stay separate from the graph totals.
 
+## Monitoring venue activity without overcalling a sale
+
+- A receipt-confirmed swap must match the exact transfer and a canonical pool/factory; a router, symbol or pool-shaped log alone is insufficient.
+- A direct token transfer to an unrelated contract, without same-receipt swap/fill and consideration or returned asset, does not establish a sale in that transaction.
+- Persist only bounded one-hop recipient leads with transaction/log provenance; a lead is a follow-up observation, not ownership attribution.
+- Never recurse automatically through leads; pooled CEX endpoints remain terminal without an independent account-specific join.
+- Value proceeds using the asset actually returned by the receipt, not the input token's spot quote.
+- A current quote is spot-indicative; call USD realized only with a time-scoped historical quote and a verified recipient join.
+- Keep remaining balances as chain/contract-scoped snapshots; do not derive them from sale proceeds or historical gross flow.
+
 ## Continue by question
 
 - [Names, venue accounts, corporate attribution and reporting](attribution-and-venues.md) continues steps 7–9.

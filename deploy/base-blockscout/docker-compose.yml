@@ -1,0 +1,116 @@
+# API-only Blockscout backend for a separately hosted, archive-capable Base node.
+#
+# All image references are operator inputs. Use immutable digests from the
+# official registries; this file intentionally does not choose a release tag.
+
+services:
+  db-init:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE must be an official pinned digest}
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        chown -R 2000:2000 /var/lib/postgresql/data
+    volumes:
+      - blockscout-db-data:/var/lib/postgresql/data
+
+  db:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE must be an official pinned digest}
+    user: "2000:2000"
+    shm_size: 256m
+    restart: always
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - client_connection_check_interval=60000
+    environment:
+      POSTGRES_DB: blockscout
+      POSTGRES_USER: blockscout
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    volumes:
+      - blockscout-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blockscout -d blockscout"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: ${REDIS_IMAGE:?REDIS_IMAGE must be an official pinned digest}
+    restart: always
+    command: ["redis-server"]
+    volumes:
+      - blockscout-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    image: ${BLOCKSCOUT_OP_IMAGE:?BLOCKSCOUT_OP_IMAGE must be the official pinned Optimism image digest}
+    restart: always
+    stop_grace_period: 5m
+    command:
+      - sh
+      - -c
+      - >-
+        bin/blockscout eval 'Elixir.Explorer.ReleaseTasks.create_and_migrate()'
+        && bin/blockscout start
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4010:4000"
+    environment:
+      PORT: "4000"
+      CHAIN_ID: "8453"
+      CHAIN_TYPE: optimism
+      ETHEREUM_JSONRPC_VARIANT: geth
+      ETHEREUM_JSONRPC_TRANSPORT: http
+      ETHEREUM_JSONRPC_HTTP_URL: ${ETHEREUM_JSONRPC_HTTP_URL:?ETHEREUM_JSONRPC_HTTP_URL must point to an archive-capable Base RPC}
+      ETHEREUM_JSONRPC_TRACE_URL: ${ETHEREUM_JSONRPC_TRACE_URL:?ETHEREUM_JSONRPC_TRACE_URL must support Base transaction traces}
+      ETHEREUM_JSONRPC_WS_URL: ${ETHEREUM_JSONRPC_WS_URL:?ETHEREUM_JSONRPC_WS_URL must point to a Base WebSocket RPC}
+      ETHEREUM_JSONRPC_DISABLE_ARCHIVE_BALANCES: "false"
+      INDEXER_OPTIMISM_L1_RPC: ${INDEXER_OPTIMISM_L1_RPC:?INDEXER_OPTIMISM_L1_RPC must point to an Ethereum L1 RPC}
+      INDEXER_OPTIMISM_L1_SYSTEM_CONFIG_CONTRACT: 0x73a79Fab69143498Ed3712e519A88a918e1f4072
+      INDEXER_OPTIMISM_L2_BATCH_GENESIS_BLOCK_NUMBER: "0"
+      FIRST_BLOCK: "0"
+      TRACE_FIRST_BLOCK: "0"
+      BLOCK_RANGES: ""
+      TRACE_BLOCK_RANGES: ""
+      INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: "false"
+      API_V2_ENABLED: "true"
+      DISABLE_INDEXER: "false"
+      DISABLE_WEBAPP: "true"
+      ADMIN_PANEL_ENABLED: "false"
+      DATABASE_URL: postgresql://blockscout:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/blockscout
+      API_RATE_LIMIT_HAMMER_REDIS_URL: redis://redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE must be set}
+      INDEXER_DISABLE_BEACON_BLOB_FETCHER: ${INDEXER_DISABLE_BEACON_BLOB_FETCHER:-true}
+      INDEXER_OPTIMISM_L1_BATCH_BLOCKSCOUT_BLOBS_API_URL: ${INDEXER_OPTIMISM_L1_BATCH_BLOCKSCOUT_BLOBS_API_URL:-}
+      INDEXER_BEACON_RPC_URL: ${INDEXER_BEACON_RPC_URL:-}
+      INDEXER_BEACON_BLOB_FETCHER_REFERENCE_SLOT: ${INDEXER_BEACON_BLOB_FETCHER_REFERENCE_SLOT:-}
+      INDEXER_BEACON_BLOB_FETCHER_REFERENCE_TIMESTAMP: ${INDEXER_BEACON_BLOB_FETCHER_REFERENCE_TIMESTAMP:-}
+      INDEXER_BEACON_BLOB_FETCHER_SLOT_DURATION: ${INDEXER_BEACON_BLOB_FETCHER_SLOT_DURATION:-}
+    volumes:
+      - blockscout-backend-dets:/app/dets/
+      - blockscout-backend-logs:/app/logs/
+
+volumes:
+  blockscout-db-data:
+  blockscout-redis-data:
+  blockscout-backend-dets:
+  blockscout-backend-logs:

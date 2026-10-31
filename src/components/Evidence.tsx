@@ -381,7 +381,7 @@ export function EvidenceDrawer({
               >
                 {(investigation.mode === "demo"
                   ? [1, 8453]
-                  : [1, 957, 42161]
+                  : [1, 957, 8453, 42161, 999, 4663]
                 ).map((id) => (
                   <option key={id} value={id}>
                     {chainName(id)}

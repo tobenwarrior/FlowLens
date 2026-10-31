@@ -1,4 +1,5 @@
 import { ProtocolEvidenceDialog } from "./components/ProtocolEvidence.tsx";
+import { HypercoreHistory } from "./components/HypercoreHistory.tsx";
 import type { ProtocolEvidenceBundle } from "./domain/protocols.ts";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -34,6 +35,7 @@ import {
   assetKey,
   expandInvestigation,
   filterTransfers,
+  MAX_RETAINED_NODES,
   nodeKey,
   normalizeAddress,
   parseInvestigation,
@@ -551,7 +553,7 @@ export default function App() {
               investigation,
               demoProvider,
               { address: n.address, chainId: n.chainId, pageSize: 8 },
-              { maxPages: 1, maxNodes: 80 },
+              { maxPages: 1, maxNodes: MAX_RETAINED_NODES },
             )
           : await api<Investigation>(
               `/investigations/${investigation.id}/expand`,
@@ -1039,6 +1041,17 @@ export default function App() {
                       {short(investigation.root)} <span>·</span>{" "}
                       {networks.length} networks <span>·</span>{" "}
                       {investigation.transfers.length} evidence records
+                      {investigation.protocolEvidence?.hypercore && (
+                        <>
+                          {" "}
+                          <span>·</span>{" "}
+                          {
+                            investigation.protocolEvidence.hypercore.entries
+                              .length
+                          }{" "}
+                          HyperCore ledger entries
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -1352,6 +1365,52 @@ export default function App() {
                         }
                         pricing={pricing}
                       />
+                      {(!selectedNode ||
+                        selectedNode.address === investigation.root) && (
+                        <HypercoreHistory
+                          bundle={investigation.protocolEvidence?.hypercore}
+                          transfers={investigation.transfers}
+                          busy={busy}
+                          onLoad={
+                            investigation.mode !== "live"
+                              ? undefined
+                              : async () => {
+                                  setBusy(true);
+                                  setError("");
+                                  try {
+                                    const result = await api<{
+                                      errors: { message: string }[];
+                                    }>("/hypercore", {
+                                      caseId: investigation.id,
+                                      account: investigation.root,
+                                    });
+                                    const latest = await api<Investigation>(
+                                      `/investigations/${investigation.id}`,
+                                    );
+                                    setInvestigation((current) =>
+                                      current?.id === latest.id
+                                        ? refreshWorkspace(current, latest)
+                                        : current,
+                                    );
+                                    if (result.errors.length)
+                                      setError(result.errors[0].message);
+                                    else
+                                      setToast(
+                                        "HyperCore ledger saved separately from blockchain transfer totals.",
+                                      );
+                                  } catch (error) {
+                                    setError(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "HyperCore history could not be loaded",
+                                    );
+                                  } finally {
+                                    setBusy(false);
+                                  }
+                                }
+                          }
+                        />
+                      )}
                     </div>
                   )}
                 </div>

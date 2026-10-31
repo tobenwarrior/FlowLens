@@ -167,14 +167,21 @@ export class LabelStore {
   async resolve(
     nodes: WalletNode[],
     accept: (label: Label) => boolean = () => true,
+    fallback?: ReadonlyMap<string, { label: Label }>,
   ): Promise<WalletNode[]> {
     const entries = await this.read();
-    if (!entries.size) return nodes;
     return nodes.map((node) => {
       if (node.label) return node;
-      const entry = entries.get(entryKey(node.chainId, node.address));
-      return entry && accept(entry.label)
-        ? { ...node, label: entry.label }
+      const key = entryKey(node.chainId, node.address);
+      // Private/case labels outrank the tracked catalogue. If a private entry is
+      // not admissible for this case (for example a demo label in live mode), the
+      // shared fallback may still provide a valid label.
+      const privateEntry = entries.get(key);
+      if (privateEntry && accept(privateEntry.label))
+        return { ...node, label: privateEntry.label };
+      const sharedEntry = fallback?.get(key);
+      return sharedEntry && accept(sharedEntry.label)
+        ? { ...node, label: sharedEntry.label }
         : node;
     });
   }

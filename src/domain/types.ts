@@ -115,5 +115,6 @@ export interface AssetFlow {
 }
 export interface ExpansionBudget {
   maxPages: number;
+  /** Retention bound for acquired nodes; human graph projection has its own display cap. */
   maxNodes: number;
 }

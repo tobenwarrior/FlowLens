@@ -20,6 +20,8 @@ import { isCredentialParameterName } from "./source-url.ts";
 const MAX_SNAPSHOT_BYTES = 5_000_000;
 const KINDS: TransferKind[] = ["native", "erc20", "internal"];
 const MAX_TRANSFERS = 20_000;
+/** Maximum number of retained nodes in one investigation snapshot. */
+export const MAX_RETAINED_NODES = 2_000;
 const ERROR_CODE = /^[A-Z0-9_]{1,64}$/;
 
 function object(value: unknown, name: string): Record<string, unknown> {
@@ -315,7 +317,7 @@ export function parseInvestigation(input: unknown): Investigation {
     createdAt: timestamp(c.createdAt, "creation date"),
     updatedAt: timestamp(c.updatedAt, "update date"),
     transfers: list(c.transfers, "transfers", MAX_TRANSFERS).map(parseTransfer),
-    nodes: list(c.nodes, "nodes", 2000).map(parseNode),
+    nodes: list(c.nodes, "nodes", MAX_RETAINED_NODES).map(parseNode),
     coverage: list(c.coverage, "coverage", 2000).map(parseCoverage),
     expanded: strings(c.expanded, "expanded nodes"),
     pinned: strings(c.pinned, "pinned nodes"),
@@ -553,10 +555,10 @@ export async function expandInvestigation(
   investigation: Investigation,
   provider: TraceProvider,
   query: TraceQuery,
-  budget: ExpansionBudget = { maxPages: 1, maxNodes: 80 },
+  budget: ExpansionBudget = { maxPages: 1, maxNodes: MAX_RETAINED_NODES },
 ): Promise<Investigation> {
   const maxPages = integer(budget.maxPages, "page budget", 1, 10),
-    maxNodes = integer(budget.maxNodes, "node budget", 1, 200);
+    maxNodes = integer(budget.maxNodes, "node budget", 1, MAX_RETAINED_NODES);
   if (investigation.mode !== provider.mode)
     throw new Error("Provider mode must match investigation mode");
   const address = normalizeAddress(query.address),
@@ -625,9 +627,11 @@ export async function expandInvestigation(
         throw new Error("Provider returned unrelated transfer evidence");
       if (result.mode === "live" && incoming.some((t) => t.synthetic))
         throw new Error("Synthetic evidence cannot enter a live investigation");
-      const incomingNodes = list(response.nodes, "provider nodes", 2000).map(
-        parseNode,
-      );
+      const incomingNodes = list(
+        response.nodes,
+        "provider nodes",
+        MAX_RETAINED_NODES,
+      ).map(parseNode);
       if (incomingNodes.some((n) => n.chainId !== chainId))
         throw new Error("Provider returned nodes on the wrong chain");
       const nodes = new Map(

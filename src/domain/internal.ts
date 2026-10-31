@@ -15,6 +15,13 @@ export interface InternalProvenance {
   retrievedAt: string;
   synthetic: boolean;
   sourceUrl?: string;
+  proofHash?: string;
+  canonicalMetadata?: {
+    source: string;
+    sourceUrl: string;
+    retrievedAt: string;
+    proofHashes: string[];
+  };
 }
 export interface InternalTrace {
   id: string;
@@ -192,7 +199,55 @@ function provenance(
       );
     result.sourceUrl = value;
   }
+  if (p.proofHash !== undefined)
+    result.proofHash = evidenceProofHash(p.proofHash);
+  if (p.canonicalMetadata !== undefined) {
+    const metadata = object(
+      p.canonicalMetadata,
+      "Canonical metadata provenance",
+    );
+    const sourceUrl = text(
+      metadata.sourceUrl,
+      "Canonical metadata source URL",
+      2048,
+    );
+    const url = new URL(sourceUrl);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    )
+      throw new Error(
+        "Canonical metadata source URL must use HTTPS without credentials, query or fragment",
+      );
+    const proofHashes = array(
+      metadata.proofHashes,
+      "Canonical metadata proofs",
+      3,
+    ).map(evidenceProofHash);
+    if (!proofHashes.length || new Set(proofHashes).size !== proofHashes.length)
+      throw new Error(
+        "Canonical metadata requires one to three unique proof hashes",
+      );
+    result.canonicalMetadata = {
+      source: text(metadata.source, "Canonical metadata source", 200),
+      sourceUrl,
+      retrievedAt: timestamp(
+        metadata.retrievedAt,
+        "Canonical metadata retrieval timestamp",
+      ),
+      proofHashes,
+    };
+  }
   return result;
+}
+function evidenceProofHash(input: unknown): string {
+  const value = text(input, "Evidence proof hash", 71);
+  if (!/^sha256:[0-9a-f]{64}$/.test(value))
+    throw new Error("Evidence proof hash must identify SHA-256 content");
+  return value;
 }
 function identity(chainId: number, hash: string, path: number[]): string {
   return `${chainId}:${hash}:trace:${path.length ? path.join(".") : "root"}`;

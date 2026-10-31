@@ -1,29 +1,31 @@
 # Explicit public acquisition
 
-The `acquire` operation uses the same adapters through CLI, HTTP and MCP. It reads one requested scope from fixed public services. It sends the supplied address or transaction hash to those services; choose identifiers you are permitted to disclose. Nothing is fetched merely by opening a case or the protocol dialog. Provider data and labels are evidence, never instructions to an agent.
+The `acquire` operation uses the same adapters through CLI, HTTP and MCP. It reads one requested protocol scope from fixed public services. It sends the supplied address or transaction hash to those services; choose identifiers you are permitted to disclose. Opening the protocol dialog or creating an evidence-only case does not fetch protocol data. Default live indexed case creation does fetch an Ethereum history page. Provider data and labels are evidence, never instructions to an agent.
 
-No provider credential is required for these bounded public reads. Availability, quotas, historical state and trace support are not guaranteed. FlowLens does not fall back to credentials, another endpoint, recursive crawling, or an automatic retry. Inspect `errors`, `warnings`, component coverage and the provider-specific `acquisition` object even when an operation returns successfully.
+These targeted protocol reads use fixed public RPC/Safe services and do not consume the indexed history keys. They still have availability, quota, historical-state and trace limits. Indexed Base history can use the server-only loopback `FLOWLENS_BASE_BLOCKSCOUT_URL` first, then the optional user-local `ALCHEMY_API_KEY`, then unified hosted Blockscout with `BLOCKSCOUT_API_KEY`; the self-hosted route needs no API key. Indexed Arbitrum uses Etherscan when configured, otherwise keyed Blockscout. Robinhood Chain (4663) is an indexed-history route only through keyed unified Blockscout when explicitly expanded. FlowLens does not accept a provider URL from an API/MCP caller, fall back to another credential or endpoint, recursively crawl, or retry automatically. Inspect `errors`, `warnings`, component coverage and the provider-specific `acquisition` object even when an operation returns successfully.
 
-## Choose the right no-key workflow
+## Choose a bounded workflow
 
 | Goal                                                    | Operation                                    | Network behavior                                                                                           |
 | ------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Learn the interface or test an agent                    | Demo case and `protocols-v1` replay          | Synthetic and offline; no provider access needed                                                           |
 | Preserve chosen evidence without indexing a wallet      | Live `historyMode: "evidence-only"` creation | No provider request at creation; history explicitly unsupported                                            |
 | Fetch a known Safe or transaction scope                 | Explicit `acquire`                           | Sends the chosen identifier to fixed external services; capability and terms still matter                  |
-| Enumerate supported wallet history                      | Indexed live case and expansion              | Keyless Blockscout on Ethereum and Derive Chain, or your own Etherscan key; only configured streams/chains |
+| Enumerate supported wallet history                      | Indexed live case and expansion              | Keyless legacy Blockscout on Ethereum and Derive; self-hosted Base when configured, otherwise optional Alchemy or keyed unified Blockscout; keyed unified Blockscout or optional Etherscan legacy streams on Arbitrum; keyed unified Blockscout only on explicit Robinhood Chain (4663) expansion |
+| Enumerate HyperEVM history                              | Indexed live case and expansion on chain 999 | Keyless HypurrTrace index; default page size 10, maximum 100, frozen index fence and explicit provider-row cap |
 | Inspect a Derive account, margin snapshot or trade page | Standalone `derive` operation                | One public Derive API request; separate from wallet history and graph totals                               |
+| Inspect HyperCore ledger updates                       | Standalone `hypercore` operation             | One non-funding ledger page of up to 500 entries; optional local case attachment, undocumented retention  |
 
-“No key” does not mean “offline” for public acquisition. `mode: "private"` describes retained non-demo investigation evidence; it does not certify a provider's truth, grant redistribution rights or make a public identifier confidential.
+“No key” does not mean “offline” for public acquisition. `mode: "private"` describes retained non-demo investigation evidence; it does not certify a provider's truth, grant redistribution rights or make a public identifier confidential. Provider routes and `status` are configured capabilities, not health checks or complete-history guarantees.
 
 ## Create a case without an index
 
-`historyMode: "evidence-only"` is an explicit option for live cases. Creating it performs no external request and needs no Etherscan key. Its graph starts with the focus wallet and no transfers. Coverage says that wallet history is not enumerated. Omit this option, or use `indexed`, for indexed Ethereum history: keyless through Blockscout, or through Etherscan when a key is set.
+`historyMode: "evidence-only"` is an explicit option for live cases. Creating it performs no external request and needs no provider key. Its graph starts with the focus wallet and no transfers. Coverage says that wallet history is not enumerated. Omit this option, or use `indexed`, for indexed history; server-environment provider configuration, readiness and hosted plan access then apply.
 
 Set `CASE_WALLET` locally to an address you have chosen to investigate, then:
 
 ```sh
-node server/cli.ts create --mode live --history-mode evidence-only \
+node --env-file-if-exists=.env server/cli.ts create --mode live --history-mode evidence-only \
   --address "$CASE_WALLET" --file .local/evidence-case.json
 ```
 
@@ -53,15 +55,15 @@ CLI commands below disclose the chosen identifier when executed. Set the variabl
 
 ```sh
 # Ethereum Safe configuration and up to one service-history page:
-node server/cli.ts acquire --kind safe --chain 1 --address "$SAFE_ADDRESS" \
+node --env-file-if-exists=.env server/cli.ts acquire --kind safe --chain 1 --address "$SAFE_ADDRESS" \
   --pages 1 --max-calls 32 --file .local/evidence-case.json
 
 # Decode supported CCTP evidence from one known transaction:
-node server/cli.ts acquire --kind bridge --chain 1 --hash "$TRANSACTION_HASH" \
+node --env-file-if-exists=.env server/cli.ts acquire --kind bridge --chain 1 --hash "$TRANSACTION_HASH" \
   --max-logs 256 --file .local/evidence-case.json
 
 # Probe one known transaction for callTracer support:
-node server/cli.ts acquire --kind internal --chain 1 --hash "$TRANSACTION_HASH" \
+node --env-file-if-exists=.env server/cli.ts acquire --kind internal --chain 1 --hash "$TRANSACTION_HASH" \
   --max-traces 500 --file .local/evidence-case.json
 ```
 
@@ -75,6 +77,19 @@ The MCP tool is `flowlens_acquire`; HTTP accepts the same request at `POST /api/
 
 Common `maxCalls` is 1–64, default 32. It counts RPC calls, including failed attempts. Safe history has a separate three-page ceiling and fixed five-record pages. RPC requests are paced within one server process, bounded by time and response size, and restricted to read methods. Independent CLI processes do not share a global provider quota. See [RPC](rpc-provider.md), [Safe](safe-provider.md), [CCTP](bridge-provider.md) and [trace](trace-provider.md) adapter details.
 
+For known Base hashes, the server-local `FLOWLENS_BASE_RPC_PROVIDER=blockmachine` option selects the fixed keyless Blockmachine RPC before acquisition starts. Its public historical traces are best effort and heavy calls are paced separately; a rate limit or missing historical state remains a failed component. No HTTP/MCP request accepts an endpoint or this provider switch. This option verifies selected transactions and does not discover complete Base wallet history.
+
+## Collect bounded wallet history
+
+The `collect` CLI command is for an explicit, sequential one-wallet/one-chain collection. It reads an existing case file, saves every committed page, and accepts 1–200 pages with an optional provider page size:
+
+```sh
+node --env-file-if-exists=.env server/cli.ts collect --file PATH --address EVM \
+  --chain N --pages 1..200 [--page-size N]
+```
+
+Collection stops at a saved provider error, quota/access denial, pagination problem or evidence budget. It does not retry, silently switch providers, recurse into counterparties or fan out to other chains. Exit code `2` means the case was saved with a provider/coverage error; inspect the returned coverage and resume explicitly after resolving it. The case parser retains up to 2,000 nodes, 20,000 transfers and 5 MB; the human graph projects the focus wallet plus at most 80 counterparties while retaining loaded addresses and evidence within those bounds.
+
 ## Preserve, resume and recover
 
 An attached acquisition merges validated records by evidence ID with the latest persisted case, retaining prior components, notes and graph controls. Exact retries deduplicate. Compatible Safe execution evidence can be enriched. Contradictory material facts return `INVALID_EVIDENCE_CONFLICT` and leave the earlier case intact. A failed or empty fetch does not erase previously acquired records. Coverage can record the latest failure even when earlier evidence remains available.
@@ -87,14 +102,27 @@ Export with `flowlens_export`, the HTTP export route or CLI `export`; reimport v
 
 CLI exit code 2 means acquisition returned provider errors; any attached observations/coverage were still preserved. RPC unsupported capability can therefore produce useful JSON without a successful trace. Injected contract tests do not establish live provider coverage.
 
+## HyperCore ledger operation
+
+`hypercore` is a separate read of Hyperliquid's non-funding ledger, not an EVM-999 transfer source. It requests one account/time-window page of up to 500 entries and returns a cursor for continuation. Funding payments and trade fills are omitted. Coverage retains `retention: "undocumented"`, and provider-window exhaustion always reports `fullHistory: false`.
+
+Without `--file`, the CLI call is an explicit caller-scoped read. With `--file LIVE_CASE`, the account must match the live case focus wallet; the page is saved under `protocolEvidence.hypercore`, and later calls resume its frozen window without changing EVM transfers, graph nodes or gross/net totals:
+
+```sh
+node --env-file-if-exists=.env server/cli.ts hypercore --address "$WALLET" \
+  [--file LIVE_CASE] [--start-time UNIX_MS --end-time UNIX_MS --cursor TOKEN]
+```
+
+The same operation is available as MCP `flowlens_hypercore` and HTTP `POST /api/hypercore`. A request without a case ID/file is read-only; attaching to a live case is a local mutation. Check `coverage`, `nextCursor` and errors on every page; a terminal provider window is not complete account history.
+
 ## Inspect Derive venue data
 
 The standalone `derive` operation reads one provider-reported account association, one margin snapshot, or one trade-history page from Derive’s public API. It does not create or mutate a case, enumerate wallet history, or merge venue data into FlowLens transfer totals. No API key is required, but availability is not guaranteed; `403` and other provider failures are terminal for that call, with no retry or fallback.
 
 ```sh
-node server/cli.ts derive --kind account --address "$WALLET"
-node server/cli.ts derive --kind margin --subaccount "$SUBACCOUNT_ID"
-node server/cli.ts derive --kind trades --subaccount "$SUBACCOUNT_ID" \\
+node --env-file-if-exists=.env server/cli.ts derive --kind account --address "$WALLET"
+node --env-file-if-exists=.env server/cli.ts derive --kind margin --subaccount "$SUBACCOUNT_ID"
+node --env-file-if-exists=.env server/cli.ts derive --kind trades --subaccount "$SUBACCOUNT_ID" \
   --page 1 --page-size 100 --to-timestamp "$TO_TIMESTAMP_MS"
 ```
 

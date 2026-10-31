@@ -1,6 +1,6 @@
 # Image provenance and rights notes
 
-This index covers the tracked assets under `docs/images/`. It documents sources stated in this repository and visible in the screenshots; it is not independent source authentication, a rights grant, or legal certification. Public blockchain data and permission to redistribute provider responses are separate questions. Owner approval for original assets and provider-data use remains pending in `docs/release-checklist.md`.
+This index covers the tracked assets under `docs/images/`. It documents sources stated in this repository and visible in the screenshots; it is not independent source authentication, a rights grant, or legal certification. Public blockchain data and permission to redistribute provider responses are separate questions. This index does not record approval of image or provider-data redistribution rights; the remaining review below applies before reusing these existing public assets.
 
 ## Wallet examples and scope
 
@@ -23,4 +23,4 @@ The 0.1.0 section in `CHANGELOG.md` describes the 21 Oct 2026 release-candidate 
 
 ## Packaging
 
-`scripts/release.mjs` explicitly allowlists seven screenshots and two logo PNGs in this directory, plus app icons. The source archive's exact-byte checksums establish archive integrity, not provenance, ownership, provider-data rights, or permission to publish. Add this index to the reviewed source allowlist before producing a source archive that links to it.
+`scripts/release.mjs` explicitly allowlists this index, seven screenshots and two logo PNGs in this directory, plus app icons. The source archive's exact-byte checksums establish archive integrity, not provenance, ownership, provider-data rights, or permission to publish.

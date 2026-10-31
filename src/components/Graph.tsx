@@ -17,11 +17,18 @@ import {
   nodeKey,
   assetKey,
 } from "../domain/engine.ts";
+import { projectGraph } from "../domain/graph-projection.ts";
 
 export const short = (s: string) => `${s.slice(0, 6)}…${s.slice(-4)}`;
 export const chainName = (id: number) =>
-  ({ 1: "Ethereum", 957: "Derive", 8453: "Base", 42161: "Arbitrum" })[id] ||
-  `Chain ${id}`;
+  ({
+    1: "Ethereum",
+    957: "Derive",
+    8453: "Base",
+    42161: "Arbitrum",
+    999: "HyperEVM",
+    4663: "Robinhood",
+  })[id] || `Chain ${id}`;
 export const displayUnits = (
   raw: string,
   decimals: number,
@@ -40,6 +47,8 @@ export const explorer = (id: number, type: "tx" | "address", value: string) => {
       957: "https://explorer.derive.xyz",
       8453: "https://basescan.org",
       42161: "https://arbiscan.io",
+      999: "https://hyperevmscan.io",
+      4663: "https://robinhoodchain.blockscout.com",
     } as Record<number, string>
   )[id];
   return origin ? `${origin}/${type}/${value}` : undefined;
@@ -92,29 +101,21 @@ export function Graph({
     py: number;
   } | null>(null);
   const root = investigation.root.toLowerCase();
-  const edges = useMemo(() => buildEdges(transfers), [transfers]);
-  const visible = investigation.nodes.filter(
-    (n) =>
-      n.address.toLowerCase() !== root &&
-      !investigation.hidden.includes(nodeKey(n.chainId, n.address)) &&
-      transfers.some(
-        (t) =>
-          t.chainId === n.chainId &&
-          (t.from === n.address || t.to === n.address),
-      ),
+  const projection = useMemo(
+    () =>
+      projectGraph(investigation, transfers, {
+        selected,
+        grouped,
+      }),
+    [investigation, transfers, selected, grouped],
   );
-  const nodes = visible
-    .slice()
-    .sort(
-      (a, b) =>
-        Number(investigation.pinned.includes(nodeKey(b.chainId, b.address))) -
-          Number(
-            investigation.pinned.includes(nodeKey(a.chainId, a.address)),
-          ) ||
-        (grouped ? (a.category || "").localeCompare(b.category || "") : 0),
-    );
+  const edges = useMemo(
+    () => buildEdges(projection.transfers),
+    [projection.transfers],
+  );
+  const nodes = projection.nodes;
   const incoming = nodes.filter((n) =>
-    transfers.some(
+    projection.transfers.some(
       (t) => t.chainId === n.chainId && t.from === n.address && t.to === root,
     ),
   );
@@ -138,7 +139,7 @@ export function Graph({
       ? { x: 550, y: height / 2 }
       : positions.get(nodeKey(chainId, address as `0x${string}`));
   const nodeTransfers = (n: WalletNode) =>
-    transfers.filter(
+    projection.transfers.filter(
       (t) =>
         t.chainId === n.chainId && (t.from === n.address || t.to === n.address),
     );
@@ -363,6 +364,13 @@ export function Graph({
           })}
         </g>
       </svg>
+      {projection.omittedCounterparties > 0 && (
+        <div className="graph-omission" role="status">
+          Showing {nodes.length} of {projection.totalCounterparties}{" "}
+          counterparties; {projection.omittedCounterparties} omitted from the
+          graph. Retained evidence and totals are unchanged.
+        </div>
+      )}
       {nodes.length === 0 && (
         <div className="graph-empty">
           <Wallet size={28} />

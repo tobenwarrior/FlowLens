@@ -267,7 +267,7 @@ export function WorkspaceDialogs({
                       ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
                       : evidenceOnly
                         ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
-                        : "Loaded indexed transfers; each coverage row below names its provider and page state. Blockscout serves Ethereum and Derive Chain without a key. Etherscan history uses your permitted server-side key, and chain access depends on your provider plan."}
+                        : "Each row names its provider, loaded streams and page state. Ethereum and Derive can use keyless Blockscout; Base and Arbitrum need configured history access. HyperEVM uses keyless HypurrTrace. HyperCore ledger entries appear separately in Evidence view."}
                   </p>
                 </div>
                 <div className="coverage-list">
@@ -318,7 +318,7 @@ export function WorkspaceDialogs({
               <p>
                 {investigation?.mode === "demo"
                   ? "Protocol evidence offers a clearly marked synthetic replay of Safe, bridge and internal-trace observations. No public provider is queried."
-                  : "Protocol evidence can explicitly query Safe configuration/history or a known CCTP transaction and call trace. Public endpoint support and coverage are checked per request. No wallet-history discovery is implied."}
+                  : "Safe, bridge and call-trace evidence is requested for a known target. HyperCore shows non-funding ledger updates in its own panel. These observations do not change graph totals or establish complete wallet history."}
               </p>
             </div>
             <div className="coverage-source">

@@ -8,6 +8,7 @@ Agent procedures live here; architecture, provider specifications and API/data c
 | Gather transfers, funding and attribution evidence | [Trace a wallet](investigation/trace-wallet/SKILL.md) |
 | Follow a CEX deposit-address or shared-control lead | [Cluster wallet evidence](investigation/cluster-wallets/SKILL.md) |
 | Challenge completeness, claims and false joins | [Audit trace evidence](investigation/audit-trace-evidence/SKILL.md) |
+| Make a report clear, concise and evidence-led | [Edit an evidence report](reporting/edit-evidence-report/SKILL.md) |
 | Prepare a cited PDF, Word, HTML or Markdown report | [Report an investigation](reporting/report-investigation/SKILL.md) |
 
 ## Structure and maintenance

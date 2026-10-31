@@ -1,0 +1,241 @@
+/* HyperCore ledger: deliberately scoped to the small, evidence-only history panel. */
+.hypercore-panel {
+  min-width: 0;
+}
+.hypercore-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px var(--gutter);
+  border-bottom: 1px solid var(--border);
+}
+.hypercore-header h2 {
+  margin-top: 3px;
+  color: var(--text-bright);
+  font-size: 14px;
+  font-weight: 500;
+}
+.hypercore-header .button {
+  flex: none;
+}
+.hypercore-spinner {
+  width: 13px;
+  height: 13px;
+  animation: hypercore-spin 0.9s linear infinite;
+}
+@keyframes hypercore-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.hypercore-meta {
+  display: grid;
+  gap: 7px;
+  padding: 10px var(--gutter);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.hypercore-count {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.hypercore-count strong {
+  color: var(--text-bright);
+  font-size: 12px;
+  font-weight: 500;
+}
+.hypercore-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+.hypercore-coverage-note {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.hypercore-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--blue-light) 45%, var(--border));
+  border-radius: var(--radius);
+  color: var(--blue-light);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hypercore-badge-muted {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+.hypercore-notices {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.hypercore-notices > summary {
+  padding: 7px var(--gutter);
+  color: var(--blue-light);
+  cursor: pointer;
+}
+.hypercore-notices > summary:hover {
+  background: var(--selected);
+}
+.hypercore-notices > ul {
+  margin: 0;
+  padding: 0 var(--gutter) 8px 28px;
+  line-height: 1.6;
+}
+.hypercore-notices li {
+  overflow-wrap: anywhere;
+}
+.hypercore-table {
+  min-width: 960px;
+}
+.hypercore-table tbody td {
+  height: auto;
+  min-height: var(--row);
+  padding-top: 8px;
+  padding-bottom: 8px;
+  vertical-align: top;
+  white-space: normal;
+}
+.hypercore-table .txtime {
+  white-space: nowrap;
+}
+.hypercore-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 130px;
+  color: var(--text);
+}
+.hypercore-address {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  max-width: 230px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.hypercore-address:hover {
+  color: var(--text-bright);
+}
+.hypercore-address code {
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.hypercore-copied {
+  flex: none;
+  color: var(--green);
+  font-size: 9px;
+  white-space: nowrap;
+}
+.hypercore-not-returned {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.hypercore-raw {
+  margin-top: 6px;
+  min-width: 160px;
+  max-width: 420px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.hypercore-bridge-relation {
+  display: grid;
+  gap: 7px;
+  width: 380px;
+  max-width: 100%;
+  margin-top: 7px;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.hypercore-bridge-relation strong {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.hypercore-bridge-relation code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.hypercore-raw > summary {
+  width: fit-content;
+  color: var(--blue-light);
+  cursor: pointer;
+}
+.hypercore-raw > summary:hover {
+  color: var(--text-bright);
+}
+.hypercore-raw pre {
+  max-height: 240px;
+  margin: 7px 0 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--light-navy);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.hypercore-footer {
+  min-height: 42px;
+}
+.hypercore-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.hypercore-pager .icon-button {
+  width: 24px;
+  height: 24px;
+}
+.hypercore-empty {
+  min-height: 150px;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  line-height: 1.7;
+}
+@media (max-width: 700px) {
+  .hypercore-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .hypercore-header .button {
+    width: 100%;
+  }
+  .hypercore-table {
+    min-width: 820px;
+  }
+  .hypercore-address {
+    max-width: 180px;
+  }
+}

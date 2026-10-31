@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { lstatSync, realpathSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { annotateWallet, setVisibility } from "../src/domain/workspace.ts";
 import { walletFlows, visibleTransfers } from "../src/domain/wallet-flows.ts";
 import { createHash } from "node:crypto";
@@ -6,6 +7,7 @@ import {
   aggregateFlows,
   buildEdges,
   filterTransfers,
+  normalizeAddress,
   parseInvestigation,
 } from "../src/domain/engine.ts";
 import {
@@ -14,7 +16,7 @@ import {
   parseProtocolEvidence,
   mergeProtocolEvidence,
 } from "../src/domain/protocols.ts";
-import type { Investigation, TraceFilter } from "../src/domain/types.ts";
+import type { Investigation, Label, TraceFilter } from "../src/domain/types.ts";
 import {
   expandCase,
   operationSchema,
@@ -30,6 +32,15 @@ import {
   withFileLock,
 } from "./store.ts";
 import { LabelStore } from "./label-store.ts";
+import type { StoredLabel } from "./label-store.ts";
+import {
+  DEFAULT_PUBLIC_LABEL_FILE,
+  applyPublicLabels,
+  loadPublicLabels,
+  publicLabelEntries,
+  publicLabelKey,
+} from "./public-labels.ts";
+import type { PublicLabelEntry } from "./public-labels.ts";
 import { fetchOnChainPrices } from "./price-provider.ts";
 import { distinctLookups, fetchHistoricalPrices } from "./historical-price.ts";
 import { ProviderError } from "./etherscan.ts";
@@ -41,6 +52,9 @@ import {
 } from "./acquire.ts";
 import type { Acquirer } from "./acquire.ts";
 import { inspectDerive, parseDeriveQuery } from "./derive-provider.ts";
+import { createHypercoreProvider } from "./hypercore-provider.ts";
+import type { HypercoreProvider } from "./hypercore-provider.ts";
+import { acquireHypercoreHistory } from "./hypercore-acquisition.ts";
 
 export class AgentOperationError extends Error {
   code: string;
@@ -138,36 +152,138 @@ function errorFor(error: unknown): AgentOperationError {
 export interface AgentServiceOptions {
   dataDir?: string;
   labelFile?: string;
+  /** Tracked shared catalogue; injectable for isolated tests/review tooling. */
+  publicLabelFile?: string;
   providers?: Providers;
   acquirer?: Acquirer;
   deriveInspector?: typeof inspectDerive;
+  hypercoreProvider?: HypercoreProvider;
 }
+
+function canonicalPath(path: string): string {
+  const unresolved: string[] = [];
+  let current = resolve(path);
+  while (true) {
+    try {
+      return resolve(realpathSync(current), ...unresolved);
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return resolve(current, ...unresolved);
+      unresolved.unshift(basename(current));
+      current = parent;
+    }
+  }
+}
+
 /** One service boundary shared by MCP and local replay API; never accepts arbitrary paths or endpoints. */
 export function createAgentService(options: AgentServiceOptions = {}) {
+  const privateLabelFile = resolve(
+    options.labelFile ??
+      process.env.FLOWLENS_LABEL_FILE ??
+      ".local/labels.json",
+  );
+  const publicLabelFile = resolve(
+    options.publicLabelFile ?? DEFAULT_PUBLIC_LABEL_FILE,
+  );
+  let publicFileIsSymlink = false;
+  try {
+    publicFileIsSymlink = lstatSync(publicLabelFile).isSymbolicLink();
+  } catch {
+    // A missing catalogue is allowed; validation reports it explicitly.
+  }
+  if (publicFileIsSymlink)
+    throw new Error(
+      "Tracked public wallet-label catalogue path must not be a symbolic link",
+    );
+  if (canonicalPath(privateLabelFile) === canonicalPath(publicLabelFile))
+    throw new Error(
+      "Private label storage must not use the tracked public wallet-label catalogue path",
+    );
   const store = new CaseStore(
     options.dataDir ?? resolve(process.env.FLOWLENS_DATA_DIR ?? ".local/cases"),
   );
   // Attribution outlives any one case, so it lives beside them rather than inside them.
-  const labels = new LabelStore(
-    options.labelFile ??
-      resolve(process.env.FLOWLENS_LABEL_FILE ?? ".local/labels.json"),
-  );
+  const labels = new LabelStore(privateLabelFile);
   // Wallets named in an earlier investigation arrive already labelled, which is the point
   // of remembering them. A label the case already holds always wins, a live case never
   // takes a synthetic or demo one, and a store that cannot be read changes nothing.
-  const remembered = (value: Investigation) =>
-    labels
-      .resolve(
-        value.nodes,
-        value.mode === "live"
-          ? (label) => label.confidence !== "synthetic" && label.kind !== "demo"
-          : undefined,
-      )
-      .catch(() => value.nodes);
+  const remembered = async (value: Investigation) => {
+    const accept =
+      value.mode === "live"
+        ? (label: NonNullable<Investigation["nodes"][number]["label"]>) =>
+            label.confidence !== "synthetic" && label.kind !== "demo"
+        : () => true;
+    // The shared file is independent of private case storage. A malformed or
+    // unavailable catalogue must not make a private trace fail, and a private
+    // read failure must not hide a valid shared label.
+    let shared = new Map<string, PublicLabelEntry>();
+    try {
+      shared = await loadPublicLabels(publicLabelFile);
+    } catch {
+      /* Keep the empty map; private labels remain independently usable. */
+    }
+    try {
+      return await labels.resolve(value.nodes, accept, shared);
+    } catch {
+      return applyPublicLabels(value.nodes, shared, accept);
+    }
+  };
   const providers = options.providers ?? providersFromEnvironment();
   const acquirer = options.acquirer ?? acquireProtocolEvidence;
+  const hypercoreProvider =
+    options.hypercoreProvider ?? createHypercoreProvider();
   const mutate = async <T>(id: string, run: () => Promise<T>) =>
     withFileLock(store.path(id), run);
+  const searchLabels = async (query: {
+    query?: string;
+    chainId?: number;
+    address?: string;
+    kind?: Label["kind"];
+    limit?: number;
+  }) => {
+    const address = query.address ? normalizeAddress(query.address) : undefined;
+    let privateAll: StoredLabel[] = [];
+    let privateLabels: StoredLabel[] = [];
+    try {
+      privateAll = [...(await labels.read()).values()];
+      const text = query.query?.trim().toLowerCase();
+      privateLabels = privateAll
+        .filter(
+          (entry) =>
+            (query.chainId === undefined || entry.chainId === query.chainId) &&
+            (!address || entry.address === address) &&
+            (!query.kind || entry.label.kind === query.kind) &&
+            (!text || entry.label.text.toLowerCase().includes(text)),
+        )
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    } catch {
+      // The shared catalogue remains searchable when private storage is
+      // unavailable or corrupt.
+    }
+    let shared = new Map<string, PublicLabelEntry>();
+    try {
+      shared = await loadPublicLabels(publicLabelFile);
+    } catch {
+      // Private label search remains useful when the independent shared file is
+      // unavailable or fails validation.
+    }
+    const text = query.query?.trim().toLowerCase();
+    const privateKeys = new Set(
+      privateAll.map((entry) => publicLabelKey(entry.chainId, entry.address)),
+    );
+    const sharedLabels = publicLabelEntries(shared).filter((entry) => {
+      if (privateKeys.has(publicLabelKey(entry.chainId, entry.address)))
+        return false;
+      if (query.chainId !== undefined && entry.chainId !== query.chainId)
+        return false;
+      if (address && entry.address !== address) return false;
+      if (query.kind && entry.label.kind !== query.kind) return false;
+      if (text && !entry.label.text.toLowerCase().includes(text)) return false;
+      return true;
+    });
+    const limit = Math.min(Math.max(query.limit ?? 100, 1), 1000);
+    return [...privateLabels, ...sharedLabels].slice(0, limit);
+  };
   async function run(operation: string, args: unknown): Promise<unknown> {
     const input = object(args ?? {});
     if (Buffer.byteLength(JSON.stringify(input)) > 5_000_000)
@@ -179,6 +295,50 @@ export function createAgentService(options: AgentServiceOptions = {}) {
       return await (options.deriveInspector ?? inspectDerive)(
         parseDeriveQuery(input),
       );
+    if (operation === "hypercore") {
+      const { caseId: caseValue, ...query } = input;
+      if (caseValue === undefined)
+        return acquireHypercoreHistory(query, undefined, hypercoreProvider);
+      const id = caseId(caseValue);
+      return mutate(id, async () => {
+        const current = await store.read(id);
+        if (current.mode !== "live")
+          throw new AgentOperationError(
+            "INVALID_ARGUMENT",
+            "Live HyperCore acquisition requires a live case",
+          );
+        const account =
+          query.account === undefined
+            ? current.root
+            : normalizeAddress(query.account as string);
+        if (account !== current.root)
+          throw new AgentOperationError(
+            "INVALID_ARGUMENT",
+            "HyperCore account must match this case's focus wallet",
+          );
+        const result = await acquireHypercoreHistory(
+          { ...query, account },
+          current.protocolEvidence?.hypercore,
+          hypercoreProvider,
+        );
+        if (!result.cached) {
+          const protocolEvidence = mergeProtocolEvidence(
+            current.protocolEvidence,
+            {
+              version: 1,
+              mode: "private",
+              hypercore: result.bundle,
+            },
+          );
+          await store.save({
+            ...current,
+            protocolEvidence,
+            updatedAt: nextRevision(current.updatedAt),
+          });
+        }
+        return { ...result, caseId: id };
+      });
+    }
     if (operation === "status")
       return {
         version: 1,
@@ -226,13 +386,19 @@ export function createAgentService(options: AgentServiceOptions = {}) {
             scope:
               "explicit public venue reads; access is not guaranteed; no transfer or case mutation",
           },
+          hypercore: {
+            available: true,
+            credentials: false,
+            scope:
+              "explicit non-funding ledger window; optional case attachment; not EVM transfers or proof of complete history",
+          },
           arkham: { available: false },
         },
         limits: operationSchema.limits,
         replay: {
           version: 1,
           modes: ["synthetic", "private"],
-          components: ["safe", "bridges", "internal"],
+          components: ["safe", "bridges", "internal", "hypercore"],
           independentAuthentication: false,
         },
       };
@@ -462,14 +628,14 @@ export function createAgentService(options: AgentServiceOptions = {}) {
     }
     if (operation === "label_search")
       return {
-        labels: await labels.search({
+        labels: await searchLabels({
           query: input.query as string | undefined,
           chainId: input.chainId as number | undefined,
           address: input.address as string | undefined,
           kind: input.kind as never,
           limit: input.limit as number | undefined,
         }),
-        scope: "label-store",
+        scope: "label-store+public-catalogue",
       };
     if (operation === "label_forget")
       return {

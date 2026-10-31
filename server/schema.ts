@@ -28,7 +28,11 @@ function shape(
   };
 }
 const kinds = ["native", "erc20", "internal"];
-const requestExpansion = (chains: number[], pageSize: number): Schema =>
+const requestExpansion = (
+  chains: number[],
+  pageSize: number,
+  defaultSize = pageSize === 10 ? 10 : 12,
+): Schema =>
   shape(
     {
       address: ref("Address"),
@@ -38,7 +42,7 @@ const requestExpansion = (chains: number[], pageSize: number): Schema =>
         type: "integer",
         minimum: 1,
         maximum: pageSize,
-        default: pageSize === 10 ? 10 : 12,
+        default: defaultSize,
       },
     },
     ["address", "chainId"],
@@ -124,7 +128,7 @@ export const jsonSchema = {
         },
       ],
       description:
-        "Demo uses only the synthetic 0x1111…1111 root. Live indexed mode initially fetches one Ethereum page: from Etherscan when the server has ETHERSCAN_API_KEY, otherwise from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet. FLOWLENS_BLOCKSCOUT=off turns that off. Explicit live evidence-only mode creates an empty case with unsupported history coverage and no provider query. No key field is consumed or retained.",
+        "Demo uses only the synthetic 0x1111…1111 root. Live indexed mode initially fetches one Ethereum page: from Etherscan when the server has ETHERSCAN_API_KEY, otherwise from keyless Blockscout (legacy host eth.blockscout.com), which then receives the traced wallet. Base (8453) selects the server-environment FLOWLENS_BASE_BLOCKSCOUT_URL when configured, then optional Alchemy Transfers, then the user-local BLOCKSCOUT_API_KEY unified route. The self-hosted origin is loopback-only, needs no API key, runs readiness checks before each wallet-history page, and cannot prove genesis-range configuration; no API or MCP field accepts that URL. Arbitrum One (42161) uses Etherscan when configured or the unified Blockscout route. Robinhood Chain (4663) uses only the user-local BLOCKSCOUT_API_KEY unified route when explicitly expanded; its public explorer is not a keyless FlowLens history route. Account plans can still restrict a keyed chain. HyperEVM (999) uses keyless HypurrTrace when enabled. FLOWLENS_BLOCKSCOUT=off turns off every Blockscout route, including self-hosted Base, and FLOWLENS_HYPURRTRACE=off turns off HyperEVM. Explicit live evidence-only mode creates an empty case with unsupported history coverage and no provider query. No key field is consumed or retained.",
     },
     AnnotateRequest: {
       ...shape(
@@ -283,21 +287,21 @@ export const jsonSchema = {
         "Explicit bounded read-only query to fixed public providers, disclosing supplied identifiers. Optional live caseId merges private observations without changing graph totals. Runtime enforces per-kind options and budgets before outbound calls. Inspect errors, warnings, acquisition capability and component coverage even on success.",
     },
     ExpandRequest: {
-      ...requestExpansion([1, 957, 8453, 42161], 100),
+      ...requestExpansion([1, 957, 8453, 42161, 999, 4663], 100),
       description:
         "Use ExpandLiveRequest for live cases and ExpandDemoRequest for demo cases. Resume state is read from the case coverage record; raw cursors are not accepted by this API body.",
     },
     ExpandLiveRequest: {
-      ...requestExpansion([1, 957, 42161], 10),
+      ...requestExpansion([1, 957, 8453, 42161, 999, 4663], 100, 10),
       description:
-        "Live chain 957 (Derive Chain) is always served by keyless Blockscout at explorer.derive.xyz, which receives the expanded wallet; FLOWLENS_BLOCKSCOUT=off refuses it with PROVIDER_DISABLED. Chains 1 and 42161 follow the create routing.",
+        "Explicit wallet history on Ethereum, Derive, Base, Arbitrum, HyperEVM or Robinhood Chain. Ethereum and Derive use the configured legacy routes; Base selects the server-environment FLOWLENS_BASE_BLOCKSCOUT_URL, then optional Alchemy Transfers, then unified hosted Blockscout. The self-hosted route is loopback-only, needs no API key and checks chain/readiness before every page; SELF_HOSTED_NOT_READY and SELF_HOSTED_CHAIN_MISMATCH remain explicit coverage errors. No API or MCP field accepts a provider URL, and there is no automatic fallback or retry. Arbitrum uses Etherscan when configured or unified Blockscout; HyperEVM uses the keyless HypurrTrace index; Robinhood Chain (4663) uses the keyed unified Blockscout route only. Check status for configured providers and required access. Resume state remains in case coverage; no counterparty expansion. Blockscout/Etherscan pages are capped at 10 rows per stream; HyperEVM accepts up to 100 indexed rows per page.",
     },
     ExpandDemoRequest: requestExpansion([1, 8453], 100),
     GraphFilters: shape(
       {
         chainId: {
           type: "string",
-          enum: ["1", "957", "8453", "42161"],
+          enum: ["1", "957", "8453", "42161", "999", "4663"],
           description:
             "HTTP query values are strings. Omit to include all loaded chains.",
         },
@@ -505,6 +509,7 @@ export const jsonSchema = {
         { required: ["safe"] },
         { required: ["bridges"] },
         { required: ["internal"] },
+        { required: ["hypercore"] },
       ],
       properties: {
         version: { const: 1 },
@@ -544,6 +549,7 @@ export const jsonSchema = {
             "Strict typed trace-path observations and supplied bounded provider coverage. Transaction-specific callTracer acquisition probes endpoint support; no complete wallet internal-history index is provided.",
           additionalProperties: true,
         },
+        hypercore: ref("HypercoreEvidenceBundle"),
       },
       "x-invariants": [
         "All component modes and per-record provenance flags agree with bundle mode.",
@@ -759,6 +765,135 @@ export const jsonSchema = {
       ["root", "transfers", "edges", "flows", "coverage"],
       "allowed",
     ),
+    HypercoreQuery: shape(
+      {
+        caseId: text(100),
+        account: ref("Address"),
+        startTime: integer(),
+        endTime: integer(),
+        cursor: { anyOf: [text(100_000), { type: "null" }] },
+      },
+      ["account"],
+    ),
+    HypercoreEvidenceBundle: {
+      ...shape(
+        {
+          version: { const: 1 },
+          mode: { enum: ["synthetic", "private"] },
+          account: ref("Address"),
+          entries: array(
+            shape(
+              {
+                domain: { const: "hypercore" },
+                id: text(200),
+                account: ref("Address"),
+                time: integer(),
+                hash: { type: "string", pattern: "^0x[0-9a-fA-F]{64}$" },
+                hashKind: { enum: ["ledger", "virtual"] },
+                isEvmTransaction: { const: false },
+                delta: {
+                  type: "object",
+                  required: ["type"],
+                  properties: { type: text(128) },
+                  additionalProperties: true,
+                },
+                flow: { type: "object" },
+                provenance: {
+                  type: "object",
+                  required: ["source", "retrievedAt", "synthetic"],
+                },
+              },
+              [
+                "domain",
+                "id",
+                "account",
+                "time",
+                "hash",
+                "hashKind",
+                "isEvmTransaction",
+                "delta",
+                "flow",
+                "provenance",
+              ],
+            ),
+            20_000,
+          ),
+          coverage: shape(
+            {
+              provider: text(200),
+              scope: { const: "non-funding-ledger" },
+              account: ref("Address"),
+              startTime: integer(),
+              endTime: integer(),
+              status: {
+                enum: ["partial", "exhausted", "error", "unsupported"],
+              },
+              pagesLoaded: integer(),
+              cursor: { anyOf: [text(100_000), { type: "null" }] },
+              exhausted: { type: "boolean" },
+              fullHistory: { const: false },
+              retention: { const: "undocumented" },
+              warnings: array(text(4096), 100),
+              provenance: {
+                type: "object",
+                required: ["source", "retrievedAt", "synthetic"],
+              },
+              error: text(500),
+              errorCode: { type: "string", pattern: "^[A-Z0-9_]{1,64}$" },
+              retryable: { type: "boolean" },
+            },
+            [
+              "provider",
+              "scope",
+              "account",
+              "startTime",
+              "endTime",
+              "status",
+              "pagesLoaded",
+              "cursor",
+              "exhausted",
+              "fullHistory",
+              "retention",
+              "warnings",
+              "provenance",
+            ],
+          ),
+        },
+        ["version", "mode", "account", "entries", "coverage"],
+      ),
+      description:
+        "HyperCore record fingerprints and provider-window coverage, separate from EVM transfers. Exact decimal text and omitted endpoints are preserved. Derived flow.endpointKind distinguishes wallet-transfer, protocol-accounting, bridge-accounting and unknown; flow.accountingDirection is separate from wallet endpoint direction. Protocol accounting does not invent wallet endpoints. A strict related Arbitrum bridge leg remains separate chain-qualified evidence, never a HyperCore endpoint or finalization proof. Runtime enforces mode, source safety and byte bounds.",
+    },
+    HypercoreAcquisitionResult: shape(
+      {
+        version: { const: 1 },
+        mode: { const: "private" },
+        domain: { const: "hypercore" },
+        account: ref("Address"),
+        caseId: text(100),
+        bundle: ref("HypercoreEvidenceBundle"),
+        analysis: { type: "object" },
+        errors: array(
+          { type: "object", required: ["code", "message", "retryable"] },
+          10,
+        ),
+        cached: { type: "boolean" },
+        latestPageCount: integer(),
+        indexedHistoryChanged: { const: false },
+      },
+      [
+        "version",
+        "mode",
+        "domain",
+        "account",
+        "bundle",
+        "analysis",
+        "errors",
+        "cached",
+        "latestPageCount",
+        "indexedHistoryChanged",
+      ],
+    ),
     DeriveQuery: {
       type: "object",
       description:
@@ -906,6 +1041,7 @@ export const operationSchema = {
     "replay",
     "acquire",
     "derive",
+    "hypercore",
     "annotate",
     "visibility",
     "wallet",
@@ -918,12 +1054,16 @@ export const operationSchema = {
   operationsScope:
     "Operations of the shared agent boundary, each offered as an MCP tool. Not every operation has an HTTP route or CLI command, and contracts describes only some of those that do.",
   limits: {
-    chains: [1, 957, 8453, 42161],
+    chains: [1, 957, 8453, 42161, 999, 4663],
     demoChains: [1, 8453],
-    liveChains: [1, 957, 42161],
+    liveChains: [1, 957, 8453, 42161, 999, 4663],
     maxPagesPerExpansion: 3,
-    maxNodes: 80,
+    maxNodes: 2000,
+    maxGraphCounterparties: 80,
     liveRowsPerStream: 10,
+    maxHypurrtraceRowsPerStream: 100,
+    maxHypercoreEntriesPerPage: 500,
+    maxHypercoreCursorChars: 100_000,
     maxBodyBytes: 5_000_000,
     publicRpcChains: [1, 8453, 42161],
     maxRpcCallsPerAcquisition: 64,
@@ -981,6 +1121,15 @@ export const operationSchema = {
       description:
         "Read-only external acquisition; optional local attachment. Transaction-scoped bridge/internal evidence never implies complete wallet history. Per-case POST /api/investigations/{id}/acquire also supported.",
     },
+    hypercore: {
+      method: "POST",
+      path: "/api/hypercore",
+      bodySchema: contractRef("HypercoreQuery"),
+      responseSchema: contractRef("HypercoreAcquisitionResult"),
+      cli: "hypercore --address EVM [--file LIVE_CASE_PATH] [--start-time MS] [--end-time MS] [--cursor CURSOR]",
+      description:
+        "Read one bounded HyperCore non-funding ledger page from the fixed public info endpoint. Without caseId it is caller-scoped; with a live caseId it persists protocolEvidence.hypercore and resumes the frozen account/window. It never adds EVM transfers or changes graph totals. The provider page is capped at 500 entries, cursor length at 100000 characters and retention is undocumented; exhaustion never establishes complete account history.",
+    },
     replay: {
       method: "POST",
       path: "/api/replay",
@@ -1005,7 +1154,7 @@ export const operationSchema = {
       path: "/api/status",
       cli: "status",
       description:
-        "Provider availability and limits; no secrets. liveAvailable is a boolean. providers.live.routes names the provider serving each live chain: blockscout-v2 sends the traced wallet to eth.blockscout.com for chain 1 and to explorer.derive.xyz for chain 957.",
+        "Provider availability and limits; no secrets. liveAvailable is a boolean. providers.live.routes names the provider serving each indexed chain: legacy blockscout-v2 serves Ethereum (1) and Derive Chain (957), blockscout-self-hosted-v1-<endpoint-digest> serves Base (8453) when FLOWLENS_BASE_BLOCKSCOUT_URL is configured, alchemy-transfers is next for Base when ALCHEMY_API_KEY is configured, blockscout-pro-v2 serves keyed Base, Arbitrum One (42161) or Robinhood Chain (4663), etherscan-v2 can serve Ethereum or Arbitrum when configured, and hypurrtrace-indexed serves HyperEVM (999). A route's presence is configuration, not a readiness check or a complete-history guarantee; self-hosted readiness is checked before each wallet-history page.",
     },
     create: {
       method: "POST",
@@ -1014,6 +1163,8 @@ export const operationSchema = {
       responseSchema: contractRef("Investigation"),
       successStatus: 201,
       cli: "create --mode MODE --file PATH [--address EVM] [--title TEXT]",
+      description:
+        "Create a demo, indexed live or evidence-only case. Base provider selection is server-environment-only: self-hosted loopback Blockscout, then Alchemy, then hosted keyed Blockscout. No API or MCP request supplies a provider URL or key.",
     },
     inspect: {
       method: "GET",
@@ -1036,7 +1187,7 @@ export const operationSchema = {
       responseSchema: contractRef("Investigation"),
       cli: "expand --file PATH --address EVM --chain CHAIN_ID [--pages 1..3] [--page-size N]",
       description:
-        "A successful HTTP response may still contain coverage errors. Inspect every coverage status; CLI saves this state and exits 2 if any coverage error exists.",
+        "Resume one wallet/chain using server-configured provider routing. Base selects self-hosted loopback Blockscout, then Alchemy, then hosted keyed Blockscout; self-hosted readiness runs before each page and cannot prove genesis-range configuration. A successful HTTP response may still contain coverage errors. Inspect every coverage status; CLI saves this state and exits 2 if any coverage error exists.",
     },
     evidence: {
       method: "GET",

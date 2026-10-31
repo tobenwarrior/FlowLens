@@ -16,6 +16,12 @@ import {
   parseInternalEvidence,
 } from "./internal.ts";
 import type { InternalEvidenceBundle } from "./internal.ts";
+import {
+  analyzeHypercoreEvidence,
+  mergeHypercoreEvidence,
+  parseHypercoreEvidence,
+} from "./hypercore.ts";
+import type { HypercoreEvidenceBundle } from "./hypercore.ts";
 
 export type ReplayMode = "synthetic" | "private";
 export interface ProtocolEvidenceBundle {
@@ -24,6 +30,7 @@ export interface ProtocolEvidenceBundle {
   safe?: SafeEvidenceBundle;
   bridges?: BridgeEvidenceBundle;
   internal?: InternalEvidenceBundle;
+  hypercore?: HypercoreEvidenceBundle;
 }
 
 /** Replays are supplied observations, not an authenticated provider fetch or automatic ledger import. */
@@ -53,10 +60,11 @@ export function parseProtocolEvidence(
   if (
     value.safe === undefined &&
     value.bridges === undefined &&
-    value.internal === undefined
+    value.internal === undefined &&
+    value.hypercore === undefined
   )
     throw new Error(
-      "Protocol evidence needs at least one Safe, bridge or internal component",
+      "Protocol evidence needs at least one Safe, bridge, internal or HyperCore component",
     );
   const result: ProtocolEvidenceBundle = { version: 1, mode: value.mode };
   if (value.safe !== undefined)
@@ -65,6 +73,8 @@ export function parseProtocolEvidence(
     result.bridges = parseBridgeEvidence(value.bridges, value.mode);
   if (value.internal !== undefined)
     result.internal = parseInternalEvidence(value.internal, value.mode);
+  if (value.hypercore !== undefined)
+    result.hypercore = parseHypercoreEvidence(value.hypercore, value.mode);
   return result;
 }
 
@@ -294,6 +304,11 @@ export function mergeProtocolEvidence(
           ),
         }
       : next.internal;
+  if (next.hypercore)
+    result.hypercore = mergeHypercoreEvidence(
+      current.hypercore,
+      next.hypercore,
+    );
   return parseProtocolEvidence(result);
 }
 export function analyzeProtocolEvidence(input: ProtocolEvidenceBundle) {
@@ -305,6 +320,9 @@ export function analyzeProtocolEvidence(input: ProtocolEvidenceBundle) {
     ...(bundle.bridges ? { bridges: matchBridgeEvidence(bundle.bridges) } : {}),
     ...(bundle.internal
       ? { internal: analyzeInternalEvidence(bundle.internal) }
+      : {}),
+    ...(bundle.hypercore
+      ? { hypercore: analyzeHypercoreEvidence(bundle.hypercore) }
       : {}),
     caveats: [
       bundle.mode === "synthetic"

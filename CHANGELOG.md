@@ -2,6 +2,12 @@
 
 ## Unreleased — open-source launch
 
+- Expanded wallet-history routes: keyless HyperEVM, keyed hosted Base/Arbitrum/Robinhood Chain, optional Alchemy Base, and a readiness-checked loopback Base Blockscout connector with deployment preparation files. Access and indexed coverage remain provider-specific; no Base indexer or universal all-chain history is bundled.
+- Added bounded, resumable CLI history collection. Cases retain up to 2,000 nodes and 20,000 transfers within 5 MB; the graph separately projects at most 80 counterparties without dropping retained evidence.
+- Added separate HyperCore non-funding ledger evidence, explicit protocol-accounting endpoints, and strict links to already-loaded Arbitrum bridge transfers. These entries do not change EVM transfer totals.
+- Added optional keyless Base traces for known transaction hashes, with visible rate limits and separate trace/canonical metadata provenance. This does not discover an unknown wallet's complete history.
+- Added an initially empty, validated shared wallet-label catalogue and a selected-label preparation workflow. Private labels and investigations stay local; publication requires review of sources and redistribution rights.
+- Added an evidence-report editing skill that keeps conclusions, deciding evidence, counterevidence and readable screenshots ahead of the technical ledger.
 - The app opens on a start screen for live tracing, with public organisation wallets to try. The synthetic case is now only an offline test fixture (`/?fixture=synthetic`), no longer the first thing people see.
 - New FlowLens logo, favicon and app icons. README and documentation screenshots now use public-wallet examples instead of the synthetic screenshots from the 0.1.0 snapshot. The lead image documents Blockscout retrieval on 23 October 2026; capture dates for other images are not recorded. See [image provenance](docs/images/README.md).
 - Derive Chain (957) history through Derive's keyless Blockscout explorer at `explorer.derive.xyz`, with or without an Etherscan key. Derive subaccount balances and trades are not wallet transfers and are not shown.

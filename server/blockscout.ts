@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   Address,
   TraceProvider,
@@ -17,13 +18,17 @@ import {
   type Row,
 } from "./history-provider.ts";
 
+export type BlockscoutExplorer = {
+  api: string;
+  native: string;
+  pageSize: boolean;
+  warning?: string;
+};
+type Explorer = BlockscoutExplorer;
 // Hosts confirmed to answer a plain server request without a key: eth.blockscout.com on 21 October
 // 2026, explorer.derive.xyz on 23 October 2026. base.blockscout.com and arbitrum.blockscout.com
 // answered with a browser challenge and stay out. `pageSize` marks explorers that honour items_count.
-const EXPLORERS: Record<
-  number,
-  { api: string; native: string; pageSize: boolean; warning?: string }
-> = {
+const EXPLORERS: Record<number, Explorer> = {
   1: {
     api: "https://eth.blockscout.com/api/v2",
     native: "ETH",
@@ -39,6 +44,29 @@ const EXPLORERS: Record<
   },
 };
 export const BLOCKSCOUT_CHAINS = Object.keys(EXPLORERS).map(Number);
+const PRO_EXPLORERS: Record<number, Explorer> = {
+  1: {
+    api: "https://api.blockscout.com/1/api/v2",
+    native: "ETH",
+    pageSize: true,
+  },
+  8453: {
+    api: "https://api.blockscout.com/8453/api/v2",
+    native: "ETH",
+    pageSize: true,
+  },
+  42161: {
+    api: "https://api.blockscout.com/42161/api/v2",
+    native: "ETH",
+    pageSize: true,
+  },
+  4663: {
+    api: "https://api.blockscout.com/4663/api/v2",
+    native: "ETH",
+    pageSize: true,
+  },
+};
+export const BLOCKSCOUT_PRO_CHAINS = Object.keys(PRO_EXPLORERS).map(Number);
 // Pre-v12 explorers ignore page-size requests and return 50 full rows, so the budget is above Etherscan's.
 const MAX_RESPONSE_BYTES = 4_000_000;
 const MAX_ROWS = 100;
@@ -84,7 +112,7 @@ interface StreamState {
 }
 interface Cursor {
   v: 1;
-  provider: "blockscout-v2";
+  provider: ProviderId;
   chain: number;
   address: string;
   size: number;
@@ -93,6 +121,10 @@ interface Cursor {
   erc20: StreamState;
   internal: StreamState;
 }
+export type BlockscoutProviderId =
+  "blockscout-v2" | "blockscout-pro-v2" | `blockscout-self-hosted-v1-${string}`;
+type ProviderId = BlockscoutProviderId;
+const SELF_HOSTED_PROVIDER_ID = /^blockscout-self-hosted-v1-([0-9a-f]{16})$/;
 type Frame = { eventIndex: string } | { omitted: string };
 const invalid = (message: string) =>
   new ProviderError("INVALID_PROVIDER_DATA", message);
@@ -145,14 +177,19 @@ function streamState(value: unknown, stream: Stream): StreamState {
     done: state.done,
   };
 }
-function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
+function decodeCursor(
+  value: string,
+  query: TraceQuery,
+  size: number,
+  providerId: ProviderId,
+): Cursor {
   try {
     if (value.length > MAX_CURSOR) throw new Error();
     const c = row(JSON.parse(Buffer.from(value, "base64url").toString("utf8")));
     if (
       Object.keys(c).length !== 9 ||
       c.v !== 1 ||
-      c.provider !== "blockscout-v2" ||
+      c.provider !== providerId ||
       c.chain !== query.chainId ||
       c.address !== query.address.toLowerCase() ||
       c.size !== size ||
@@ -162,7 +199,7 @@ function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
       throw new Error();
     const cursor: Cursor = {
       v: 1,
-      provider: "blockscout-v2",
+      provider: providerId,
       chain: query.chainId,
       address: c.address,
       size,
@@ -192,6 +229,98 @@ const traceMismatch = () =>
     "A Blockscout call trace does not match its internal transaction listing; no page was committed. Resume after provider indexing stabilizes.",
     true,
   );
+
+function invalidConfiguration(message: string): ProviderError {
+  return new ProviderError("INVALID_PROVIDER_CONFIG", message);
+}
+
+/** Custom explorer maps are intentionally limited to the validated local Base adapter. */
+function validateCustomConfiguration(options: {
+  apiKey?: string;
+  explorers?: Readonly<Record<number, BlockscoutExplorer>>;
+  providerId?: BlockscoutProviderId;
+}): void {
+  const hasExplorers = options.explorers !== undefined;
+  const customIdentity =
+    typeof options.providerId === "string" &&
+    options.providerId.startsWith("blockscout-self-hosted-v1-");
+  if (
+    options.providerId !== undefined &&
+    options.providerId !== "blockscout-v2" &&
+    options.providerId !== "blockscout-pro-v2" &&
+    !customIdentity
+  )
+    throw invalidConfiguration(
+      "A custom Blockscout provider ID must use a bounded self-hosted identity format.",
+    );
+  if (customIdentity && !hasExplorers)
+    throw invalidConfiguration(
+      "A self-hosted Blockscout provider ID requires its validated custom explorer map.",
+    );
+  if (!hasExplorers) return;
+  if (options.apiKey !== undefined)
+    throw invalidConfiguration(
+      "A custom Blockscout explorer map cannot be combined with an API key.",
+    );
+  const explorers = options.explorers;
+  if (
+    !explorers ||
+    typeof explorers !== "object" ||
+    Array.isArray(explorers) ||
+    Object.keys(explorers).length !== 1 ||
+    !Object.prototype.hasOwnProperty.call(explorers, "8453") ||
+    typeof options.providerId !== "string"
+  )
+    throw invalidConfiguration(
+      "A custom Blockscout map must contain only Base (8453) and a self-hosted provider ID.",
+    );
+  const explorer = explorers[8453];
+  if (
+    !explorer ||
+    typeof explorer !== "object" ||
+    Object.keys(explorer).some(
+      (key) => !["api", "native", "pageSize"].includes(key),
+    ) ||
+    typeof explorer.api !== "string" ||
+    explorer.native !== "ETH" ||
+    explorer.pageSize !== true
+  )
+    throw invalidConfiguration(
+      "A custom Blockscout map must use only ETH, pageSize=true and the local Base API metadata.",
+    );
+  let api: URL;
+  try {
+    api = new URL(explorer.api);
+  } catch {
+    throw invalidConfiguration(
+      "A custom Blockscout map must point to a loopback /api/v2 endpoint.",
+    );
+  }
+  if (
+    (api.protocol !== "http:" && api.protocol !== "https:") ||
+    (api.hostname !== "127.0.0.1" && api.hostname !== "[::1]") ||
+    api.username ||
+    api.password ||
+    api.search ||
+    api.hash ||
+    api.pathname !== "/api/v2" ||
+    explorer.api !== `${api.origin}/api/v2`
+  )
+    throw invalidConfiguration(
+      "A custom Blockscout map must point to a loopback HTTP(S) /api/v2 endpoint without credentials or query data.",
+    );
+  const digest = createHash("sha256")
+    .update(api.origin)
+    .digest("hex")
+    .slice(0, 16);
+  if (
+    !SELF_HOSTED_PROVIDER_ID.test(options.providerId) ||
+    options.providerId !== `blockscout-self-hosted-v1-${digest}`
+  )
+    throw invalidConfiguration(
+      "A custom Blockscout provider ID must be the 16-hex SHA-256 identity of its loopback endpoint.",
+    );
+}
 /** One frame of a transaction's full call trace, whichever tracer the explorer runs. Fields are unvalidated. */
 interface TraceFrame {
   path: unknown;
@@ -331,11 +460,26 @@ function checkFrame(
     : { eventIndex };
 }
 
-/** Keyless Blockscout API v2 history. Every request goes to the fixed explorer host of the queried chain. */
+/** Blockscout API v2 history. Every request goes to a fixed explorer endpoint for the queried chain. */
 export function createBlockscoutProvider(
-  options: { fetch?: typeof fetch; intervalMs?: number } = {},
+  options: {
+    fetch?: typeof fetch;
+    intervalMs?: number;
+    apiKey?: string;
+    /** Internal fixed explorer map for a validated local Blockscout origin. */
+    explorers?: Readonly<Record<number, BlockscoutExplorer>>;
+    /** Internal provider identity used to bind cursors to one endpoint. */
+    providerId?: BlockscoutProviderId;
+  } = {},
 ): TraceProvider {
+  validateCustomConfiguration(options);
   const fetcher = options.fetch ?? fetch;
+  const configuredApiKey = options.apiKey;
+  const pro =
+    typeof configuredApiKey === "string" && configuredApiKey.length > 0;
+  const providerId: ProviderId =
+    options.providerId ?? (pro ? "blockscout-pro-v2" : "blockscout-v2");
+  const explorers = options.explorers ?? (pro ? PRO_EXPLORERS : EXPLORERS);
   // Both explorers advertised 180 keyless requests per minute; one queue at two per second stays below either.
   const interval = options.intervalMs ?? 500;
   let queue: Promise<unknown> = Promise.resolve();
@@ -353,11 +497,13 @@ export function createBlockscoutProvider(
       const url = new URL(`${api}/${path}`);
       for (const [key, value] of Object.entries({ ...params, ...fixed }))
         url.searchParams.set(key, String(value));
+      const headers = new Headers({ accept: "application/json" });
+      if (pro) headers.set("authorization", `Bearer ${configuredApiKey}`);
       try {
         const response = await fetcher(url, {
           signal: AbortSignal.timeout(15000),
           redirect: "error",
-          headers: { accept: "application/json" },
+          headers,
         });
         if (!response.ok) await response.body?.cancel().catch(() => undefined);
         if (response.status === 429)
@@ -369,7 +515,14 @@ export function createBlockscoutProvider(
         if (response.status === 401 || response.status === 403)
           throw new ProviderError(
             "ACCESS_DENIED",
-            `Blockscout refused keyless access (HTTP ${response.status}). The explorer may now require a browser check or an API key; this is not evidence of no activity.`,
+            pro
+              ? `Blockscout refused configured API access (HTTP ${response.status}); this is not evidence of no activity.`
+              : `Blockscout refused keyless access (HTTP ${response.status}). The explorer may now require a browser check or an API key; this is not evidence of no activity.`,
+          );
+        if (response.status === 402)
+          throw new ProviderError(
+            "PLAN_REQUIRED",
+            "Blockscout API access requires a supported plan for this chain; no page was committed.",
           );
         if (response.status === 422)
           throw new ProviderError(
@@ -397,11 +550,13 @@ export function createBlockscoutProvider(
     return task;
   }
   async function fetchPage(query: TraceQuery): Promise<TransferPage> {
-    const explorer = EXPLORERS[query.chainId];
+    const explorer = explorers[query.chainId];
     if (!explorer)
       throw new ProviderError(
         "UNSUPPORTED_CHAIN",
-        "Keyless Blockscout history covers Ethereum (1) and Derive Chain (957) only. Other Blockscout hosts are not enabled until they are confirmed to answer without a browser check.",
+        pro
+          ? "Blockscout PRO history covers Ethereum (1), Base (8453), Arbitrum One (42161) and Robinhood Chain (4663) only."
+          : "Keyless Blockscout history covers Ethereum (1) and Derive Chain (957) only. Other Blockscout hosts are not enabled until they are confirmed to answer without a browser check.",
       );
     const source = `Blockscout API v2 (${new URL(explorer.api).host})`;
     const wallet = address(query.address);
@@ -426,10 +581,10 @@ export function createBlockscoutProvider(
       done: false,
     });
     const cursor: Cursor = query.cursor
-      ? decodeCursor(query.cursor, query, size)
+      ? decodeCursor(query.cursor, query, size, providerId)
       : {
           v: 1,
-          provider: "blockscout-v2",
+          provider: providerId,
           chain: query.chainId,
           address: wallet,
           size,
@@ -766,5 +921,5 @@ export function createBlockscoutProvider(
       exhausted,
     };
   }
-  return { id: "blockscout-v2", mode: "live", fetchPage };
+  return { id: providerId, mode: "live", fetchPage };
 }

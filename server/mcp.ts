@@ -66,7 +66,7 @@ const tools = [
   {
     operation: "status",
     description:
-      "Report local provider availability, transport and bounded operation limits. providers.live.routes names the indexed-history provider for each live chain; blockscout-v2 sends traced wallets to eth.blockscout.com (chain 1) or explorer.derive.xyz (chain 957). No keys or grants are created.",
+      "Report local provider availability, transport and bounded operation limits. providers.live.routes names the indexed-history provider for each live chain: legacy blockscout-v2 serves Ethereum (1) and Derive Chain (957), blockscout-self-hosted-v1-<endpoint-digest> serves Base (8453) when FLOWLENS_BASE_BLOCKSCOUT_URL is configured, alchemy-transfers is next for Base when ALCHEMY_API_KEY is configured, blockscout-pro-v2 serves keyed Base, Arbitrum One (42161) or Robinhood Chain (4663), etherscan-v2 can serve Ethereum or Arbitrum, and hypurrtrace-indexed serves HyperEVM (999). A configured route is not a readiness check or a complete-history guarantee; self-hosted readiness is checked before each wallet-history page. No keys, URLs or grants are accepted from the caller and none are created.",
     readOnly: true,
     input: z.object({}).strict(),
   },
@@ -87,7 +87,7 @@ const tools = [
   {
     operation: "create",
     description:
-      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout at eth.blockscout.com, which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Arbitrum needs the key. Derive Chain (957) is reached by expanding a wallet there. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
+      "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout (legacy host eth.blockscout.com), which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Base (8453) selects the server-environment FLOWLENS_BASE_BLOCKSCOUT_URL when configured, then optional Alchemy Transfers, then the user-local BLOCKSCOUT_API_KEY unified route; the self-hosted route is loopback-only, needs no API key and checks readiness before each wallet-history page. Arbitrum One (42161) uses Etherscan when configured or the unified Blockscout route. Robinhood Chain (4663) uses only the user-local BLOCKSCOUT_API_KEY unified route when explicitly expanded; it has no keyless FlowLens history route. Account plans can restrict a keyed chain. HyperEVM (999) uses keyless HypurrTrace when enabled. Derive Chain (957) is reached by expanding a wallet there. No API or MCP field supplies a provider URL or key. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
     readOnly: false,
     input: z
       .object({
@@ -108,7 +108,7 @@ const tools = [
   {
     operation: "expand",
     description:
-      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 80 graph nodes; no recursive fanout. Live accepts at most 10 rows per stream and uses the same provider routing as create, so without ETHERSCAN_API_KEY an Ethereum expansion goes to keyless Blockscout, which receives the expanded wallet. A Derive Chain (957) expansion always goes to keyless Blockscout at explorer.derive.xyz, key or not, and sends it the expanded wallet; FLOWLENS_BLOCKSCOUT=off refuses it with PROVIDER_DISABLED. Coverage errors may be returned in a successful result with evidence preserved.",
+      "Expand only the named wallet and chain, resuming its last committed cursor. Maximum 3 pages and 2,000 retained nodes; the human graph separately shows at most 80 counterparties. No recursive fanout. Base selects the server-environment FLOWLENS_BASE_BLOCKSCOUT_URL, then optional Alchemy Transfers, then unified hosted Blockscout; self-hosted readiness runs before every wallet-history page and can return SELF_HOSTED_NOT_READY or SELF_HOSTED_CHAIN_MISMATCH. Robinhood Chain (4663) uses keyed unified Blockscout only when explicitly expanded; no provider URL, key, retry or fallback is accepted through MCP. Blockscout/Etherscan streams accept at most 10 rows per page, and HyperEVM accepts up to 100 indexed rows. Read status for each configured network/provider route and required access. Coverage errors may be returned in a successful result with evidence preserved.",
     readOnly: false,
     input: z
       .object({
@@ -201,7 +201,7 @@ const tools = [
   {
     operation: "label_search",
     description:
-      "Search remembered entity labels by text, chain, address or kind. Returns stored local attributions with their provenance and confidence; no external label provider is queried.",
+      "Search private remembered labels and the tracked shared catalogue by text, chain, address or kind. Returns provenance and confidence; no external label provider is queried and no repository file is written.",
     readOnly: true,
     input: z
       .object({
@@ -218,7 +218,7 @@ const tools = [
   {
     operation: "label_forget",
     description:
-      "Remove one remembered entity label for a chain and address from the local label store. Investigations that already recorded it keep their own copy.",
+      "Remove one private remembered entity label for a chain and address. A matching shared catalogue label may reappear; investigations that already recorded a label keep their own copy.",
     readOnly: false,
     input: z.object({ chainId: positiveInteger, address }).strict(),
   },
@@ -310,6 +310,31 @@ const tools = [
       "Validate and persist an investigation snapshot, preserving evidence, provenance and resume cursors. Source shape is validated, not authenticated. Synthetic evidence cannot enter a live investigation. Existing revisions must agree.",
     readOnly: false,
     input: z.object({ investigation: object }).strict(),
+  },
+  {
+    operation: "hypercore",
+    description:
+      "Read one bounded page of Hyperliquid non-funding ledger history for an account. HyperCore is separate from EVM chain 999. Optional live caseId stores records and resumes its committed frozen window without changing EVM transfers or totals. Check provider-window coverage and errors; exhausted does not prove complete historical retention. No retries, trades, funding-payment import or wallet signatures.",
+    readOnly: false,
+    input: z
+      .object({
+        caseId: caseId.optional(),
+        account: address,
+        startTime: z
+          .number()
+          .int()
+          .min(0)
+          .max(Number.MAX_SAFE_INTEGER)
+          .optional(),
+        endTime: z
+          .number()
+          .int()
+          .min(0)
+          .max(Number.MAX_SAFE_INTEGER)
+          .optional(),
+        cursor: z.union([z.string().max(100_000), z.null()]).optional(),
+      })
+      .strict(),
   },
   {
     operation: "acquire",
@@ -526,6 +551,7 @@ function outputFor(operation: string) {
       required: ["version", "mode", "analysis"],
     },
     derive: reference("DeriveInspectionResult"),
+    hypercore: reference("HypercoreAcquisitionResult"),
     acquire: {
       type: "object",
       properties: {
@@ -685,6 +711,7 @@ export function createMcpServer(
         "create",
         "expand",
         "acquire",
+        "hypercore",
         "prices",
         "prices_at_blocks",
         "derive",

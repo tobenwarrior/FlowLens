@@ -7,6 +7,8 @@ description: Produce an offline PDF or DOCX investigation report with cited, pri
 
 Use [trace-wallet](../../investigation/trace-wallet/SKILL.md) for research and [audit-trace-evidence](../../investigation/audit-trace-evidence/SKILL.md) before drafting. This skill packages existing authorized evidence; it does not fetch providers, infer identities, sign, post or purchase access. Follow [AGENTS.md](../../../AGENTS.md) and the [report guide](references/exporting.md). Keep real cases, manifests, original captures, redacted images, inventories and output under `.local/investigations/<case>/`, never public source or fixtures.
 
+Use [edit-evidence-report](../edit-evidence-report/SKILL.md) to compose the human-readable argument before building the export manifest. Put the answer, deciding facts and strongest countercase before technical registers. Evidence-complete means each material claim is supported and inspectable; it does not require repeated caveats or an indiscriminate research dump.
+
 ## Default deliverable: an evidence-complete report
 
 Default to the detailed report, using the complete audit manifest **without `--brief`**. Open with a short executive summary, then include the full material evidence chain, verified transaction tables, source citations and timestamps, coverage gaps, limitations, readable screenshots and evidence inventory in the delivered document. Length follows the evidence; do not force a two-page cap, pad to ten pages or omit evidence to fit.
@@ -56,7 +58,7 @@ Choose PDF OR DOCX according to the request; run both only when both are request
 
 ## 5. Render every page and inspect the delivered format
 
-- Count all visible page-1 words, not only the summary: at most 250, targeting 150–250 without padding. The CLI full printed `cleanText`-weighted 2,300 budget is not a word counter; wide glyphs count 2 and generated metadata/labels/hosts/footer count too. Source URL hosts are limited to 60 characters. Tighten phrasing while retaining material contradictions and the scope caveat; do not silently delete evidence to meet the budget.
+- For `--brief`, count all visible page-1 words, not only the summary: at most 250, targeting 150–250 without padding. The CLI full printed `cleanText`-weighted 2,300 budget is not a word counter; wide glyphs count 2 and generated metadata/labels/hosts/footer count too. Source URL hosts are limited to 60 characters. Tighten phrasing while retaining material contradictions and the scope caveat; do not silently delete evidence to meet the budget.
 
 - The CLI first checks print-width overflow and exact PDF page count for every brief output format: 1 page without screenshots, 2 with screenshots. Any failure writes nothing; no text is hidden or truncated. This shared gate does not replace native DOCX visual QA.
 - Render ALL pages of each final PDF and DOCX with an available local renderer, then inspect every rendered page. DOCX requires a local viewer/converter capable of pagination; a ZIP/XML check is not visual QA. HTML preview alone does not certify PDF or DOCX layout. If no suitable renderer is available, report visual QA incomplete and do not claim the document passed.

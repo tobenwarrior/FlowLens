@@ -13,6 +13,7 @@ import {
   buildEdges,
   filterTransfers,
 } from "../src/domain/engine.ts";
+import type { Investigation } from "../src/domain/types.ts";
 import { DEMO_ROOT } from "../src/domain/demo.ts";
 import {
   expandCase,
@@ -43,12 +44,16 @@ import { pathToFileURL } from "node:url";
 import { parseDeriveQuery } from "./derive-provider.ts";
 import type { DeriveQuery } from "./derive-provider.ts";
 import { realpathSync } from "node:fs";
+import { applyPublicLabels, loadPublicLabels } from "./public-labels.ts";
+import { acquireHypercoreHistory } from "./hypercore-acquisition.ts";
+import { collectWalletHistory } from "./history-collection.ts";
 
 const args = process.argv.slice(2),
   command = args.shift() ?? "help";
 const allowed = new Set([
   "--file",
   "--address",
+  "--query",
   "--subaccount",
   "--mode",
   "--chain",
@@ -82,10 +87,30 @@ const allowed = new Set([
   "--visible",
   "--expected-revision",
   "--offset",
+  "--limit",
+  "--start-time",
+  "--end-time",
 ]);
 const flags: Record<string, string> = {};
 function print(value: unknown) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+async function hydrateSharedLabels(
+  value: Investigation,
+): Promise<Investigation> {
+  try {
+    const labels = await loadPublicLabels();
+    value.nodes = applyPublicLabels(
+      value.nodes,
+      labels,
+      value.mode === "live"
+        ? (label) => label.confidence !== "synthetic" && label.kind !== "demo"
+        : undefined,
+    );
+  } catch {
+    // A broken/missing shared catalogue must not make a local case unusable.
+  }
+  return value;
 }
 async function main() {
   for (let index = 0; index < args.length; index += 2) {
@@ -103,12 +128,18 @@ async function main() {
       operations: {
         status: "No arguments; provider availability and limits.",
         schema: "No arguments; machine contract.",
+        "label-search":
+          "[--query TEXT] [--chain N] [--address EVM] [--kind KIND] [--limit 1..1000] [--label-file PATH]; searches private labels plus the tracked shared catalogue without writing either.",
+        hypercore:
+          "--address EVM [--file LIVE_CASE_PATH] [--start-time UNIX_MS --end-time UNIX_MS --cursor TOKEN]; one non-funding HyperCore ledger page, separate from EVM transfers. A case resumes its saved window.",
+        collect:
+          "--file PATH --address EVM --chain N --pages 1..200 [--page-size N]; explicitly bounded sequential wallet-history collection, saving every committed page; stops at errors without retry or fanout.",
         derive:
           "--kind account --address EVM | --kind margin --subaccount ID | --kind trades --subaccount ID [--page N] [--page-size 1..100] [--to-timestamp UNIX_MS]; one read-only Derive public API request, no case file, retries or fallback.",
         create:
           "--mode demo|live --file PATH [--address EVM] [--title TEXT] [--history-mode indexed|evidence-only]",
         expand:
-          "--file PATH --address EVM --chain 1|957|8453|42161 [--pages 1..3] [--page-size N]",
+          "--file PATH --address EVM --chain 1|957|8453|42161|999|4663 [--pages 1..3] [--page-size N]",
         annotate:
           "--file PATH --chain N --address EVM (--label-file PATH | --remove true) [--expected-revision ISO_TIMESTAMP]; local attribution assertion, not ownership authentication.",
         visibility:
@@ -140,6 +171,55 @@ async function main() {
   }
   if (command === "schema") {
     print(operationSchema);
+    return;
+  }
+  if (command === "label-search") {
+    if (flags["--query"]?.length > 200)
+      throw new Error("--query must be at most 200 characters");
+    if (flags["--chain"] !== undefined) {
+      if (!/^\d+$/.test(flags["--chain"]))
+        throw new Error("--chain must be a positive safe integer");
+      const chainId = Number(flags["--chain"]);
+      if (!Number.isSafeInteger(chainId) || chainId < 1)
+        throw new Error("--chain must be a positive safe integer");
+    }
+    if (flags["--limit"] !== undefined) {
+      if (!/^\d+$/.test(flags["--limit"]))
+        throw new Error("--limit must be an integer from 1 to 1000");
+      const limit = Number(flags["--limit"]);
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000)
+        throw new Error("--limit must be an integer from 1 to 1000");
+    }
+    const kinds = new Set([
+      "service",
+      "entity",
+      "prediction",
+      "user",
+      "demo",
+      "ai",
+    ]);
+    if (flags["--kind"] && !kinds.has(flags["--kind"]))
+      throw new Error("--kind must be a supported label kind");
+    print(
+      await createAgentService({
+        providers,
+        labelFile: flags["--label-file"]
+          ? resolve(flags["--label-file"])
+          : undefined,
+      }).call("label_search", {
+        ...(flags["--query"] === undefined ? {} : { query: flags["--query"] }),
+        ...(flags["--chain"] === undefined
+          ? {}
+          : { chainId: Number(flags["--chain"]) }),
+        ...(flags["--address"] === undefined
+          ? {}
+          : { address: flags["--address"] }),
+        ...(flags["--kind"] === undefined ? {} : { kind: flags["--kind"] }),
+        ...(flags["--limit"] === undefined
+          ? {}
+          : { limit: Number(flags["--limit"]) }),
+      }),
+    );
     return;
   }
   if (command === "acquire") {
@@ -219,6 +299,94 @@ async function main() {
   if (command === "derive") {
     const query = deriveQueryFromFlags(flags);
     print(await createAgentService({ providers }).call("derive", query));
+    return;
+  }
+  if (command === "hypercore") {
+    const query: Record<string, unknown> = { account: flags["--address"] };
+    for (const [flag, name] of [
+      ["--start-time", "startTime"],
+      ["--end-time", "endTime"],
+    ]) {
+      if (flags[flag] === undefined) continue;
+      if (!/^\d+$/.test(flags[flag]))
+        throw new Error(
+          `${flag} must be a non-negative timestamp in milliseconds`,
+        );
+      query[name] = Number(flags[flag]);
+    }
+    if (flags["--cursor"] !== undefined) query.cursor = flags["--cursor"];
+    const result = !flags["--file"]
+      ? await acquireHypercoreHistory(query)
+      : await lock(resolve(flags["--file"]), async () => {
+          const path = resolve(flags["--file"]);
+          const current = await readSnapshot(path);
+          if (current.mode !== "live")
+            throw new Error("Live HyperCore acquisition requires a live case");
+          if (String(query.account).toLowerCase() !== current.root)
+            throw new Error(
+              "HyperCore account must match the case focus wallet",
+            );
+          const acquired = await acquireHypercoreHistory(
+            query,
+            current.protocolEvidence?.hypercore,
+          );
+          if (!acquired.cached)
+            await writeSnapshot(path, {
+              ...current,
+              protocolEvidence: mergeProtocolEvidence(
+                current.protocolEvidence,
+                { version: 1, mode: "private", hypercore: acquired.bundle },
+              ),
+              updatedAt: nextRevision(current.updatedAt),
+            });
+          return { ...acquired, caseId: current.id };
+        });
+    print(result);
+    if (result.errors.length) process.exitCode = 2;
+    return;
+  }
+  if (command === "collect") {
+    if (
+      !flags["--file"] ||
+      !flags["--address"] ||
+      !flags["--chain"] ||
+      !flags["--pages"]
+    )
+      throw new Error(
+        "collect requires --file, --address, --chain and --pages",
+      );
+    for (const name of ["--chain", "--pages", "--page-size"])
+      if (flags[name] !== undefined && !/^\d+$/.test(flags[name]))
+        throw new Error(`${name} must be a positive integer`);
+    const path = resolve(flags["--file"]);
+    const collected = await lock(path, async () =>
+      collectWalletHistory(
+        await readSnapshot(path),
+        {
+          address: flags["--address"],
+          chainId: Number(flags["--chain"]),
+          maxPages: Number(flags["--pages"]),
+          ...(flags["--page-size"] === undefined
+            ? {}
+            : { pageSize: Number(flags["--page-size"]) }),
+        },
+        providers,
+        async (value) => {
+          await writeSnapshot(path, value);
+          process.stderr.write(
+            `${JSON.stringify({ progress: true, pages: value.coverage.filter((c) => c.address === flags["--address"].toLowerCase() && c.chainId === Number(flags["--chain"])).map((c) => ({ provider: c.provider, pages: c.pagesLoaded, status: c.status })), transfers: value.transfers.length })}\n`,
+          );
+        },
+      ),
+    );
+    print({
+      caseId: collected.investigation.id,
+      ...collected.summary,
+      evidenceCount: collected.investigation.transfers.length,
+      nodeCount: collected.investigation.nodes.length,
+      coverage: collected.investigation.coverage,
+    });
+    if (collected.summary.status === "error") process.exitCode = 2;
     return;
   }
   if (command === "replay") {
@@ -304,6 +472,7 @@ async function main() {
         providers,
         flags["--history-mode"],
       );
+      await hydrateSharedLabels(created);
       await writeSnapshot(path, created);
       return created;
     });
@@ -396,6 +565,7 @@ async function main() {
         },
         providers,
       );
+      await hydrateSharedLabels(next);
       next.updatedAt = nextRevision(current.updatedAt);
       await writeSnapshot(path, next);
       return next;
@@ -461,8 +631,8 @@ async function main() {
     if (!["all", "in", "out"].includes(direction))
       throw new Error("Direction must be all, in or out");
     const chain = flags["--chain"];
-    if (chain && !["1", "957", "8453", "42161"].includes(chain))
-      throw new Error("Chain must be 1, 957, 8453 or 42161");
+    if (chain && !["1", "957", "8453", "42161", "999", "4663"].includes(chain))
+      throw new Error("Chain must be 1, 957, 8453, 42161, 999 or 4663");
     const transfers = filterTransfers(value.transfers, value.root, {
       ...(chain ? { chainId: Number(chain) } : {}),
       asset: flags["--asset"],

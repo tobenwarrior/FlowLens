@@ -28,6 +28,7 @@ import type { Providers } from "./operations.ts";
 import { ProviderError } from "./etherscan.ts";
 import type { Acquirer } from "./acquire.ts";
 import type { inspectDerive } from "./derive-provider.ts";
+import type { HypercoreProvider } from "./hypercore-provider.ts";
 
 class HttpError extends Error {
   status: number;
@@ -106,10 +107,13 @@ export interface ApiOptions {
   dataDir: string;
   /** Remembered entity labels; defaults to FLOWLENS_LABEL_FILE or .local/labels.json. */
   labelFile?: string;
+  /** Tracked shared wallet-label catalogue; injectable for isolated tests/review tooling. */
+  publicLabelFile?: string;
   distDir?: string;
   providers?: Providers;
   acquirer?: Acquirer;
   deriveInspector?: typeof inspectDerive;
+  hypercoreProvider?: HypercoreProvider;
 }
 /** Local only; caller must bind to 127.0.0.1. Browser mutations are same-local-origin JSON. */
 export function createApiServer(options: ApiOptions) {
@@ -118,9 +122,11 @@ export function createApiServer(options: ApiOptions) {
   const agentService = createAgentService({
     dataDir: options.dataDir,
     labelFile: options.labelFile,
+    publicLabelFile: options.publicLabelFile,
     providers,
     acquirer: options.acquirer,
     deriveInspector: options.deriveInspector,
+    hypercoreProvider: options.hypercoreProvider,
   });
   const locks = new Map<string, Promise<unknown>>();
   async function exclusive<T>(
@@ -188,6 +194,12 @@ export function createApiServer(options: ApiOptions) {
           res,
           200,
           await agentService.call("derive", await body(req)),
+        );
+      if (method === "POST" && url.pathname === "/api/hypercore")
+        return send(
+          res,
+          200,
+          await agentService.call("hypercore", await body(req)),
         );
       if (method === "POST" && url.pathname === "/api/acquire")
         return send(
@@ -379,8 +391,13 @@ export function createApiServer(options: ApiOptions) {
           if (!["all", "in", "out"].includes(direction))
             throw new Error("Direction must be all, in or out");
           const chain = url.searchParams.get("chainId");
-          if (chain !== null && !["1", "957", "8453", "42161"].includes(chain))
-            throw new Error("Chain ID must be 1, 957, 8453 or 42161");
+          if (
+            chain !== null &&
+            !["1", "957", "8453", "42161", "999", "4663"].includes(chain)
+          )
+            throw new Error(
+              "Chain ID must be 1, 957, 8453, 42161, 999 or 4663",
+            );
           const transfers = filterTransfers(value.transfers, value.root, {
             ...(chain ? { chainId: Number(chain) } : {}),
             direction: direction as "all" | "in" | "out",

@@ -1,6 +1,6 @@
 # Reporting skills
 
-Use [report-investigation](report-investigation/SKILL.md) after [evidence review](../investigation/audit-trace-evidence/SKILL.md).
+After [evidence review](../investigation/audit-trace-evidence/SKILL.md), use [edit-evidence-report](edit-evidence-report/SKILL.md) to write the reader's argument, then [report-investigation](report-investigation/SKILL.md) to export and verify it.
 
 - [Export commands and scope](report-investigation/references/exporting.md) cover Markdown, PDF, DOCX and HTML.
 - [Manifest contract](report-investigation/references/manifest.md) defines the existing screenshot-backed document input.

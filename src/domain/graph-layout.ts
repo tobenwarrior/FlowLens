@@ -45,6 +45,8 @@ export function layoutFlow(
   keys: string[],
   links: FlowLink[],
   group?: (key: string) => string,
+  /** The height a node needs in its column; ROW_GAP unless it is a taller box. */
+  size: (key: string) => number = () => ROW_GAP,
 ): FlowLayout {
   const all = [root, ...keys.filter((key) => key !== root)];
   const rank = new Map(all.map((key, index) => [key, index]));
@@ -220,10 +222,16 @@ export function layoutFlow(
   // Rows: line each node up with its neighbours, keeping ROW_GAP between rows. Each
   // column takes the closest fit that keeps its order and spacing: rows that would
   // collide pool into one block centred on their mean wish, and the rest stay put.
-  const pack = (wanted: number[]) => {
+  // Neighbouring rows sit half of each one's height apart: ROW_GAP for two wallets.
+  const pack = (wanted: number[], heights: number[]) => {
+    const offset = heights.map((_, i) =>
+      heights
+        .slice(0, i)
+        .reduce((sum, h, j) => sum + (h + heights[j + 1]) / 2, 0),
+    );
     const blocks: { start: number; size: number; sum: number }[] = [];
     wanted.forEach((value, i) => {
-      blocks.push({ start: i, size: 1, sum: value - i * ROW_GAP });
+      blocks.push({ start: i, size: 1, sum: value - offset[i] });
       while (blocks.length > 1) {
         const last = blocks.at(-1)!,
           prev = blocks.at(-2)!;
@@ -234,10 +242,7 @@ export function layoutFlow(
       }
     });
     return blocks.flatMap(({ start, size, sum }) =>
-      Array.from(
-        { length: size },
-        (_, k) => sum / size + (start + k) * ROW_GAP,
-      ),
+      Array.from({ length: size }, (_, k) => sum / size + offset[start + k]),
     );
   };
   const y = new Map(all.map((key) => [key, index.get(key)! * ROW_GAP]));
@@ -249,6 +254,7 @@ export function layoutFlow(
           const around = neighbours.get(key)!.map((other) => y.get(other)!);
           return around.length ? mean(around) : y.get(key)!;
         }),
+        list.map(size),
       );
       list.forEach((key, i) => y.set(key, rows[i]));
     }

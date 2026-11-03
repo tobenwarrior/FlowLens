@@ -1,8 +1,11 @@
 import { nodeKey, normalizeAddress } from "./engine.ts";
 import type { Investigation, Transfer, WalletNode } from "./types.ts";
 
-/** The human graph is a readable projection; retained evidence has a larger bound. */
-export const GRAPH_NODE_LIMIT = 80;
+/**
+ * The human graph is a readable projection; retained evidence has a larger bound. A
+ * busy wallet's smaller counterparties are drawn as chips in a box, so this many fit.
+ */
+export const GRAPH_NODE_LIMIT = 400;
 
 export interface GraphProjectionOptions {
   /** A selected counterparty is shown before pinned and activity-ranked nodes. */

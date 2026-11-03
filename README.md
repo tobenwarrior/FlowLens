@@ -53,7 +53,7 @@ Ethereum (1) and Derive Chain (957) can use the keyless legacy Blockscout routes
 
 | Capability        | What you get                                                                                                        |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Funding graph     | Money flows left to right, one column per hop, with lines weighted and captioned by value. Expand a wallet from the graph, spotlight its connections, and group, pin or hide wallets. |
+| Funding graph     | Money flows left to right, one column per hop, with lines weighted and captioned by value and two-way flows drawn as paired arrows. A busy wallet keeps its biggest counterparties as nodes and boxes the rest, so every counterparty stays on the graph; lookalike addresses (likely address poisoning) are flagged. Expand a wallet from the graph, spotlight its connections, and group, pin or hide wallets. |
 | Wallet analysis   | Gross inflow, outflow and net across every priced asset in USD, or per asset in exact units; ranked counterparties, transfer history and cumulative net-flow charts. |
 | Filters           | Network, asset, direction, date and value filters shared by the graph and evidence views. Hide zero-value transfers, transfers under a USD floor or unpriced tokens such as airdrop spam; the evidence stays in the case. |
 | Evidence          | Exact raw amounts, transaction hashes, blocks, UTC timestamps, token contracts and provider provenance.             |
@@ -151,7 +151,7 @@ node --env-file-if-exists=.env server/cli.ts collect --file .local/endowment.jso
   --address 0x4F2083f5fBede34C2714aFfb3105539775f7FE64 --chain 1 --pages 10 --page-size 10
 ```
 
-It saves each committed page, stops at provider errors, quota, access or evidence budgets, and does not retry, fall back or fan out to counterparties. The case retains up to 2,000 nodes and 20,000 transfers within the existing 5 MB snapshot bound; the human graph is a projection of the focus wallet plus at most 80 counterparties.
+It saves each committed page, stops at provider errors, quota, access or evidence budgets, and does not retry, fall back or fan out to counterparties. The case retains up to 2,000 nodes and 20,000 transfers within the existing 5 MB snapshot bound; the human graph is a projection of the focus wallet plus at most 400 counterparties.
 
 Reuse the command with the appropriate `--chain` from the source table for each network you want to check. `inspect` reports saved coverage and cursors. After loading transfers, add a label with its source, observation date and confidence; a counterparty relationship alone does not identify an owner. The [label guide](docs/workspace-controls.md#attach-or-edit-a-label) covers annotations, and the [shared catalogue guide](data/README.md) covers reviewing selected labels for publication.
 

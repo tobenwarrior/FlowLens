@@ -3291,6 +3291,85 @@ label.filter-select > select option {
  * box 8px (RING) above the disc so the selection ring and the focus glow are not
  * clipped; the disc stays the button's first child, after that 8px of padding.
  */
+/* A group box: div.counterparty-group > span.group-head + div.group-chips > button.group-chip.
+   Graph.tsx sizes the box from CHIP and BOX; keep these measurements in step. */
+.counterparty-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  font-family: var(--mono);
+}
+.counterparty-group .group-head {
+  height: 24px;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.group-chips {
+  display: grid;
+  gap: 4px;
+  grid-auto-rows: 20px;
+}
+.group-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--light-navy);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.group-chip:hover,
+.group-chip:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text-bright);
+}
+.group-chip:focus-visible {
+  outline: 1px solid var(--blue);
+  outline-offset: 1px;
+}
+/* Lookalike addresses (likely address poisoning): an amber ring on the disc and an
+   amber chip edge. Outline, so a selected wallet keeps its own ring. */
+.graph-node.lookalike .node-disc {
+  outline: 2px solid color-mix(in srgb, var(--orange) 75%, transparent);
+  outline-offset: 2px;
+}
+.graph-node.lookalike .node-sub {
+  color: var(--orange);
+}
+.group-chip.lookalike {
+  border-color: color-mix(in srgb, var(--orange) 55%, var(--border));
+  color: var(--orange);
+}
+.group-chip.group-more {
+  justify-content: center;
+  color: var(--blue-light);
+}
+.group-chip .chain-dot {
+  width: 5px;
+  height: 5px;
+}
 .graph-node {
   display: flex;
   flex-direction: column;

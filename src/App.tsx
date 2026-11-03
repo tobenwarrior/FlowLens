@@ -58,7 +58,7 @@ import { DateField } from "./components/DateField.tsx";
 import type { PriceBook, PriceQuote } from "./domain/pricing.ts";
 import { TransferTable } from "./components/TransferTable.tsx";
 import { AddressOverview } from "./components/AddressOverview.tsx";
-import { Graph, chainName, displayUnits, short } from "./components/Graph.tsx";
+import { Graph, chainName, displayAmount, short } from "./components/Graph.tsx";
 import { EvidenceDrawer } from "./components/Evidence.tsx";
 import type { VisibilityChange } from "./components/WalletFlows.tsx";
 import {
@@ -565,9 +565,9 @@ export default function App() {
       };
     const others = summary.assets - 1;
     return {
-      inflow: displayUnits(flow.inflow, flow.asset.decimals),
-      outflow: displayUnits(flow.outflow, flow.asset.decimals),
-      net: `${BigInt(flow.net) > 0n ? "+" : ""}${displayUnits(flow.net, flow.asset.decimals)}`,
+      inflow: displayAmount(flow.inflow, flow.asset),
+      outflow: displayAmount(flow.outflow, flow.asset),
+      net: `${BigInt(flow.net) > 0n ? "+" : ""}${displayAmount(flow.net, flow.asset)}`,
       unit: flow.asset.symbol,
       scope: `${flow.asset.symbol} · ${chainName(flow.asset.chainId)}`,
       detail: `Focus wallet · loaded scope only${

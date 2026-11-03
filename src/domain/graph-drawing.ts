@@ -55,10 +55,14 @@ export interface Caption {
   y: number;
   /** Degrees, kept upright. */
   angle: number;
+  /** Under its line rather than over it: the lower line of a two-way pair. */
+  below?: boolean;
 }
 
 /** Space the arrowhead needs between a line's end and the disc it points at. */
 export const ARROW_GAP = 6;
+/** The spacing of the lanes a fan's lines bend in; Graph.tsx widens columns to fit them. */
+export const LANE = 10;
 /** Spots to try for a caption, as shifts from its preferred spot along the line. */
 const SHIFTS = [
   0,
@@ -239,7 +243,13 @@ export function routeForward(
     },
     e1 = { x: to.x - Math.max(to.clear, to.r) - 6, y: toY };
   const room = e1.x - s1.x;
-  const width = Math.max(16, Math.min(room * 0.4, 64) - Math.abs(offset) * 8);
+  // Each line of a fan bends in a lane of its own, LANE apart, so no two share a
+  // vertical run; the lanes nest as above.
+  const lanes = (fan.of - 1) / 2;
+  const reach = Math.max(16, Math.min(room * 0.7, 16 + lanes * 2 * LANE));
+  const width = lanes
+    ? 16 + (reach - 16) * (1 - Math.abs(offset) / (lanes + 0.5))
+    : Math.max(16, Math.min(room * 0.4, 64));
   let direct: Route;
   if (bend === "start" && fromY !== toY) {
     const m = { x: s1.x + width, y: to.y };
@@ -270,6 +280,14 @@ export function routeForward(
     ],
     2,
   );
+}
+
+/** The same line travelled the other way, for drawing money that flows back. */
+export function reverseRoute(route: Route): Route {
+  const segments = [...route.segments]
+    .reverse()
+    .map(({ p0, p1, p2, p3 }) => ({ p0: p3, p1: p2, p2: p1, p3: p0 }));
+  return { ...toRoute(segments, 0), prefer: 1 - route.prefer };
 }
 
 /**
@@ -320,14 +338,21 @@ export const captionAt = (
   route: Route,
   text: string,
   u = route.prefer,
-): Caption => ({ text, ...pointAt(route, u), angle: angleAt(route, u) });
+  below = false,
+): Caption => ({
+  text,
+  ...pointAt(route, u),
+  angle: angleAt(route, u),
+  ...(below ? { below } : {}),
+});
 
-/** The box a caption's text occupies: drawn 5px above its line, about 11px tall. */
+/** The box a caption's text occupies: about 11px tall, just over (or under) its line. */
 export function captionBox(caption: Caption, width: number): Rect {
   const angle = (caption.angle * Math.PI) / 180;
+  const side = caption.below ? -1 : 1;
   return {
-    cx: caption.x + 6.5 * Math.sin(angle),
-    cy: caption.y - 6.5 * Math.cos(angle),
+    cx: caption.x + side * 6.5 * Math.sin(angle),
+    cy: caption.y - side * 6.5 * Math.cos(angle),
     hw: width / 2 + 3,
     hh: 6.5,
     angle,
@@ -436,7 +461,7 @@ const stroke = (route: Route) => {
  * nowhere are left out; requests earlier in the list win.
  */
 export function placeCaptions(
-  requests: { id: string; texts: string[]; route: Route }[],
+  requests: { id: string; texts: string[]; route: Route; below?: boolean }[],
   obstacles: Rect[],
   width: (text: string) => number,
 ): Map<string, Caption> {
@@ -460,7 +485,7 @@ export function placeCaptions(
         ),
     );
   };
-  for (const { id, texts, route } of requests) {
+  for (const { id, texts, route, below } of requests) {
     const total = route.lengths[route.lengths.length - 1];
     const spots = SHIFTS.map((shift) => route.prefer + shift).filter(
       (u) => u > 0 && u < 1,
@@ -473,7 +498,7 @@ export function placeCaptions(
           const w = width(text);
           for (const u of spots) {
             if (w / 2 + 4 > Math.min(u, 1 - u) * total) continue;
-            const caption = captionAt(route, text, u);
+            const caption = captionAt(route, text, u, below);
             if (level && Math.abs(caption.angle) > LEVEL) continue;
             const box = captionBox(caption, w);
             if (taken.some((other) => overlaps(box, other))) continue;

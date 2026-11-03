@@ -88,7 +88,7 @@ node --env-file-if-exists=.env server/cli.ts collect --file PATH --address EVM \
   --chain N --pages 1..200 [--page-size N]
 ```
 
-Collection stops at a saved provider error, quota/access denial, pagination problem or evidence budget. It does not retry, silently switch providers, recurse into counterparties or fan out to other chains. Exit code `2` means the case was saved with a provider/coverage error; inspect the returned coverage and resume explicitly after resolving it. The case parser retains up to 2,000 nodes, 20,000 transfers and 5 MB; the human graph projects the focus wallet plus at most 80 counterparties while retaining loaded addresses and evidence within those bounds.
+Collection stops at a saved provider error, quota/access denial, pagination problem or evidence budget. It does not retry, silently switch providers, recurse into counterparties or fan out to other chains. Exit code `2` means the case was saved with a provider/coverage error; inspect the returned coverage and resume explicitly after resolving it. The case parser retains up to 2,000 nodes, 20,000 transfers and 5 MB; the human graph projects the focus wallet plus at most 400 counterparties while retaining loaded addresses and evidence within those bounds.
 
 ## Preserve, resume and recover
 

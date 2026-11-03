@@ -122,6 +122,37 @@ export function formatCompact(value: number, decimals = 3): string {
   return `${sign}${trimZeros(magnitude.toFixed(decimals))}`;
 }
 
+/** Stablecoins read to the cent. A spoofed symbol only changes how it is rounded. */
+const STABLECOIN =
+  /^(USDC(\.E)?|USDT0?|DAI|USDS|USDE|PYUSD|FDUSD|TUSD|GHO|LUSD|FRAX|USDBC|CRVUSD|RLUSD)$/i;
+
+/**
+ * Decimal places for reading an amount: stablecoins 2, other assets 2 from 1,000,
+ * 4 from 1 and 6 below. Evidence views keep the exact figure.
+ */
+export function readablePlaces(
+  raw: string,
+  asset: { symbol: string; decimals: number },
+): number {
+  if (STABLECOIN.test(asset.symbol)) return 2;
+  const size = Math.abs(wholeUnits(raw, asset.decimals));
+  return size >= 1000 ? 2 : size >= 1 ? 4 : 6;
+}
+
+/** A raw amount rounded half away from zero to `places` decimals of the token. */
+export function roundUnits(
+  raw: string,
+  decimals: number,
+  places: number,
+): string {
+  if (places >= decimals) return raw;
+  const unit = 10n ** BigInt(decimals - places);
+  const value = BigInt(raw),
+    size = value < 0n ? -value : value;
+  const rounded = ((size + unit / 2n) / unit) * unit;
+  return (value < 0n ? -rounded : rounded).toString();
+}
+
 /** A dollar amount in compact form, its sign ahead of the dollar sign. */
 export function formatUsdAmount(amount: number, decimals = 2): string {
   return `${amount < 0 ? "-" : ""}$${formatCompact(Math.abs(amount), decimals)}`;

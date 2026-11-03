@@ -49,6 +49,14 @@ Explicitly test namesakes and contradictions: a different corporate domain, inco
 
 Geographic or semantic matches can strengthen A but do not prove B. Compatible brand, functional activity and explicitly published company region can justify retaining A as a corporate-profile research hypothesis even without reciprocal links or any wallet disclosure; state the limitations. Do not require exact wallet disclosure merely to keep candidate A. Reciprocal links strengthen A, while full-address disclosure or control evidence belongs to the separate B test. Even a first-party address disclosure is an attributable assertion, not automatically authenticated ownership. A configured Safe signer, validated signature or operational payment has its own scope and cannot silently become beneficial ownership.
 
+Use three qualitative confidence slots rather than one overall score:
+
+- **Exact public platform association:** whether a public platform or profile explicitly pairs this exact address with the business. Preserve the provider's wording; a predicted or community label remains a prediction.
+- **Probable business affiliation:** whether convergent exact-address naming, business-discriminating operational links, and early gas or account-use clues fit the business better than the alternatives. Ordinary OTC or customer payments, exchange/bridge transfers, pooled-service flows and associated peer labels do not suffice; predicted peer labels remain unverified provider assertions. A **very confident affiliation** finding is allowed only after material contradictions are evaluated and reconciled or explicitly outweighed by independent evidence, with scope and remaining gaps stated. Otherwise use disputed or unresolved; a first-party legal wallet disclosure is not required for this narrower claim.
+- **Technical, legal or beneficial ownership:** whether first-party disclosure, attributable control, a validated signature or a legal record supports that narrower claim. Keep it unresolved when that proof is absent.
+
+Do not use a fixed source count or mechanical matrix in place of judgment. Multiple mirrors of one label are one source claim, and user conviction is not evidence. Never turn an affiliation verdict into ownership or assign an ownership percentage.
+
 Keep service funders, noncontemporaneous payments, platform labels and control proof in separate evidence rows. Source dates and transaction dates are different fields. A transfer through shared exchange, bridge or relayer infrastructure does not identify a customer or imply common ownership.
 
 ## 5. Boundaries, ledger and verdict

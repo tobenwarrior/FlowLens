@@ -16,7 +16,7 @@ A name an address registered for itself is a self-disclosure, and one of the str
 
 Test each lookup with an address you know has a profile. If that positive control also returns nothing, the result is inconclusive, not a negative. A key-gated, challenged or rate-limited lookup is a blocker, not "no profile".
 
-Search social media for the **full** address. A match on a short prefix counts only once the full address and chain match. Keep the original post URL and date, and attribute a third party's claim to its author as unverified.
+Search social media for the **full** address. A match on a short prefix counts only once the full address and chain match. For X or an equivalent public feed, run three bounded searches separately: exact address in **Top**, exact address in **Latest**, and exact address plus the candidate business name or official handle. Open and expand each relevant original post (for example, **Show more**) before judging confidence; retain the exact full-address/business-name pairing rather than a collapsed preview. Record each query, surface/filter and UTC time, then retain the original post URL, date and author. Note whether the post names the exact address, links the business's official account, or only discusses activity. A third-party address/business-name pairing supports an affiliation lead; a business-controlled post naming the exact address is stronger; activity-only posts do not establish ownership. Search results remain bounded by the accessible scope.
 
 **Stop at a personal-looking handle.** Record it and go no further. This guide is for public businesses and voluntary disclosures, never for identifying private people.
 
@@ -42,6 +42,8 @@ When someone asks "is this firm X?":
 2. Find each firm's publicly labelled wallets.
 3. Test address joins with the target: direct transfers, a shared dedicated deposit address, a funding parent, a shared session key, a venue collateral marker.
 4. Report each firm as **joined** (with the exact path), **not joined within the stated scope**, or **untestable**.
+
+Treat an operational link as business-discriminating only when its endpoints, timing, product context or account role distinguish the candidate from ordinary OTC/customer payments, exchange or bridge traffic, pooled services and shared infrastructure. Associated peer labels do not become verified joins merely because they are nearby or repeated; predicted labels remain provider assertions until independently supported.
 
 Draw every hop explicitly, for example `firm claim -> labelled wallet A -> verified transfer -> target`. Missing joins stay missing even when every transfer is real. A trade counterparty, a fellow recipient of one distribution, a matching trading style, or a follow on social media is not a join. Never fill a requested shortlist with names the evidence does not support.
 
@@ -71,7 +73,7 @@ Then report:
 2. The exact links behind it, hop by hop.
 3. The working hypothesis, clearly labelled as one.
 4. What would confirm or change it, and the next input that could.
-5. Confidence stated separately for transfers, provider labels, possible common operation and ownership. Do not invent ownership percentages.
+5. State confidence separately for transfers, exact public platform association, probable business affiliation or common operation, and technical/legal/beneficial ownership. A very confident affiliation finding can coexist with unresolved ownership when exact-address naming and business-discriminating operations converge, material contradictions are reconciled or explicitly outweighed by independent evidence, and alternatives and limits are explicit. Otherwise use disputed or unresolved. Do not use a fixed source count, treat mirrored or predicted labels as independent proof, or invent ownership percentages.
 
 Close the leads you could check, and name the exact blocker for each one you could not. Never claim that every chain, transaction or source has been exhausted. When a later finding overturns an earlier claim, correct it plainly and keep the old version as history.
 

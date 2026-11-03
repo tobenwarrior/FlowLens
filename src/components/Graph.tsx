@@ -1,23 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
   Expand,
-  Minus,
-  Plus,
-  Wallet,
   Landmark,
   Layers,
+  Minus,
   Pin,
+  Plus,
+  Wallet,
 } from "lucide-react";
 import type { Investigation, Transfer, WalletNode } from "../domain/types.ts";
 import {
+  assetKey,
   buildEdges,
   formatUnits,
   nodeKey,
-  assetKey,
 } from "../domain/engine.ts";
 import { projectGraph } from "../domain/graph-projection.ts";
+import {
+  COLUMN_GAP,
+  layoutFlow,
+  linkKey,
+  type FlowLink,
+} from "../domain/graph-layout.ts";
+import {
+  captionAt,
+  placeCaptions,
+  pointAt,
+  routeBackward,
+  routeForward,
+  type Caption,
+  type Rect,
+  type Route,
+} from "../domain/graph-drawing.ts";
 
 export const short = (s: string) => `${s.slice(0, 6)}…${s.slice(-4)}`;
 export const chainName = (id: number) =>
@@ -53,6 +67,84 @@ export const explorer = (id: number, type: "tx" | "address", value: string) => {
   )[id];
   return origin ? `${origin}/${type}/${value}` : undefined;
 };
+
+/** The focus wallet's layout key; every other node is keyed by chain and address. */
+const ROOT = "root";
+type Role = "focus" | "wallet" | "labelled" | "exchange" | "bridge";
+const ROLES: { role: Role; name: string }[] = [
+  { role: "focus", name: "Focus" },
+  { role: "wallet", name: "Wallet" },
+  { role: "labelled", name: "Labelled" },
+  { role: "exchange", name: "Exchange" },
+  { role: "bridge", name: "Bridge or protocol" },
+];
+const roleOf = (node: WalletNode): Role =>
+  node.category === "exchange"
+    ? "exchange"
+    : node.category === "bridge" || node.category === "protocol"
+      ? "bridge"
+      : node.label
+        ? "labelled"
+        : "wallet";
+const RADIUS = { focus: 28, node: 22 };
+/** Each node is its disc with a two-line caption underneath, in one foreignObject. */
+const LABEL_WIDTH = 170;
+const LABEL_HEIGHT = 40;
+/** The hop captions sit this far above the topmost disc. */
+const HOP_OFFSET = 44;
+/** Room above each disc for its selection ring and the focus wallet's glow. */
+const RING = 8;
+
+const cleanLabel = (text: string) =>
+  text.replace(" (demo)", "").replace(" · demo", "");
+
+/** Width of monospace text at a font size: about 0.6em per character. */
+const textWidth = (text: string, size: number, tracking = 0) =>
+  text.length * size * (0.6 + tracking);
+/** Line captions are 9px (`.edge-label`). */
+const captionWidth = (text: string) => textWidth(text, 9);
+const hopText = (layer: number) =>
+  layer === 0
+    ? "Focus"
+    : `${Math.abs(layer)} hop${Math.abs(layer) === 1 ? "" : "s"} ${layer < 0 ? "before" : "after"}`;
+
+/**
+ * A line's caption, fullest first: the main token's total and the transfer count, or a
+ * single transfer's UTC time; then the amount alone for tight spots. Assets are told
+ * apart by contract, not symbol. Exact amounts stay in the evidence drawer.
+ */
+export function edgeCaptions(transfers: Transfer[]): [string, string] {
+  const assets = new Map<
+    string,
+    { symbol: string; decimals: number; raw: bigint; count: number }
+  >();
+  for (const transfer of transfers) {
+    const key = assetKey(transfer.asset);
+    const entry = assets.get(key) ?? {
+      symbol: transfer.asset.symbol,
+      decimals: transfer.asset.decimals,
+      raw: 0n,
+      count: 0,
+    };
+    entry.raw += BigInt(transfer.rawAmount);
+    entry.count++;
+    assets.set(key, entry);
+  }
+  const [main] = [...assets.values()].sort(
+    (a, b) => b.count - a.count || (b.raw > a.raw ? 1 : b.raw < a.raw ? -1 : 0),
+  );
+  const amount = `${displayUnits(main.raw.toString(), main.decimals, 4)} ${main.symbol}`;
+  if (transfers.length === 1) {
+    const at = transfers[0].timestamp;
+    return [`${amount} · ${at.slice(0, 10)} ${at.slice(11, 16)} UTC`, amount];
+  }
+  const extra =
+    assets.size > 1
+      ? ` +${assets.size - 1} asset${assets.size === 2 ? "" : "s"}`
+      : "";
+  return [`${amount}${extra} (${transfers.length} transfers)`, amount];
+}
+
 export function Graph({
   investigation,
   transfers,
@@ -90,10 +182,6 @@ export function Graph({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  }, [investigation.id]);
   const [drag, setDrag] = useState<{
     x: number;
     y: number;
@@ -114,48 +202,222 @@ export function Graph({
     [projection.transfers],
   );
   const nodes = projection.nodes;
-  const incoming = nodes.filter((n) =>
-    projection.transfers.some(
-      (t) => t.chainId === n.chainId && t.from === n.address && t.to === root,
-    ),
+  const byKey = useMemo(
+    () => new Map(nodes.map((n) => [nodeKey(n.chainId, n.address), n])),
+    [nodes],
   );
-  const outgoing = nodes.filter((n) => !incoming.includes(n));
-  const height = Math.max(
-    510,
-    Math.max(incoming.length, outgoing.length) * 92 + 90,
-  );
-  const positions = new Map<string, { x: number; y: number }>();
-  const position = (arr: WalletNode[], x: number) =>
-    arr.forEach((n, i) =>
-      positions.set(nodeKey(n.chainId, n.address), {
-        x,
-        y: height / 2 + (i - (arr.length - 1) / 2) * 92,
+  const keyOf = (chainId: number, address: string) =>
+    address.toLowerCase() === root
+      ? ROOT
+      : nodeKey(chainId, address as `0x${string}`);
+  const layout = useMemo(() => {
+    const links: FlowLink[] = edges.map((edge) => ({
+      from:
+        edge.from.toLowerCase() === root
+          ? ROOT
+          : nodeKey(edge.chainId, edge.from),
+      to:
+        edge.to.toLowerCase() === root ? ROOT : nodeKey(edge.chainId, edge.to),
+      transfers: edge.transfers.length,
+      firstAt: edge.transfers.reduce(
+        (first, transfer) =>
+          transfer.timestamp < first ? transfer.timestamp : first,
+        edge.transfers[0].timestamp,
+      ),
+    }));
+    return layoutFlow(
+      ROOT,
+      [...byKey.keys()],
+      links,
+      grouped ? (key) => byKey.get(key)?.category ?? "" : undefined,
+    );
+  }, [edges, byKey, grouped, root]);
+  const radiusOf = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
+  const { minX, maxX, minY, maxY } = layout.bounds;
+  const hopY = minY - RADIUS.focus - HOP_OFFSET + 12;
+
+  // Route every line around the wallets and place its caption where it covers no
+  // text. Wallet discs, their captions and the hop captions are the obstacles.
+  const drawing = useMemo(() => {
+    const keyFor = (chainId: number, address: string) =>
+      address.toLowerCase() === root
+        ? ROOT
+        : nodeKey(chainId, address as `0x${string}`);
+    const radius = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
+    // Half the width of each wallet's caption (address over label or chain).
+    const half = new Map(
+      [...layout.nodes.keys()].map((key) => {
+        const node = byKey.get(key);
+        const sub =
+          key === ROOT
+            ? "Focus wallet"
+            : node?.label
+              ? cleanLabel(node.label.text)
+              : chainName(node!.chainId);
+        const wide = Math.max(
+          textWidth(short(key === ROOT ? root : node!.address), 11),
+          textWidth(sub, 10) + (key === ROOT ? 0 : 10),
+        );
+        return [key, Math.min(LABEL_WIDTH / 2, wide / 2 + 4)];
       }),
     );
-  position(incoming, 205);
-  position(outgoing, 895);
-  const point = (address: string, chainId: number) =>
-    address.toLowerCase() === root
-      ? { x: 550, y: height / 2 }
-      : positions.get(nodeKey(chainId, address as `0x${string}`));
-  const nodeTransfers = (n: WalletNode) =>
-    projection.transfers.filter(
-      (t) =>
-        t.chainId === n.chainId && (t.from === n.address || t.to === n.address),
+    const clear = new Map<number, number>();
+    for (const [key, p] of layout.nodes)
+      clear.set(p.layer, Math.max(clear.get(p.layer) ?? 0, half.get(key)!));
+    const walletRects = new Map(
+      [...layout.nodes].map(([key, p]): [string, Rect[]] => {
+        const r = radius(key);
+        return [
+          key,
+          [
+            { cx: p.x, cy: p.y, hw: r + 4, hh: r + 4, angle: 0 },
+            {
+              cx: p.x,
+              cy: p.y + r + 18.5,
+              hw: half.get(key)!,
+              hh: 15,
+              angle: 0,
+            },
+          ],
+        ];
+      }),
     );
+    const hopRects: Rect[] = layout.layers.map((layer) => ({
+      cx: layer * COLUMN_GAP,
+      cy: hopY - 4,
+      hw: textWidth(hopText(layer), 10, 0.12) / 2 + 4,
+      hh: 8,
+      angle: 0,
+    }));
+    const degree = new Map<string, number>();
+    for (const edge of edges)
+      for (const key of [
+        keyFor(edge.chainId, edge.from),
+        keyFor(edge.chainId, edge.to),
+      ])
+        degree.set(key, (degree.get(key) ?? 0) + 1);
+    const routes = new Map<string, Route>();
+    const requests: { id: string; texts: string[]; route: Route }[] = [];
+    for (const edge of edges) {
+      const fromKey = keyFor(edge.chainId, edge.from),
+        toKey = keyFor(edge.chainId, edge.to);
+      const a = layout.nodes.get(fromKey),
+        b = layout.nodes.get(toKey);
+      if (!a || !b || fromKey === toKey) continue;
+      const from = {
+        x: a.x,
+        y: a.y,
+        r: radius(fromKey),
+        clear: clear.get(a.layer)!,
+      };
+      const to = {
+        x: b.x,
+        y: b.y,
+        r: radius(toKey),
+        clear: clear.get(b.layer)!,
+      };
+      const blockers = [...walletRects]
+        .filter(([key]) => key !== fromKey && key !== toKey)
+        .flatMap(([, rects]) => rects);
+      // A fan bends next to its busy wallet, so the level runs (and captions) sit a row apart.
+      const busyFrom = degree.get(fromKey)!,
+        busyTo = degree.get(toKey)!;
+      const route = layout.backward.has(linkKey(fromKey, toKey))
+        ? routeBackward(from, to, blockers)
+        : routeForward(
+            from,
+            to,
+            blockers,
+            busyFrom > busyTo ? "start" : busyTo > busyFrom ? "end" : "middle",
+          );
+      routes.set(edge.id, route);
+      requests.push({
+        id: edge.id,
+        texts: edgeCaptions(edge.transfers),
+        route,
+      });
+    }
+    // Lines at the focus wallet claim their caption spots first, then the busiest lines.
+    const weight = new Map(
+      edges.map((edge) => [edge.id, edge.transfers.length]),
+    );
+    const atFocus = (id: string) =>
+      edges.some(
+        (edge) =>
+          edge.id === id &&
+          (edge.from.toLowerCase() === root || edge.to.toLowerCase() === root),
+      );
+    requests.sort(
+      (a, b) =>
+        Number(atFocus(b.id)) - Number(atFocus(a.id)) ||
+        weight.get(b.id)! - weight.get(a.id)! ||
+        (a.id < b.id ? -1 : 1),
+    );
+    const captions = placeCaptions(
+      requests,
+      [...[...walletRects.values()].flat(), ...hopRects],
+      captionWidth,
+    );
+    // Hidden captions still exist, shown on hover or keyboard focus of their line.
+    const tucked = new Map<string, Caption>(
+      requests
+        .filter(({ id }) => !captions.has(id))
+        .map(({ id, texts, route }) => [id, captionAt(route, texts[0])]),
+    );
+    let low = -Infinity,
+      high = Infinity;
+    for (const route of routes.values())
+      for (let i = 0; i <= 40; i++) {
+        const point = pointAt(route, i / 40);
+        low = Math.max(low, point.y);
+        high = Math.min(high, point.y);
+      }
+    return { routes, captions, tucked, low, high };
+  }, [edges, layout, byKey, root, hopY]);
+
+  // The drawn extent: discs, captions under them, hop captions and loops below.
+  const extent = {
+    left: minX - LABEL_WIDTH / 2 - 16,
+    right: maxX + LABEL_WIDTH / 2 + 16,
+    top: Math.min(
+      minY - RADIUS.focus - HOP_OFFSET - RING - 16,
+      drawing.high - 24,
+    ),
+    bottom: Math.max(maxY + RADIUS.focus + LABEL_HEIGHT + 16, drawing.low + 16),
+  };
+  const centre = {
+    x: (extent.left + extent.right) / 2,
+    y: (extent.top + extent.bottom) / 2,
+  };
+  const fitZoom = Math.max(
+    0.3,
+    Math.min(
+      1,
+      (viewport.width - 48) / (extent.right - extent.left),
+      (viewport.height - 88) / (extent.bottom - extent.top),
+    ),
+  );
+  // Fit when the case or its wallets change, and on resize until the user zooms or pans.
+  const signature = `${investigation.id}|${[...layout.nodes.keys()].join(",")}`;
+  const fitted = useRef({ signature: "", adjusted: false });
+  useEffect(() => {
+    if (fitted.current.signature === signature && fitted.current.adjusted)
+      return;
+    fitted.current = { signature, adjusted: false };
+    setZoom(fitZoom);
+    setPan({ x: 0, y: 0 });
+  }, [signature, fitZoom]);
+  const adjusted = () => {
+    fitted.current.adjusted = true;
+  };
+
   return (
     <div className="graph-wrap" data-testid="funding-graph" ref={viewportRef}>
-      <div className="graph-lane lane-in">
-        <ArrowDownLeft size={14} /> SOURCES OF FUNDS
-      </div>
-      <div className="graph-lane lane-out">
-        DESTINATIONS <ArrowUpRight size={14} />
-      </div>
       <svg
         viewBox={`0 0 ${viewport.width} ${viewport.height}`}
         className="graph-svg"
         aria-label="Interactive directed funding graph"
-        aria-description="Drag the blank canvas to pan. Use zoom controls or Fit graph to inspect more connections. Expansion retains the current text scale."
+        aria-description="Money flows left to right, one column per hop from the focus wallet. Drag the blank canvas to pan; use the zoom controls or Fit graph to see more."
         width={viewport.width}
         height={viewport.height}
         onPointerDown={(e) => {
@@ -169,11 +431,13 @@ export function Graph({
           }
         }}
         onPointerMove={(e) => {
-          if (drag)
+          if (drag) {
+            adjusted();
             setPan({
               x: drag.px + (e.clientX - drag.x),
               y: drag.py + (e.clientY - drag.y),
             });
+          }
         }}
         onPointerUp={() => setDrag(null)}
         onPointerCancel={() => setDrag(null)}
@@ -187,70 +451,49 @@ export function Graph({
           className="graph-pan-surface"
         />
         <defs>
-          <marker
-            id="arrow-in"
-            viewBox="0 0 10 10"
-            refX="8"
-            refY="5"
-            markerWidth="7"
-            markerHeight="7"
-            orient="auto-start-reverse"
-          >
-            <path d="M0 0 10 5 0 10Z" fill="#6b9c8b" />
-          </marker>
-          <marker
-            id="arrow-out"
-            viewBox="0 0 10 10"
-            refX="8"
-            refY="5"
-            markerWidth="7"
-            markerHeight="7"
-            orient="auto-start-reverse"
-          >
-            <path d="M0 0 10 5 0 10Z" fill="#9b8cb5" />
-          </marker>
-          <filter id="node-shadow" x="-30%" y="-30%" width="160%" height="170%">
-            <feDropShadow dx="0" dy="4" stdDeviation="7" floodOpacity=".04" />
-          </filter>
+          {ROLES.map(({ role }) => (
+            <marker
+              key={role}
+              id={`arrow-${role}`}
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M0 0 10 5 0 10Z" className={`arrow-head role-${role}`} />
+            </marker>
+          ))}
         </defs>
         <g
-          transform={`translate(${viewport.width / 2 + pan.x} ${viewport.height / 2 + pan.y}) scale(${zoom}) translate(-550 ${-height / 2})`}
+          transform={`translate(${viewport.width / 2 + pan.x} ${viewport.height / 2 + pan.y}) scale(${zoom}) translate(${-centre.x} ${-centre.y})`}
           data-testid="graph-world"
         >
-          <circle
-            cx="550"
-            cy={height / 2}
-            r="152"
-            className="root-orbit"
-            pointerEvents="none"
-          />
-          <circle
-            cx="550"
-            cy={height / 2}
-            r="108"
-            className="root-orbit inner"
-            pointerEvents="none"
-          />
+          {layout.layers.map((layer) => (
+            <text
+              key={layer}
+              x={layer * COLUMN_GAP}
+              y={hopY}
+              className="hop-label"
+              textAnchor="middle"
+              pointerEvents="none"
+            >
+              {hopText(layer)}
+            </text>
+          ))}
           {edges.map((edge) => {
-            const a = point(edge.from, edge.chainId),
-              b = point(edge.to, edge.chainId);
-            if (!a || !b || edge.from === edge.to) return null;
-            const isIn = edge.to.toLowerCase() === root;
-            const right = b.x >= a.x;
-            const x1 = a.x + (right ? 96 : -96),
-              x2 = b.x + (right ? -103 : 103);
-            const paired = edges.some(
-              (e) =>
-                e.chainId === edge.chainId &&
-                e.from === edge.to &&
-                e.to === edge.from,
-            );
-            const bend = paired ? (isIn ? 18 : -18) : 0;
-            const path = `M ${x1} ${a.y} C ${(x1 + x2) / 2} ${a.y + bend}, ${(x1 + x2) / 2} ${b.y + bend}, ${x2} ${b.y}`;
+            const route = drawing.routes.get(edge.id);
+            if (!route) return null;
+            const fromKey = keyOf(edge.chainId, edge.from);
+            const role =
+              fromKey === ROOT ? "focus" : roleOf(byKey.get(fromKey)!);
+            const placed = drawing.captions.get(edge.id);
+            const caption = placed ?? drawing.tucked.get(edge.id)!;
             return (
-              <g key={edge.id} className={`flow-edge ${isIn ? "in" : "out"}`}>
+              <g key={edge.id} className={`flow-edge role-${role}`}>
                 <path
-                  d={path}
+                  d={route.path}
                   className="edge-hit"
                   role="button"
                   tabIndex={0}
@@ -261,104 +504,84 @@ export function Graph({
                   }}
                 />
                 <path
-                  d={path}
+                  d={route.path}
                   className="edge-line"
-                  markerEnd={`url(#arrow-${isIn ? "in" : "out"})`}
+                  markerEnd={`url(#arrow-${role})`}
                 />
-                <g
-                  transform={`translate(${(x1 + x2) / 2 - 32} ${(a.y + b.y) / 2 - 11 + bend * 0.75})`}
-                  className="edge-count"
+                <text
+                  className={`edge-label${placed ? "" : " tucked"}`}
+                  transform={`translate(${caption.x} ${caption.y}) rotate(${caption.angle})`}
+                  y={-5}
+                  textAnchor="middle"
                   pointerEvents="none"
                 >
-                  <rect width="64" height="23" rx="11" />
-                  <text x="32" y="15" textAnchor="middle">
-                    {edge.transfers.length} transfer
-                    {edge.transfers.length === 1 ? "" : "s"}
-                  </text>
-                </g>
+                  {caption.text}
+                </text>
               </g>
             );
           })}
-          <foreignObject x="446" y={height / 2 - 61} width="208" height="124">
-            <button
-              className={`wallet-card root-card ${selected === root ? "selected" : ""}`}
-              title={`Investigation focus address: ${root}. Labels remain chain-specific in the wallet panel.`}
-              onClick={() =>
-                onNode({ address: investigation.root, chainId: 1 })
-              }
-            >
-              <span className="root-card-top">
-                <span className="wallet-icon">
-                  <Wallet size={18} />
-                </span>
-                <span className="root-badge">FOCUS WALLET</span>
-              </span>
-              <strong>{short(root)}</strong>
-              <span className="root-card-bottom">
-                Investigation origin <span>●</span>
-              </span>
-            </button>
-          </foreignObject>
-          {nodes.map((n) => {
-            const p = positions.get(nodeKey(n.chainId, n.address))!;
-            const list = nodeTransfers(n);
-            const symbols = [
-              ...new Map(
-                list.map((transfer) => [
-                  assetKey(transfer.asset),
-                  transfer.asset.symbol,
-                ]),
-              ).values(),
-            ];
+          {[...layout.nodes].map(([key, p]) => {
+            const node = byKey.get(key);
+            const focus = key === ROOT;
+            if (!focus && !node) return null;
+            const r = radiusOf(key);
+            const role = focus ? "focus" : roleOf(node!);
+            const isSelected = focus
+              ? selected?.toLowerCase() === root
+              : selected === key;
+            const label = node?.label ? cleanLabel(node.label.text) : "";
             return (
               <foreignObject
-                key={nodeKey(n.chainId, n.address)}
-                x={p.x - 97}
-                y={p.y - 39}
-                width="194"
-                height="82"
+                key={key}
+                x={p.x - LABEL_WIDTH / 2}
+                y={p.y - r - RING}
+                width={LABEL_WIDTH}
+                height={2 * r + LABEL_HEIGHT + RING}
               >
                 <button
-                  title={`${n.label?.text ? `${n.label.text} · ` : ""}${chainName(n.chainId)} · ${n.address}${n.label ? ` · ${n.label.claimType || n.label.kind} / ${n.label.confidence}` : " · Ownership unknown"}`}
-                  className={`wallet-card counterparty ${selected === nodeKey(n.chainId, n.address) ? "selected" : ""} ${incoming.includes(n) ? "incoming" : "outgoing"}`}
-                  onClick={() => onNode(n)}
+                  className={`graph-node role-${role}${isSelected ? " selected" : ""}`}
+                  aria-label={
+                    focus
+                      ? `Focus wallet ${short(root)}`
+                      : `${short(node!.address)} · ${label || "No label"} · ${chainName(node!.chainId)}`
+                  }
+                  title={
+                    focus
+                      ? `${root}\nFocus wallet · labels are per chain in the wallet panel`
+                      : `${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
+                  }
+                  onClick={() =>
+                    onNode(
+                      focus
+                        ? { address: investigation.root, chainId: 1 }
+                        : node!,
+                    )
+                  }
                 >
-                  <span className="cp-icon">
-                    {n.category === "exchange" ? (
-                      <Landmark size={16} />
-                    ) : n.category === "bridge" ? (
-                      <Layers size={16} />
-                    ) : (
-                      <Wallet size={16} />
+                  <span className="node-disc">
+                    <span className="node-shape">
+                      {role === "exchange" ? (
+                        <Landmark size={16} />
+                      ) : role === "bridge" ? (
+                        <Layers size={16} />
+                      ) : (
+                        <Wallet size={focus ? 20 : 16} />
+                      )}
+                    </span>
+                    {investigation.pinned.includes(key) && (
+                      <Pin size={10} className="node-pin" />
                     )}
                   </span>
-                  <span className="cp-content">
-                    <strong>
-                      {(n.label?.text || short(n.address))
-                        .replace(" (demo)", "")
-                        .replace(" · demo", "")}
-                    </strong>
-                    <span>
-                      <i className={`chain-dot chain-${n.chainId}`} />
-                      {chainName(n.chainId)}{" "}
-                      <span className="cp-category">· {short(n.address)}</span>
-                    </span>
+                  <strong className="node-name">
+                    {short(focus ? root : node!.address)}
+                  </strong>
+                  <span className="node-sub">
+                    {!focus && (
+                      <i className={`chain-dot chain-${node!.chainId}`} />
+                    )}
+                    {focus ? "Focus wallet" : label || chainName(node!.chainId)}
                   </span>
-                  {investigation.pinned.includes(
-                    nodeKey(n.chainId, n.address),
-                  ) ? (
-                    <Pin size={11} />
-                  ) : (
-                    <span className="node-more">↗</span>
-                  )}
                 </button>
-                <span className="node-amount">
-                  {list.length} transfer{list.length === 1 ? "" : "s"}
-                  {symbols.length > 0 ? ` · ${symbols[0]}` : ""}
-                  {symbols.length > 1
-                    ? ` + ${symbols.length - 1} asset${symbols.length === 2 ? "" : "s"}`
-                    : ""}
-                </span>
               </foreignObject>
             );
           })}
@@ -385,19 +608,21 @@ export function Graph({
         </div>
       )}
       <div className="graph-legend">
-        <span>
-          <i className="legend-in" /> Inflow
-        </span>
-        <span>
-          <i className="legend-out" /> Outflow
-        </span>
-        <span className="legend-help">Arrows show transfer direction</span>
+        {ROLES.map(({ role, name }) => (
+          <span key={role}>
+            <i className={`legend-dot role-${role}`} /> {name}
+          </span>
+        ))}
+        <span className="legend-help">Lines take the sender's colour</span>
       </div>
       <div className="graph-controls">
         <button
           title="Zoom out"
           aria-label="Zoom out"
-          onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))}
+          onClick={() => {
+            adjusted();
+            setZoom((z) => Math.max(0.2, z - 0.15));
+          }}
         >
           <Minus size={16} />
         </button>
@@ -405,7 +630,10 @@ export function Graph({
         <button
           title="Zoom in"
           aria-label="Zoom in"
-          onClick={() => setZoom((z) => Math.min(1.8, z + 0.15))}
+          onClick={() => {
+            adjusted();
+            setZoom((z) => Math.min(1.8, z + 0.15));
+          }}
         >
           <Plus size={16} />
         </button>
@@ -414,16 +642,8 @@ export function Graph({
           title="Fit graph"
           aria-label="Fit graph"
           onClick={() => {
-            setZoom(
-              Math.max(
-                0.05,
-                Math.min(
-                  1,
-                  (viewport.width - 48) / 1100,
-                  (viewport.height - 88) / height,
-                ),
-              ),
-            );
+            fitted.current.adjusted = false;
+            setZoom(fitZoom);
             setPan({ x: 0, y: 0 });
           }}
         >

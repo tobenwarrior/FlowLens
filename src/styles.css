@@ -29,6 +29,13 @@
   --violet: #d96fff;
   --gold: #a07f1a;
 
+  /* Funding graph: one colour per kind of wallet, shared by its disc, lines and legend. */
+  --node-focus: #1585ed;
+  --node-wallet: #8f95a8;
+  --node-labelled: #b77cf2;
+  --node-exchange: #2aa8b3;
+  --node-bridge: #4cc38a;
+
   --selected: #ffffff0a;
   --selected-strong: #ffffff0f;
 
@@ -355,9 +362,7 @@ samp {
 }
 /* --------------------------------------------------------------- surfaces */
 .investigation-panel,
-.wallet-card,
 .evidence-drawer,
-.root-card,
 .saved-case,
 .coverage-list,
 .provenance-box,
@@ -829,26 +834,6 @@ samp {
     0 / 22px 22px;
   background-color: var(--navy);
 }
-.graph-lane {
-  color: var(--text-faint);
-}
-/* The label is a <g> of a pill <rect> and its <text>; they need separate fills. */
-/* Faint rings behind the focus wallet, not filled discs. */
-.root-orbit {
-  fill: none;
-  stroke: var(--border);
-  stroke-width: 1;
-  opacity: 0.55;
-}
-.root-orbit.inner {
-  stroke: var(--border-strong);
-  opacity: 0.4;
-}
-/*
- * Graph node cards live in fixed-size foreignObjects (194x82), with the amount line
- * sitting under the card in the same box. Everything here is sized to that budget so
- * long entity names truncate instead of spilling out of the frame.
- */
 .graph-empty,
 .empty-state {
   padding: 30px 16px;
@@ -936,7 +921,6 @@ samp {
   color: var(--border-strong);
 }
 /* ------------------------------------------------------- counterparties */
-.cp-icon,
 .wallet-icon,
 .scope-icon,
 .asset-icon,
@@ -3083,15 +3067,36 @@ label.filter-select > select option {
   cursor: grabbing;
 }
 
-/* The arrowheads in <defs> have light-theme fill attributes. Use the direction colours. */
-.graph-svg #arrow-in path {
-  fill: var(--green);
+/* Each role sets --node once: discs, lines, arrowheads and legend dots all read it. */
+.role-focus {
+  --node: var(--node-focus);
 }
-.graph-svg #arrow-out path {
-  fill: var(--red);
+.role-wallet {
+  --node: var(--node-wallet);
+}
+.role-labelled {
+  --node: var(--node-labelled);
+}
+.role-exchange {
+  --node: var(--node-exchange);
+}
+.role-bridge {
+  --node: var(--node-bridge);
+}
+.graph-svg .arrow-head {
+  fill: var(--node);
 }
 
-/* Edges: g.flow-edge.in|out > path.edge-hit + path.edge-line + g.edge-count */
+/* Hop captions above each column. */
+.graph-svg .hop-label {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Lines: g.flow-edge.role-* > path.edge-hit + path.edge-line + text.edge-label */
 .flow-edge .edge-hit {
   fill: none;
   stroke: transparent;
@@ -3110,245 +3115,127 @@ label.filter-select > select option {
 }
 .flow-edge .edge-line {
   fill: none;
-  stroke: var(--border-strong);
-  stroke-width: 1.25;
-  stroke-opacity: 0.6;
+  stroke: var(--node);
+  stroke-width: 1.4;
+  stroke-opacity: 0.7;
   pointer-events: none;
   transition:
     stroke-opacity 0.1s ease,
     stroke-width 0.1s ease;
 }
-.flow-edge.in .edge-line {
-  stroke: var(--green);
-}
-.flow-edge.out .edge-line {
-  stroke: var(--red);
-}
-.flow-edge:hover .edge-line {
-  stroke-opacity: 1;
-  stroke-width: 1.75;
-}
+.flow-edge:hover .edge-line,
 .flow-edge:has(.edge-hit:focus-visible) .edge-line {
   stroke-opacity: 1;
-  stroke-width: 1.75;
+  stroke-width: 2;
 }
-
-/* The count label is a 64x23 <g>. Its text is centred at x=32, baseline y=15. The rect
-   is resized around that centre into a 2px-radius chip that fits "100 transfers". */
-.flow-edge .edge-count rect {
-  x: -6px;
-  y: 3px;
-  width: 76px;
-  height: 17px;
-  rx: 2px;
-  ry: 2px;
-  fill: var(--navy);
-  stroke: var(--border-strong);
-  stroke-width: 1;
-  transition: stroke 0.1s ease;
-}
-.flow-edge .edge-count text {
-  fill: var(--text-muted);
+/* The caption runs along its line, haloed in the canvas colour so it stays readable
+   where lines cross. */
+.flow-edge .edge-label {
+  fill: var(--text-dim);
   font-family: var(--mono);
   font-size: 9px;
-  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--navy);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
-.flow-edge.in:hover .edge-count rect {
-  stroke: var(--green);
-}
-.flow-edge.out:hover .edge-count rect {
-  stroke: var(--red);
-}
-.flow-edge:hover .edge-count text {
+.flow-edge:hover .edge-label,
+.flow-edge:has(.edge-hit:focus-visible) .edge-label {
   fill: var(--text-bright);
 }
-
-/* Lane captions (div.graph-lane.lane-in|out) sit in the top corners over the canvas. */
-.lane-in,
-.lane-out {
-  position: absolute;
-  top: var(--gutter);
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.14em;
-  white-space: nowrap;
-  pointer-events: none;
+/* A caption with nowhere to fit without covering other text appears only while its
+   line is hovered or focused. */
+.flow-edge .edge-label.tucked {
+  opacity: 0;
 }
-.lane-in {
-  left: var(--gutter);
-}
-.lane-out {
-  right: var(--gutter);
-}
-.lane-in svg,
-.lane-out svg {
-  flex: none;
-  width: 12px;
-  height: 12px;
-}
-.lane-in svg {
-  color: var(--green);
-}
-.lane-out svg {
-  color: var(--red);
+.flow-edge:hover .edge-label.tucked,
+.flow-edge:has(.edge-hit:focus-visible) .edge-label.tucked {
+  opacity: 1;
 }
 
 /*
- * Node cards are <button>s inside fixed foreignObjects. The focus box is 208x124 and
- * each counterparty box is 194x82. Edges meet each card at its vertical centre, so a
- * card's top margin plus half its height equals the box's centre: 11 + 100/2 = 61
- * for the focus card and 11 + 56/2 = 39 for counterparties. The foreignObject clips
- * anything drawn outside it, so the focus ring is drawn inside the card.
+ * Nodes are <button>s in 170px foreignObjects: a disc (44px, or 56px for the focus
+ * wallet) with the short address and a label or chain underneath. Graph.tsx starts the
+ * box 8px (RING) above the disc so the selection ring and the focus glow are not
+ * clipped; the disc stays the button's first child, after that 8px of padding.
  */
-.graph-svg .wallet-card {
-  box-sizing: border-box;
+.graph-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
-  margin: 11px 0 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  background: none;
   color: var(--text);
   font-family: var(--mono);
-  text-align: left;
-  overflow: hidden;
+  text-align: center;
   cursor: pointer;
-  transition:
-    border-color 0.1s ease,
-    background 0.1s ease;
 }
-.graph-svg .wallet-card:focus-visible {
-  outline: 1px solid var(--blue-light);
-  outline-offset: -3px;
+.graph-node:focus-visible {
+  outline: none;
 }
-
-/* Focus wallet: top row (icon + badge), the address, then the origin line. */
-.wallet-card.root-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100px;
-  padding: 10px var(--gutter);
-  border-color: var(--blue);
-  background: var(--card-raised);
+.graph-node .node-disc {
+  position: relative;
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transition: box-shadow 0.1s ease;
 }
-.wallet-card.root-card:hover {
-  border-color: var(--blue-light);
-}
-.wallet-card.root-card.selected {
-  border-color: var(--blue-light);
-  box-shadow: inset 0 0 0 1px var(--blue);
-}
-.wallet-card.root-card:active {
-  background: var(--card);
-}
-.root-card .root-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0;
-}
-.root-card .wallet-icon {
-  width: 24px;
-  height: 24px;
-  border-color: var(--blue-dim);
-  background: var(--card);
-  color: var(--blue-light);
-}
-.root-card .wallet-icon svg {
-  width: 14px;
-  height: 14px;
-}
-.root-card .root-badge {
-  border-color: var(--blue-dim);
-  color: var(--blue-light);
-}
-.root-card > strong {
-  display: block;
-  overflow: hidden;
-  color: var(--text-bright);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.root-card .root-card-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0;
-  color: var(--text-faint);
-  font-size: 10px;
-  line-height: 1.2;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-.root-card .root-card-bottom > span {
-  color: var(--blue-light);
-  font-size: 8px;
-}
-
-/*
- * Counterparty: icon | name over chain + short address | pin or arrow.
- * Width budget (194px box): 2 border + 18 padding + 22 icon + 6 + 6 gaps + 10 trailing
- * slot leaves 130px for the text column. "Arbitrum · 0x1234…abcd" at 9px mono needs
- * about 126px (6 dot + 3 + 8ch + 3 + 13ch), so the short address does not truncate.
- * The 9px padding puts the icon's outer edge 10px in, the same inset as .node-amount.
- */
-.wallet-card.counterparty {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.graph-node.role-focus .node-disc {
+  width: 56px;
   height: 56px;
-  padding: 0 9px;
-  border-color: var(--border);
-  background: var(--card);
 }
-.wallet-card.counterparty:hover {
-  border-color: var(--border-strong);
-  background: var(--card-raised);
+.graph-node .node-shape {
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--node);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--node) 18%, var(--card));
+  color: var(--node);
+  transition: background 0.1s ease;
 }
-.wallet-card.counterparty.selected {
-  border-color: var(--blue);
-  background: var(--card-raised);
+.graph-node:hover .node-shape {
+  background: color-mix(in srgb, var(--node) 30%, var(--card));
 }
-.wallet-card.counterparty:active {
-  background: var(--card);
+.graph-node.role-focus .node-shape {
+  border-width: 2px;
+  background: color-mix(in srgb, var(--node) 26%, var(--card));
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--node) 16%, transparent);
 }
-.counterparty .cp-icon {
-  width: 22px;
-  height: 22px;
-  border-color: var(--border);
-  background: var(--card-raised);
-  color: var(--text-muted);
+/* Exchanges, bridges and protocols are hexagons, as in the diagrams investigators share. */
+.graph-node.role-exchange .node-shape,
+.graph-node.role-bridge .node-shape {
+  border: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--node) 34%, var(--card));
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
-.counterparty.incoming .cp-icon {
-  color: var(--green);
+.graph-node.role-exchange:hover .node-shape,
+.graph-node.role-bridge:hover .node-shape {
+  background: color-mix(in srgb, var(--node) 46%, var(--card));
 }
-.counterparty.outgoing .cp-icon {
-  color: var(--red);
+.graph-node.selected .node-disc,
+.graph-node:focus-visible .node-disc {
+  box-shadow:
+    0 0 0 3px var(--navy),
+    0 0 0 5px var(--text-bright);
 }
-.counterparty .cp-icon svg {
-  width: 12px;
-  height: 12px;
+.graph-node .node-pin {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: var(--blue-light);
 }
-.counterparty .cp-content {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.counterparty .cp-content > strong {
-  display: block;
+.graph-node .node-name {
+  max-width: 100%;
+  margin-top: 5px;
   overflow: hidden;
   color: var(--text-bright);
   font-size: 11px;
@@ -3357,70 +3244,26 @@ label.filter-select > select option {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.counterparty .cp-content > span {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  min-width: 0;
+.graph-node .node-sub {
+  max-width: 100%;
   overflow: hidden;
   color: var(--text-dim);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 13px;
-  white-space: nowrap;
-}
-.cp-content .cp-category {
-  display: block;
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  color: var(--text-muted);
-  font-size: 9px;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  text-transform: none;
-}
-/* The trailing arrow and the Pin glyph share one fixed 10px slot, so a pinned card
-   has the same text budget as an unpinned one. */
-.counterparty .node-more {
-  flex: none;
-  width: 10px;
-  color: var(--text-faint);
-  font-size: 11px;
-  line-height: 1;
-  text-align: center;
-  transition: color 0.1s ease;
-}
-.counterparty:hover .node-more {
-  color: var(--blue-light);
-}
-.counterparty > svg {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  color: var(--blue-light);
-}
-
-/* The transfer and asset caption under each counterparty card, in the same box.
-   Its 10px inset lines up with the card's icon edge (1px border + 9px padding). */
-.graph-svg .node-amount {
-  display: block;
-  margin-top: 2px;
-  padding: 0 10px;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 12px;
-  letter-spacing: 0.02em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.graph-node .node-sub .chain-dot {
+  margin-right: 4px;
+}
+.graph-node.role-focus .node-sub {
+  color: var(--node);
+}
 
-/* Empty state: sits just under the focus card, which stays centred. */
+/* Empty state: sits just under the focus wallet's caption, which stays centred. */
 .graph-wrap > .graph-empty {
   position: absolute;
-  top: calc(50% + 62px);
+  top: calc(50% + 80px);
   left: 50%;
   z-index: 1;
   display: flex;
@@ -3436,7 +3279,7 @@ label.filter-select > select option {
   text-align: center;
   pointer-events: none;
 }
-/* The Wallet icon repeats the focus card's wallet icon right above it. */
+/* The Wallet icon repeats the focus wallet's icon right above it. */
 .graph-empty > svg {
   display: none;
 }
@@ -3476,31 +3319,20 @@ label.filter-select > select option {
   align-items: center;
   gap: 6px;
 }
-.legend-in,
-.legend-out {
-  position: relative;
+.legend-dot {
   display: inline-block;
   flex: none;
-  width: 16px;
-  height: 1px;
-  background: currentColor;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--node);
 }
-.legend-in::after,
-.legend-out::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-  border-left: 5px solid currentColor;
-}
-.legend-in {
-  color: var(--green);
-}
-.legend-out {
-  color: var(--red);
+.legend-dot.role-exchange,
+.legend-dot.role-bridge {
+  width: 9px;
+  height: 10px;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
 .graph-legend .legend-help {
   display: block;
@@ -3760,20 +3592,12 @@ label.expand-network option {
   .graph-svg {
     height: clamp(360px, 58vh, 480px);
   }
-  .lane-in,
-  .lane-out {
-    gap: 4px;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-  }
-  /* Inflow and Outflow stack so the legend clears the controls at phone width. */
+  /* The legend wraps into rows so it clears the controls at phone width. */
   .graph-legend {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-end;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     height: auto;
-    max-width: none;
+    max-width: calc(100% - 150px);
   }
   .graph-legend .legend-help {
     display: none;
@@ -3804,20 +3628,6 @@ label.expand-network option {
   }
   .canvas-footer > button {
     margin-left: 14px;
-  }
-}
-
-/* On a phone the 1100-unit graph would be fitted into ~280px and drawn at a quarter
-   scale. Draw it at full size instead, centred and clipped by the canvas; dragging
-   pans to the rest. */
-@media (max-width: 640px) {
-  .graph-wrap {
-    overflow: hidden;
-  }
-  .graph-svg {
-    width: 1100px;
-    max-width: none;
-    margin-left: calc(50% - 550px);
   }
 }
 

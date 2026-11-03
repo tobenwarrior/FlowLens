@@ -161,6 +161,8 @@ const allowlist = [
   "src/domain/demo.ts",
   "src/domain/engine.ts",
   "src/domain/graph-projection.ts",
+  "src/domain/graph-layout.ts",
+  "src/domain/graph-drawing.ts",
   "src/domain/hypercore.ts",
   "src/domain/search-intent.ts",
   "src/domain/source-url.ts",

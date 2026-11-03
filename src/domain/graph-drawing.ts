@@ -218,21 +218,36 @@ export function routeForward(
   to: End,
   blockers: Rect[],
   bend: "start" | "end" | "middle" = "middle",
+  fan: { slot: number; of: number } = { slot: 0, of: 1 },
 ): Route {
-  const s = { x: from.x + from.r, y: from.y },
-    s1 = { x: from.x + Math.max(from.clear, from.r) + 6, y: from.y };
-  const e = { x: to.x - to.r - ARROW_GAP, y: to.y },
-    e1 = { x: to.x - Math.max(to.clear, to.r) - 6, y: to.y };
+  // In a fan, each line meets the busy wallet at its own height (no stacked
+  // arrowheads), and lines to the farthest wallets bend nearest it, so the curves
+  // nest rather than cross. Slots run top to bottom by the other end's height.
+  const offset = fan.slot - (fan.of - 1) / 2;
+  const hub = bend === "start" ? from : bend === "end" ? to : null;
+  const port = hub
+    ? Math.max(-(hub.r - 6), Math.min(hub.r - 6, offset * 5))
+    : 0;
+  const rim = (r: number) => Math.sqrt(r * r - port * port);
+  const fromY = from.y + (bend === "start" ? port : 0),
+    toY = to.y + (bend === "end" ? port : 0);
+  const s = { x: from.x + (bend === "start" ? rim(from.r) : from.r), y: fromY },
+    s1 = { x: from.x + Math.max(from.clear, from.r) + 6, y: fromY };
+  const e = {
+      x: to.x - (bend === "end" ? rim(to.r) : to.r) - ARROW_GAP,
+      y: toY,
+    },
+    e1 = { x: to.x - Math.max(to.clear, to.r) - 6, y: toY };
   const room = e1.x - s1.x;
-  const width = Math.min(room * 0.4, 64);
+  const width = Math.max(16, Math.min(room * 0.4, 64) - Math.abs(offset) * 8);
   let direct: Route;
-  if (bend === "start" && from.y !== to.y) {
+  if (bend === "start" && fromY !== toY) {
     const m = { x: s1.x + width, y: to.y };
     direct = toRoute(
       [straight(s, s1), ease(s1, m), straight(m, e1), straight(e1, e)],
       2,
     );
-  } else if (bend === "end" && from.y !== to.y) {
+  } else if (bend === "end" && fromY !== toY) {
     const m = { x: e1.x - width, y: from.y };
     direct = toRoute(
       [straight(s, s1), straight(s1, m), ease(m, e1), straight(e1, e)],

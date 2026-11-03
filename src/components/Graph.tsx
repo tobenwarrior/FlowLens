@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   Expand,
   Landmark,
@@ -16,6 +22,13 @@ import {
   nodeKey,
 } from "../domain/engine.ts";
 import { projectGraph } from "../domain/graph-projection.ts";
+import {
+  EMPTY_PRICE_BOOK,
+  formatCompact,
+  sumUsd,
+  wholeUnits,
+  type PriceBook,
+} from "../domain/pricing.ts";
 import {
   COLUMN_GAP,
   layoutFlow,
@@ -109,11 +122,16 @@ const hopText = (layer: number) =>
     : `${Math.abs(layer)} hop${Math.abs(layer) === 1 ? "" : "s"} ${layer < 0 ? "before" : "after"}`;
 
 /**
- * A line's caption, fullest first: the main token's total and the transfer count, or a
- * single transfer's UTC time; then the amount alone for tight spots. Assets are told
- * apart by contract, not symbol. Exact amounts stay in the evidence drawer.
+ * A line's caption, fullest first: its value and transfer count, or a single
+ * transfer's UTC time; then the value alone for tight spots. The value is the USD
+ * total when every transfer on the line is priced, otherwise the main token's total,
+ * both in compact form ("30.5K"). Assets are told apart by contract, not symbol.
+ * Exact amounts stay in the evidence drawer.
  */
-export function edgeCaptions(transfers: Transfer[]): [string, string] {
+export function edgeCaptions(
+  transfers: Transfer[],
+  book: PriceBook = EMPTY_PRICE_BOOK,
+): [string, string] {
   const assets = new Map<
     string,
     { symbol: string; decimals: number; raw: bigint; count: number }
@@ -133,13 +151,17 @@ export function edgeCaptions(transfers: Transfer[]): [string, string] {
   const [main] = [...assets.values()].sort(
     (a, b) => b.count - a.count || (b.raw > a.raw ? 1 : b.raw < a.raw ? -1 : 0),
   );
-  const amount = `${displayUnits(main.raw.toString(), main.decimals, 4)} ${main.symbol}`;
+  const usd = sumUsd(transfers, book);
+  const priced = usd.priced > 0 && usd.unpriced === 0;
+  const amount = priced
+    ? `$${formatCompact(usd.amount, 2)}`
+    : `${formatCompact(wholeUnits(main.raw.toString(), main.decimals), 2)} ${main.symbol}`;
   if (transfers.length === 1) {
     const at = transfers[0].timestamp;
     return [`${amount} · ${at.slice(0, 10)} ${at.slice(11, 16)} UTC`, amount];
   }
   const extra =
-    assets.size > 1
+    !priced && assets.size > 1
       ? ` +${assets.size - 1} asset${assets.size === 2 ? "" : "s"}`
       : "";
   return [`${amount}${extra} (${transfers.length} transfers)`, amount];
@@ -152,6 +174,9 @@ export function Graph({
   onTransfer,
   selected,
   grouped,
+  book = EMPTY_PRICE_BOOK,
+  onExpand,
+  busy = false,
 }: {
   investigation: Investigation;
   transfers: Transfer[];
@@ -159,6 +184,11 @@ export function Graph({
   onTransfer: (t: Transfer) => void;
   selected?: string;
   grouped: boolean;
+  /** Prices for USD captions and line weights; lines show token amounts without them. */
+  book?: PriceBook;
+  /** Loads a wallet's next page of history, from the "+" on its disc. */
+  onExpand?: (n: WalletNode) => void;
+  busy?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 1100, height: 600 });
@@ -256,7 +286,7 @@ export function Graph({
               : chainName(node!.chainId);
         const wide = Math.max(
           textWidth(short(key === ROOT ? root : node!.address), 11),
-          textWidth(sub, 10) + (key === ROOT ? 0 : 10),
+          textWidth(sub, 10),
         );
         return [key, Math.min(LABEL_WIDTH / 2, wide / 2 + 4)];
       }),
@@ -296,14 +326,45 @@ export function Graph({
         keyFor(edge.chainId, edge.to),
       ])
         degree.set(key, (degree.get(key) ?? 0) + 1);
-    const routes = new Map<string, Route>();
-    const requests: { id: string; texts: string[]; route: Route }[] = [];
-    for (const edge of edges) {
+    // Decide each line's shape first, so the lines in each fan can be given slots.
+    const lines = edges.flatMap((edge) => {
       const fromKey = keyFor(edge.chainId, edge.from),
         toKey = keyFor(edge.chainId, edge.to);
       const a = layout.nodes.get(fromKey),
         b = layout.nodes.get(toKey);
-      if (!a || !b || fromKey === toKey) continue;
+      if (!a || !b || fromKey === toKey) return [];
+      const backward = layout.backward.has(linkKey(fromKey, toKey));
+      // A fan bends next to its busy wallet, so the level runs (and captions) sit a row apart.
+      const busyFrom = degree.get(fromKey)!,
+        busyTo = degree.get(toKey)!;
+      const bend: "start" | "end" | "middle" =
+        backward || busyFrom === busyTo
+          ? "middle"
+          : busyFrom > busyTo
+            ? "start"
+            : "end";
+      return [{ edge, fromKey, toKey, a, b, backward, bend }];
+    });
+    const fans = new Map<string, typeof lines>();
+    for (const line of lines)
+      if (line.bend !== "middle") {
+        const hub = `${line.bend}:${line.bend === "start" ? line.fromKey : line.toKey}`;
+        fans.set(hub, [...(fans.get(hub) ?? []), line]);
+      }
+    const slots = new Map<string, { slot: number; of: number }>();
+    for (const members of fans.values()) {
+      members.sort(
+        (p, q) =>
+          (p.bend === "start" ? p.b.y - q.b.y : p.a.y - q.a.y) ||
+          (p.edge.id < q.edge.id ? -1 : 1),
+      );
+      members.forEach((line, slot) =>
+        slots.set(line.edge.id, { slot, of: members.length }),
+      );
+    }
+    const routes = new Map<string, Route>();
+    const requests: { id: string; texts: string[]; route: Route }[] = [];
+    for (const { edge, fromKey, toKey, a, b, backward, bend } of lines) {
       const from = {
         x: a.x,
         y: a.y,
@@ -319,24 +380,35 @@ export function Graph({
       const blockers = [...walletRects]
         .filter(([key]) => key !== fromKey && key !== toKey)
         .flatMap(([, rects]) => rects);
-      // A fan bends next to its busy wallet, so the level runs (and captions) sit a row apart.
-      const busyFrom = degree.get(fromKey)!,
-        busyTo = degree.get(toKey)!;
-      const route = layout.backward.has(linkKey(fromKey, toKey))
+      const route = backward
         ? routeBackward(from, to, blockers)
-        : routeForward(
-            from,
-            to,
-            blockers,
-            busyFrom > busyTo ? "start" : busyTo > busyFrom ? "end" : "middle",
-          );
+        : routeForward(from, to, blockers, bend, slots.get(edge.id));
       routes.set(edge.id, route);
       requests.push({
         id: edge.id,
-        texts: edgeCaptions(edge.transfers),
+        texts: edgeCaptions(edge.transfers, book),
         route,
       });
     }
+    // Priced lines are weighted by USD value, on a log scale; unpriced lines stay thin.
+    const values = new Map(
+      edges.map((edge) => {
+        const usd = sumUsd(edge.transfers, book);
+        return [edge.id, usd.priced && !usd.unpriced ? usd.amount : null];
+      }),
+    );
+    const most = Math.max(
+      0,
+      ...[...values.values()].filter((v): v is number => v !== null),
+    );
+    const weights = new Map(
+      [...values].map(([id, value]) => [
+        id,
+        value !== null && most > 0
+          ? 1.2 + 2.8 * (Math.log10(1 + value) / Math.log10(1 + most))
+          : null,
+      ]),
+    );
     // Lines at the focus wallet claim their caption spots first, then the busiest lines.
     const weight = new Map(
       edges.map((edge) => [edge.id, edge.transfers.length]),
@@ -372,8 +444,33 @@ export function Graph({
         low = Math.max(low, point.y);
         high = Math.min(high, point.y);
       }
-    return { routes, captions, tucked, low, high };
-  }, [edges, layout, byKey, root, hopY]);
+    return { routes, captions, tucked, low, high, weights };
+  }, [edges, layout, byKey, root, hopY, book]);
+
+  // Hovering or focusing a wallet or line brings out its connections; the rest dims.
+  const [spotlight, setSpotlight] = useState<
+    { node: string } | { edge: string } | null
+  >(null);
+  const related = useMemo(() => {
+    if (!spotlight) return null;
+    const wallets = new Set<string>(),
+      lines = new Set<string>();
+    if ("node" in spotlight) wallets.add(spotlight.node);
+    for (const edge of edges) {
+      const from = keyOf(edge.chainId, edge.from),
+        to = keyOf(edge.chainId, edge.to);
+      if (
+        "edge" in spotlight
+          ? edge.id === spotlight.edge
+          : from === spotlight.node || to === spotlight.node
+      ) {
+        lines.add(edge.id);
+        wallets.add(from);
+        wallets.add(to);
+      }
+    }
+    return { wallets, lines };
+  }, [spotlight, edges, root]);
 
   // The drawn extent: discs, captions under them, hop captions and loops below.
   const extent = {
@@ -458,8 +555,9 @@ export function Graph({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="7"
-              markerHeight="7"
+              markerWidth="9"
+              markerHeight="9"
+              markerUnits="userSpaceOnUse"
               orient="auto-start-reverse"
             >
               <path d="M0 0 10 5 0 10Z" className={`arrow-head role-${role}`} />
@@ -469,6 +567,7 @@ export function Graph({
         <g
           transform={`translate(${viewport.width / 2 + pan.x} ${viewport.height / 2 + pan.y}) scale(${zoom}) translate(${-centre.x} ${-centre.y})`}
           data-testid="graph-world"
+          className={related ? "has-spotlight" : undefined}
         >
           {layout.layers.map((layer) => (
             <text
@@ -490,8 +589,14 @@ export function Graph({
               fromKey === ROOT ? "focus" : roleOf(byKey.get(fromKey)!);
             const placed = drawing.captions.get(edge.id);
             const caption = placed ?? drawing.tucked.get(edge.id)!;
+            const weight = drawing.weights.get(edge.id);
             return (
-              <g key={edge.id} className={`flow-edge role-${role}`}>
+              <g
+                key={edge.id}
+                className={`flow-edge role-${role}${related?.lines.has(edge.id) ? " is-related" : ""}`}
+                onMouseEnter={() => setSpotlight({ edge: edge.id })}
+                onMouseLeave={() => setSpotlight(null)}
+              >
                 <path
                   d={route.path}
                   className="edge-hit"
@@ -502,11 +607,16 @@ export function Graph({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") onTransfer(edge.transfers[0]);
                   }}
+                  onFocus={() => setSpotlight({ edge: edge.id })}
+                  onBlur={() => setSpotlight(null)}
                 />
                 <path
                   d={route.path}
                   className="edge-line"
                   markerEnd={`url(#arrow-${role})`}
+                  style={
+                    weight ? ({ "--w": weight } as CSSProperties) : undefined
+                  }
                 />
                 <text
                   className={`edge-label${placed ? "" : " tucked"}`}
@@ -533,55 +643,80 @@ export function Graph({
             return (
               <foreignObject
                 key={key}
+                className={`node-box${related?.wallets.has(key) ? " is-related" : ""}`}
                 x={p.x - LABEL_WIDTH / 2}
                 y={p.y - r - RING}
                 width={LABEL_WIDTH}
                 height={2 * r + LABEL_HEIGHT + RING}
               >
-                <button
-                  className={`graph-node role-${role}${isSelected ? " selected" : ""}`}
-                  aria-label={
-                    focus
-                      ? `Focus wallet ${short(root)}`
-                      : `${short(node!.address)} · ${label || "No label"} · ${chainName(node!.chainId)}`
-                  }
-                  title={
-                    focus
-                      ? `${root}\nFocus wallet · labels are per chain in the wallet panel`
-                      : `${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
-                  }
-                  onClick={() =>
-                    onNode(
-                      focus
-                        ? { address: investigation.root, chainId: 1 }
-                        : node!,
-                    )
-                  }
+                <div
+                  className="graph-node-wrap"
+                  onMouseEnter={() => setSpotlight({ node: key })}
+                  onMouseLeave={() => setSpotlight(null)}
+                  onFocus={() => setSpotlight({ node: key })}
+                  onBlur={() => setSpotlight(null)}
                 >
-                  <span className="node-disc">
-                    <span className="node-shape">
-                      {role === "exchange" ? (
-                        <Landmark size={16} />
-                      ) : role === "bridge" ? (
-                        <Layers size={16} />
-                      ) : (
-                        <Wallet size={focus ? 20 : 16} />
+                  <button
+                    className={`graph-node role-${role}${isSelected ? " selected" : ""}`}
+                    aria-label={
+                      focus
+                        ? `Focus wallet ${short(root)}`
+                        : `${short(node!.address)} · ${label || "No label"} · ${chainName(node!.chainId)}`
+                    }
+                    title={
+                      focus
+                        ? `${root}\nFocus wallet · labels are per chain in the wallet panel`
+                        : `${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
+                    }
+                    onClick={() =>
+                      onNode(
+                        focus
+                          ? { address: investigation.root, chainId: 1 }
+                          : node!,
+                      )
+                    }
+                  >
+                    <span className="node-disc">
+                      <span className="node-shape">
+                        {role === "exchange" ? (
+                          <Landmark size={16} />
+                        ) : role === "bridge" ? (
+                          <Layers size={16} />
+                        ) : (
+                          <Wallet size={focus ? 20 : 16} />
+                        )}
+                      </span>
+                      {investigation.pinned.includes(key) && (
+                        <Pin size={10} className="node-pin" />
+                      )}
+                      {!focus && (
+                        <i
+                          className={`node-chain chain-dot chain-${node!.chainId}`}
+                          title={chainName(node!.chainId)}
+                        />
                       )}
                     </span>
-                    {investigation.pinned.includes(key) && (
-                      <Pin size={10} className="node-pin" />
-                    )}
-                  </span>
-                  <strong className="node-name">
-                    {short(focus ? root : node!.address)}
-                  </strong>
-                  <span className="node-sub">
-                    {!focus && (
-                      <i className={`chain-dot chain-${node!.chainId}`} />
-                    )}
-                    {focus ? "Focus wallet" : label || chainName(node!.chainId)}
-                  </span>
-                </button>
+                    <strong className="node-name">
+                      {short(focus ? root : node!.address)}
+                    </strong>
+                    <span className="node-sub">
+                      {focus
+                        ? "Focus wallet"
+                        : label || chainName(node!.chainId)}
+                    </span>
+                  </button>
+                  {!focus && onExpand && (
+                    <button
+                      className="node-expand"
+                      aria-label={`Load more history for ${short(node!.address)}`}
+                      title="Load this wallet's next page of history"
+                      disabled={busy}
+                      onClick={() => onExpand(node!)}
+                    >
+                      <Plus size={12} />
+                    </button>
+                  )}
+                </div>
               </foreignObject>
             );
           })}

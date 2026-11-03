@@ -1341,6 +1341,9 @@ export default function App() {
                           : undefined
                       }
                       grouped={grouped}
+                      book={activeBook}
+                      onExpand={(node) => void expand(node)}
+                      busy={busy}
                     />
                   ) : (
                     <div className="address-page">

@@ -217,20 +217,40 @@ export function layoutFlow(
     reindex(list);
   }
 
-  // Rows: line each node up with its neighbours, keeping ROW_GAP between rows.
+  // Rows: line each node up with its neighbours, keeping ROW_GAP between rows. Each
+  // column takes the closest fit that keeps its order and spacing: rows that would
+  // collide pool into one block centred on their mean wish, and the rest stay put.
+  const pack = (wanted: number[]) => {
+    const blocks: { start: number; size: number; sum: number }[] = [];
+    wanted.forEach((value, i) => {
+      blocks.push({ start: i, size: 1, sum: value - i * ROW_GAP });
+      while (blocks.length > 1) {
+        const last = blocks.at(-1)!,
+          prev = blocks.at(-2)!;
+        if (prev.sum / prev.size <= last.sum / last.size) break;
+        blocks.pop();
+        prev.size += last.size;
+        prev.sum += last.sum;
+      }
+    });
+    return blocks.flatMap(({ start, size, sum }) =>
+      Array.from(
+        { length: size },
+        (_, k) => sum / size + (start + k) * ROW_GAP,
+      ),
+    );
+  };
   const y = new Map(all.map((key) => [key, index.get(key)! * ROW_GAP]));
   for (let pass = 0; pass < 4; pass++) {
     for (const layer of layers) {
       const list = columns.get(layer)!;
-      const wanted = list.map((key) => {
-        const around = neighbours.get(key)!.map((other) => y.get(other)!);
-        return around.length ? mean(around) : y.get(key)!;
-      });
-      const rows = [...wanted];
-      for (let i = 1; i < rows.length; i++)
-        rows[i] = Math.max(rows[i], rows[i - 1] + ROW_GAP);
-      const shift = mean(wanted) - mean(rows);
-      list.forEach((key, i) => y.set(key, rows[i] + shift));
+      const rows = pack(
+        list.map((key) => {
+          const around = neighbours.get(key)!.map((other) => y.get(other)!);
+          return around.length ? mean(around) : y.get(key)!;
+        }),
+      );
+      list.forEach((key, i) => y.set(key, rows[i]));
     }
   }
 

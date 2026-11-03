@@ -371,11 +371,61 @@ export function overlaps(a: Rect, b: Rect): boolean {
   return true;
 }
 
+interface Bounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+const bounds = (r: Rect): Bounds => {
+  const c = Math.abs(Math.cos(r.angle)),
+    s = Math.abs(Math.sin(r.angle));
+  const w = r.hw * c + r.hh * s,
+    h = r.hw * s + r.hh * c;
+  return { minX: r.cx - w, maxX: r.cx + w, minY: r.cy - h, maxY: r.cy + h };
+};
+
+const apart = (a: Bounds, b: Bounds) =>
+  a.maxX < b.minX || b.maxX < a.minX || a.maxY < b.minY || b.maxY < a.minY;
+
+/** A line as thin boxes, one per sampled stretch, with their overall bounds. */
+const stroke = (route: Route) => {
+  const boxes: (Bounds & { rect: Rect })[] = [];
+  for (const segment of route.segments) {
+    let previous = segment.p0;
+    for (let i = 1; i <= 8; i++) {
+      const next = cubicAt(segment, i / 8);
+      const length = Math.hypot(next.x - previous.x, next.y - previous.y);
+      if (length) {
+        const rect = {
+          cx: (previous.x + next.x) / 2,
+          cy: (previous.y + next.y) / 2,
+          hw: length / 2,
+          hh: 1,
+          angle: Math.atan2(next.y - previous.y, next.x - previous.x),
+        };
+        boxes.push({ rect, ...bounds(rect) });
+      }
+      previous = next;
+    }
+  }
+  return {
+    route,
+    boxes,
+    minX: Math.min(...boxes.map((box) => box.minX)),
+    maxX: Math.max(...boxes.map((box) => box.maxX)),
+    minY: Math.min(...boxes.map((box) => box.minY)),
+    maxY: Math.max(...boxes.map((box) => box.maxY)),
+  };
+};
+
 /**
  * Place each line's caption where it touches no obstacle and no caption placed
  * before it, trying spots along the line from its preferred one outwards and each
- * text in turn (fullest first). A caption must also fit within its own line. Lines
- * whose captions fit nowhere are left out; requests earlier in the list win.
+ * text in turn (fullest first). A caption must also fit within its own line, and
+ * takes a spot no other line crosses when it has one. Lines whose captions fit
+ * nowhere are left out; requests earlier in the list win.
  */
 export function placeCaptions(
   requests: { id: string; texts: string[]; route: Route }[],
@@ -384,26 +434,41 @@ export function placeCaptions(
 ): Map<string, Caption> {
   const placed = new Map<string, Caption>();
   const taken: Rect[] = [...obstacles];
+  const lines = requests.map(({ route }) => stroke(route));
+  const crossed = (box: Rect, own: Route) => {
+    const area = bounds(box);
+    return lines.some(
+      (line) =>
+        line.route !== own &&
+        !apart(line, area) &&
+        line.boxes.some(
+          (part) => !apart(part, area) && overlaps(box, part.rect),
+        ),
+    );
+  };
   for (const { id, texts, route } of requests) {
     const total = route.lengths[route.lengths.length - 1];
     const spots = SHIFTS.map((shift) => route.prefer + shift).filter(
       (u) => u > 0 && u < 1,
     );
-    // Level text reads best: every text gets a level spot before any angled one.
-    search: for (const level of [true, false])
-      for (const text of texts) {
-        const w = width(text);
-        for (const u of spots) {
-          if (w / 2 + 4 > Math.min(u, 1 - u) * total) continue;
-          const caption = captionAt(route, text, u);
-          if (level && Math.abs(caption.angle) > LEVEL) continue;
-          const box = captionBox(caption, w);
-          if (taken.some((other) => overlaps(box, other))) continue;
-          placed.set(id, caption);
-          taken.push(box);
-          break search;
+    // Text no other line runs through reads best, then level text: every text gets
+    // a clear level spot, then a clear angled one, before any spot a line crosses.
+    search: for (const clear of [true, false])
+      for (const level of [true, false])
+        for (const text of texts) {
+          const w = width(text);
+          for (const u of spots) {
+            if (w / 2 + 4 > Math.min(u, 1 - u) * total) continue;
+            const caption = captionAt(route, text, u);
+            if (level && Math.abs(caption.angle) > LEVEL) continue;
+            const box = captionBox(caption, w);
+            if (taken.some((other) => overlaps(box, other))) continue;
+            if (clear && crossed(box, route)) continue;
+            placed.set(id, caption);
+            taken.push(box);
+            break search;
+          }
         }
-      }
   }
   return placed;
 }

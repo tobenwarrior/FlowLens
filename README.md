@@ -17,9 +17,9 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-![FlowLens funding graph showing the ENS DAO endowment, counterparties and per-asset flows](docs/images/live-desktop.png)
+![FlowLens funding graph of the Lido DAO treasury: Lido fee contracts pay in on the left, Easy Track payouts leave on the right, and one payout Safe is followed a hop further](docs/images/live-desktop.png)
 
-_ENS DAO endowment example, loaded from Blockscout without an API key on 23 October 2026. Screenshots use public-wallet examples, not private investigations. [Sources and scope](docs/images/README.md)._
+_Lido DAO treasury (Aragon Agent), traced live from Blockscout without an API key on 3 November 2026 and filtered to 16 October–3 November. Labels come from [Lido's deployed-contracts list](https://docs.lido.fi/deployed-contracts/); four senders of small ETH amounts or a spam token are hidden; USD uses spot prices. Screenshots use public-wallet examples, not private investigations. [Sources and scope](docs/images/README.md)._
 
 ## Why FlowLens
 

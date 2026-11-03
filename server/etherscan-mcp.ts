@@ -19,6 +19,7 @@ const MAX_RESPONSE_BYTES = 8_000_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 const PAGE_TIMEOUT_MS = 60_000;
 const DEFAULT_INTERVAL_MS = 1_000;
+type Pacer = { intervalMs: number; lastCallAt: number };
 
 type CallTool = (
   name: string,
@@ -116,6 +117,37 @@ type Fetcher = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+async function pace(
+  pacer: Pacer,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  const wait = Math.max(0, pacer.lastCallAt + pacer.intervalMs - Date.now());
+  if (wait) {
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal?.reason ?? new Error("Request aborted"));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, wait);
+      if (signal?.aborted) onAbort();
+      else signal?.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+  pacer.lastCallAt = Date.now();
+}
+
+function isToolCall(init: RequestInit | undefined): boolean {
+  if (typeof init?.body !== "string") return false;
+  try {
+    return row(JSON.parse(init.body)).method === "tools/call";
+  } catch {
+    return false;
+  }
+}
+
 function fixedUrl(input: RequestInfo | URL): URL {
   if (typeof input === "string") return new URL(input);
   if (input instanceof URL) return input;
@@ -147,7 +179,11 @@ function httpFailure(status: number): ProviderError {
   );
 }
 
-function boundedFetch(baseFetch: Fetcher, timeoutMs: number): Fetcher {
+function boundedFetch(
+  baseFetch: Fetcher,
+  timeoutMs: number,
+  pacer?: Pacer,
+): Fetcher {
   return async (input, init) => {
     let url: URL;
     try {
@@ -171,6 +207,7 @@ function boundedFetch(baseFetch: Fetcher, timeoutMs: number): Fetcher {
     if (method !== "POST")
       // Streamable HTTP may probe an SSE GET; FlowLens deliberately does not subscribe.
       return new Response(null, { status: 405 });
+    if (pacer && isToolCall(init)) await pace(pacer, init?.signal ?? undefined);
     const requestInit: RequestInit = {
       ...init,
       redirect: "error",
@@ -379,7 +416,6 @@ export function createEtherscanMcpRequest(options: {
   };
 }
 
-type Pacer = { intervalMs: number; lastCallAt: number };
 type SdkCallTool = CallTool & { close: () => Promise<void> };
 
 function createSdkCallTool(options: {
@@ -394,7 +430,11 @@ function createSdkCallTool(options: {
     const transport = new StreamableHTTPClientTransport(
       new URL(ETHERSCAN_MCP_ENDPOINT),
       {
-        fetch: boundedFetch(options.fetch ?? fetch, options.timeoutMs),
+        fetch: boundedFetch(
+          options.fetch ?? fetch,
+          options.timeoutMs,
+          options.pacer,
+        ),
         redirectPolicy: "same-origin",
         reconnectionOptions: {
           maxReconnectionDelay: 0,
@@ -417,21 +457,12 @@ function createSdkCallTool(options: {
     session = undefined;
     await active?.client.close().catch(() => undefined);
   };
-  const pace = async () => {
-    const wait = Math.max(
-      0,
-      options.pacer.lastCallAt + options.pacer.intervalMs - Date.now(),
-    );
-    if (wait) await new Promise<void>((resolve) => setTimeout(resolve, wait));
-    options.pacer.lastCallAt = Date.now();
-  };
   let queue: Promise<unknown> = Promise.resolve();
   const callTool: CallTool = (name, arguments_) => {
     const task = queue.then(async () => {
       const active = (session ??= connect());
       try {
         const { client } = await active;
-        await pace();
         const result = await client.callTool(
           { name, arguments: arguments_ },
           {

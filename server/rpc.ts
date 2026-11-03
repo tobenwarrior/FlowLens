@@ -43,9 +43,15 @@ const BLOCKMACHINE_BASE_RPC = {
   name: "BlockMachine Base RPC",
   documentation: "https://blockmachine.io/docs/base-rpc",
 } as const;
+const OFFICIAL_BASE_RPC = {
+  url: "https://mainnet.base.org",
+  name: "Base Official RPC",
+  documentation: "https://mainnet.base.org/",
+} as const;
 const BASE_CHAIN_ID = 8453;
 const BLOCKMACHINE_PROVIDER = "blockmachine";
 const PUBLICNODE_PROVIDER = "publicnode";
+const OFFICIAL_PROVIDER = "official";
 const HEAVY_TRACE_INTERVAL_MS = 35_000;
 const MAX_PROVIDER_COOLDOWN_MS = 120_000;
 const METHODS = new Set([
@@ -73,6 +79,8 @@ export interface PublicRpcOptions {
   maxCalls?: number;
   maxResponseBytes?: number;
   maxDurationMs?: number;
+  /** Fixed Base endpoint selection used by the composite internal lane. */
+  baseProvider?: "official" | "publicnode" | "blockmachine";
 }
 
 async function boundedJson(response: Response, max: number): Promise<unknown> {
@@ -139,9 +147,16 @@ function configuredBaseRpcProvider(): string {
   );
 }
 
-function endpointFor(chainId: number) {
+function endpointFor(
+  chainId: number,
+  baseProvider?: "official" | "publicnode" | "blockmachine",
+) {
   const endpoint = PUBLIC_RPC[chainId as keyof typeof PUBLIC_RPC];
   if (!endpoint) return undefined;
+  if (chainId === BASE_CHAIN_ID && baseProvider === OFFICIAL_PROVIDER)
+    return OFFICIAL_BASE_RPC;
+  if (chainId === BASE_CHAIN_ID && baseProvider === BLOCKMACHINE_PROVIDER)
+    return BLOCKMACHINE_BASE_RPC;
   if (
     chainId === BASE_CHAIN_ID &&
     configuredBaseRpcProvider() === BLOCKMACHINE_PROVIDER
@@ -201,7 +216,22 @@ export function createPublicRpcClient(
   chainId: number,
   options: PublicRpcOptions = {},
 ): RpcClient {
-  const endpoint = endpointFor(chainId);
+  if (
+    options.baseProvider !== undefined &&
+    ![OFFICIAL_PROVIDER, PUBLICNODE_PROVIDER, BLOCKMACHINE_PROVIDER].includes(
+      options.baseProvider,
+    )
+  )
+    throw new RpcProviderError(
+      "RPC_INVALID_PROVIDER",
+      "The fixed Base provider option is not supported.",
+    );
+  if (options.baseProvider !== undefined && chainId !== BASE_CHAIN_ID)
+    throw new RpcProviderError(
+      "RPC_INVALID_PROVIDER",
+      "The fixed official Base provider option is valid only for Base.",
+    );
+  const endpoint = endpointFor(chainId, options.baseProvider);
   if (!endpoint)
     throw new RpcProviderError(
       "RPC_UNSUPPORTED_CHAIN",

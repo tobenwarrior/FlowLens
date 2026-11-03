@@ -40,7 +40,7 @@ const MAX_DEPTH = 32;
 const SCOPE_WARNING =
   "Only the requested transaction was inspected. Other transactions in this block and full wallet history remain uninspected.";
 const SOURCE_WARNING =
-  "Transaction, receipt, block and traces are observations from one RPC source, not independent cryptographic verification; reorganizations and provider omissions remain possible.";
+  "Transaction, receipt, block and traces are observations from the configured RPC source lane(s), not independent cryptographic verification; reorganizations and provider omissions remain possible.";
 type Row = Record<string, unknown>;
 
 class EvidenceError extends Error {

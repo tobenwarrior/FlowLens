@@ -24,7 +24,10 @@ import { operationSchema } from "./schema.ts";
 import { createHypurrtraceProvider } from "./hypurrtrace.ts";
 import { createAlchemyProvider } from "./alchemy.ts";
 import { createSelfHostedBlockscoutProvider } from "./self-hosted-blockscout.ts";
-import { createEtherscanMcpProvider } from "./etherscan-mcp.ts";
+import {
+  createEtherscanMcpProvider,
+  createEtherscanMcpV2Provider,
+} from "./etherscan-mcp.ts";
 
 export interface Providers {
   demo: TraceProvider;
@@ -61,8 +64,15 @@ export function providersFromEnvironment(): Providers {
   const mcpSwitch = process.env.FLOWLENS_ETHERSCAN_MCP ?? "";
   if (!["", "on", "off"].includes(mcpSwitch))
     throw new Error("FLOWLENS_ETHERSCAN_MCP must be empty, on or off");
+  const baseInternalsSwitch = process.env.FLOWLENS_BASE_INTERNALS ?? "";
+  if (!["", "on", "off"].includes(baseInternalsSwitch))
+    throw new Error("FLOWLENS_BASE_INTERNALS must be empty, on or off");
   const keylessBase =
-    mcpSwitch === "off" ? undefined : createEtherscanMcpProvider();
+    mcpSwitch === "off"
+      ? undefined
+      : baseInternalsSwitch === "off"
+        ? createEtherscanMcpProvider()
+        : createEtherscanMcpV2Provider();
   const live = new Map<number, TraceProvider>();
   for (const chainId of operationSchema.limits.liveChains) {
     // Provider selection is configuration, never a silent retry/fallback after a failure.

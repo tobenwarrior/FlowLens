@@ -18,7 +18,7 @@ Use FlowLens to gather the evidence, follow the method in [the tracing guide](re
 ## 1. Set up the case
 
 1. Call `flowlens_status` to see which chains and providers are available.
-2. Call `flowlens_create` with `root` (the full address), `mode: "live"` and a `title`. Tell the user that a keyless trace sends the address to Blockscout.
+2. Call `flowlens_create` with `root` (the full address), `mode: "live"` and a `title`. History requests disclose the wallet to the selected public providers; inspect `providers.live.routes` rather than assuming every chain uses Blockscout.
 3. Use the returned `result.id` as `caseId` from then on. Never invent an ID.
 
 Without MCP, the CLI does the same: `node server/cli.ts create --mode live --address <address> --file .local/<name>.json`.
@@ -30,6 +30,14 @@ Without MCP, the CLI does the same: `node server/cli.ts create --mode live --add
 - Read flows and counterparties with `flowlens_wallet` (filter by chain, asset, direction or dates) and page the graph with `flowlens_graph`.
 - Verify material transfers with `flowlens_evidence`: exact amount, token contract, block, time, hash and provenance.
 - For first funding, counterparty classes, linking clues and Safes, follow steps 2 to 6 of the tracing guide. Protocol reads (`flowlens_acquire` with `kind` `safe`, `bridge` or `internal`) stay separate from the graph totals.
+
+### Trace without Arkham history
+
+- Use the configured history routes to discover transactions from the wallet address. Arkham is optional label/comparison evidence, never a required list of transaction hashes. Check each relevant supported network explicitly; initial creation loads Ethereum only. HyperCore is a separate ledger operation, not EVM chain 999.
+- On Base, inspect the selected provider and its streams. The keyless v2 route discovers internal candidates and checks transaction, receipt, block membership and full call trees before accepting movements. Its internal pages are deliberately smaller than native/ERC-20 pages. Continue the saved cursor until terminal or a reported limit/error; do not stop after the first native/ERC-20 page.
+- A saved keyless v1 scope covers native/ERC-20 only. It cannot certify internal history; expand with the current configured route to obtain its distinct coverage. An unavailable trace is a gap, not evidence that no internal transfer occurred. Read [provider limits](../../../docs/providers.md) for the server-only controls and access requirements.
+- Preserve exact event identities and raw amounts. A provider's internal trace ID is not a Geth call path. Keep HyperCore protocol accounting separate when no wallet endpoint exists; an Arbitrum bridge endpoint does not become a HyperCore address.
+- For a supplied benchmark, account for every row and distinguish one-to-one transfers, protocol-accounting resolutions, ambiguous rows and missing evidence. State which events were independently wallet-enumerated and which were recovered using known hashes. A matched benchmark does not establish complete history for a new wallet.
 
 ### Shared deposits and related-wallet hypotheses
 

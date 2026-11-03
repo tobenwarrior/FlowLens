@@ -2,7 +2,9 @@
 
 ## Unreleased — open-source launch
 
-- Base wallet history now defaults to official keyless Etherscan MCP when self-hosted Blockscout or Alchemy is not configured. It uses receipt-derived ERC20 event identities and provider-bound cursors; prior failed source attempts remain visible. No API key or automatic fallback is required. Internal transfers, NFTs and fees remain uncovered by this route.
+- Base wallet history initially defaulted to the official keyless Etherscan MCP v1 route when self-hosted Blockscout or Alchemy was not configured. It used receipt-derived ERC20 event identities and provider-bound cursors; prior failed source attempts remain visible. No API key or automatic fallback is required. Internal transfers, NFTs and fees remained uncovered by that legacy route; the v2 bounded internal stream is described below.
+
+- Added the Base keyless Etherscan MCP v2 internal stream. It alternates separately committed native/ERC-20 and internal-candidate stages, always checks metadata through official `mainnet.base.org`, and uses BlockMachine by default for the full callTracer lane while respecting an explicit PublicNode or BlockMachine selection without fallback. The v2 cursor is bound to that trace lane and refuses continuation after a change. Canonical internal IDs use validated Geth trace paths; Etherscan underscore trace IDs remain provenance. `FLOWLENS_BASE_INTERNALS=off` preserves the legacy v1 native/ERC-20-only route. Trace gaps remain explicit, and this is still bounded history rather than complete-chain coverage.
 
 - Expanded wallet-history routes: keyless HyperEVM, keyed hosted Base/Arbitrum/Robinhood Chain, optional Alchemy Base, and a readiness-checked loopback Base Blockscout connector with deployment preparation files. Access and indexed coverage remain provider-specific; no Base indexer or universal all-chain history is bundled.
 - Added bounded, resumable CLI history collection. Cases retain up to 2,000 nodes and 20,000 transfers within 5 MB; the graph separately projects at most 80 counterparties without dropping retained evidence.

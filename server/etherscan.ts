@@ -274,7 +274,15 @@ export function createEtherscanProvider(
           "INVALID_PROVIDER_DATA",
           "Provider returned an invalid history page.",
         );
-      return result.result.map(row);
+      const records = result.result.map(row);
+      for (const record of records) {
+        if (integer(record.blockNumber) > cursor.end)
+          throw new ProviderError(
+            "INVALID_PROVIDER_DATA",
+            "Provider returned a history row beyond the frozen block window.",
+          );
+      }
+      return records;
     };
     const make = (
       record: Row,

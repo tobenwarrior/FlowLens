@@ -31,9 +31,11 @@ function createPacedFetch(
     init?: RequestInit,
   ): Promise<Response> => {
     const task = queue.then(async () => {
-      const wait = Math.max(0, lastCall + intervalMs - Date.now());
+      // Date.now() can step during NTP or system-clock adjustments. Pacing is
+      // about elapsed dispatch time, so use the monotonic process clock.
+      const wait = Math.max(0, lastCall + intervalMs - performance.now());
       if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
-      lastCall = Date.now();
+      lastCall = performance.now();
       // Internal readiness/history callers create a timeout before entering this queue. Replace it
       // at dispatch so queue wait does not consume the full 15-second response budget.
       return fetcher(input, {

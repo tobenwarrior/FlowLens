@@ -106,6 +106,7 @@ const allowlist = [
   "server/cli.ts",
   "server/etherscan.ts",
   "server/etherscan-mcp.ts",
+  "server/base-internal.ts",
   "server/alchemy.ts",
   "server/blockscout.ts",
   "server/self-hosted-blockscout.ts",

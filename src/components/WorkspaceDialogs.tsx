@@ -16,6 +16,7 @@ import {
 import type { Investigation } from "../domain/types.ts";
 import {
   coverageProviderLabel,
+  coverageWarningsForDisplay,
   isEarlierEmptyFailure,
 } from "../domain/coverage.ts";
 import { chainName, short } from "./Graph.tsx";
@@ -271,7 +272,7 @@ export function WorkspaceDialogs({
                       ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
                       : evidenceOnly
                         ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
-                        : "Each row names its provider, loaded streams and page state. Ethereum and Derive can use keyless Blockscout; Base can use keyless Etherscan, local Alchemy or self-hosted Blockscout; Arbitrum can use configured Blockscout or Etherscan. HyperEVM uses keyless HypurrTrace. HyperCore ledger entries appear separately in Evidence view."}
+                        : "Each row names its provider, loaded streams and page state. Ethereum and Derive can use keyless Blockscout; Base can use keyless Etherscan with trace-checked internals, local Alchemy or self-hosted Blockscout; Arbitrum can use configured Blockscout or Etherscan. HyperEVM uses keyless HypurrTrace. HyperCore ledger entries appear separately in Evidence view."}
                   </p>
                 </div>
                 <div className="coverage-list">
@@ -301,7 +302,7 @@ export function WorkspaceDialogs({
                               : "no streams"}{" "}
                             · {c.pagesLoaded} pages · {c.status}
                           </span>
-                          {c.warnings.map((w, i) => (
+                          {coverageWarningsForDisplay(c).map((w, i) => (
                             <p key={i}>{w}</p>
                           ))}
                           {c.error && <p className="error-text">{c.error}</p>}
@@ -410,10 +411,11 @@ export function WorkspaceDialogs({
                     start screen. Live Ethereum history needs no key: Blockscout
                     serves it and receives the wallet you trace. Derive Chain
                     expansions go to Blockscout at explorer.derive.xyz, key or
-                    not. Base can use the keyless Etherscan route, local Alchemy
-                    or self-hosted Blockscout; Arbitrum can use permitted
-                    Blockscout or Etherscan access. Evidence-only cases start
-                    without an index. Each chain has separate coverage.
+                    not. Base can use keyless Etherscan with internal trace
+                    checks, local Alchemy or self-hosted Blockscout; Arbitrum
+                    can use permitted Blockscout or Etherscan access.
+                    Evidence-only cases start without an index. Each chain has
+                    separate coverage.
                   </p>
                 </section>
               </div>

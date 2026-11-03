@@ -20,6 +20,7 @@ import type {
   WalletNode,
 } from "../domain/types.ts";
 import { nodeKey } from "../domain/engine.ts";
+import { latestCoverageForScope } from "../domain/coverage.ts";
 import { chainName, displayUnits, explorer, short } from "./Graph.tsx";
 import { WalletFlows, WalletLabelEditor } from "./WalletFlows.tsx";
 import type { VisibilityChange } from "./WalletFlows.tsx";
@@ -175,8 +176,10 @@ export function EvidenceDrawer({
       ) || { address: requestedNode.address, chainId: activeChain }
     : null;
   const coverage = node
-    ? investigation.coverage.find(
-        (c) => c.address === node.address && c.chainId === expansionChain,
+    ? latestCoverageForScope(
+        investigation.coverage,
+        node.address,
+        expansionChain,
       )
     : undefined;
   const scopedNode = node;

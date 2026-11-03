@@ -19,7 +19,7 @@ import type {
   Transfer,
   WalletNode,
 } from "../domain/types.ts";
-import { formatUnits, nodeKey } from "../domain/engine.ts";
+import { nodeKey } from "../domain/engine.ts";
 import { chainName, displayUnits, explorer, short } from "./Graph.tsx";
 import { WalletFlows, WalletLabelEditor } from "./WalletFlows.tsx";
 import type { VisibilityChange } from "./WalletFlows.tsx";
@@ -220,7 +220,11 @@ export function EvidenceDrawer({
               )}
             </span>
             <h2>
-              {formatUnits(transfer.rawAmount, transfer.asset.decimals)}{" "}
+              {displayUnits(
+                transfer.rawAmount,
+                transfer.asset.decimals,
+                transfer.asset.decimals,
+              )}{" "}
               <span>{transfer.asset.symbol}</span>
             </h2>
             <p>

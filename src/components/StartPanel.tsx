@@ -2,21 +2,25 @@ import { ArrowRight, FolderOpen, Terminal } from "lucide-react";
 import { short } from "./Graph.tsx";
 
 /**
- * Public wallets of well-known organisations, so a first trace has somewhere to start.
- * Each one's ENS reverse record or verified contract name identifies it on Blockscout.
+ * Public wallets of well-known organisations whose recent history is real activity,
+ * so a first trace shows money moving rather than airdrop spam. Each owner publishes
+ * its address; `source` names where.
  */
 export const EXAMPLES = [
   {
-    name: "ENS DAO endowment",
-    address: "0x4F2083f5fBede34C2714aFfb3105539775f7FE64",
+    name: "Lido DAO treasury",
+    address: "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+    source: "Lido's deployed-contracts list",
   },
   {
-    name: "ENS DAO wallet",
-    address: "0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7",
+    name: "Sky governance pause proxy",
+    address: "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+    source: "Sky's on-chain chainlog",
   },
   {
-    name: "Uniswap governance timelock",
-    address: "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+    name: "SafeDAO treasury",
+    address: "0x0B00b3227A5F3df3484f03990A87e02EbaD2F888",
+    source: "the Safe Foundation's treasury page",
   },
 ];
 
@@ -64,7 +68,10 @@ export function StartPanel({
             disabled={busy}
             onClick={() => onTrace(example.address)}
           >
-            <strong>{example.name}</strong>
+            <span className="start-example-name">
+              <strong>{example.name}</strong>
+              <small>Address from {example.source}</small>
+            </span>
             <code>{short(example.address)}</code>
             <ArrowRight size={14} />
           </button>

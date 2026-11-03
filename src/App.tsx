@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  CircleDollarSign,
   Command,
   Download,
   GitBranch,
@@ -46,7 +47,14 @@ import {
   demoPriceBook,
   demoProvider,
 } from "./domain/demo.ts";
-import { EMPTY_PRICE_BOOK, priceBook } from "./domain/pricing.ts";
+import {
+  EMPTY_PRICE_BOOK,
+  formatUsdAmount,
+  priceBook,
+} from "./domain/pricing.ts";
+import { summarizeFlows } from "./domain/flow-summary.ts";
+import { filterByValue, type ValueFilter } from "./domain/value-filter.ts";
+import { DateField } from "./components/DateField.tsx";
 import type { PriceBook, PriceQuote } from "./domain/pricing.ts";
 import { TransferTable } from "./components/TransferTable.tsx";
 import { AddressOverview } from "./components/AddressOverview.tsx";
@@ -55,6 +63,7 @@ import { EvidenceDrawer } from "./components/Evidence.tsx";
 import type { VisibilityChange } from "./components/WalletFlows.tsx";
 import {
   annotateWallet,
+  caseHeading,
   refreshWorkspace,
   setVisibility,
 } from "./domain/workspace.ts";
@@ -138,6 +147,16 @@ function download(c: Investigation) {
 const SYNTHETIC_FIXTURE =
   new URLSearchParams(window.location.search).get("fixture") === "synthetic";
 
+/** The value filter's floors: none, no zero-value transfers, or a USD minimum. */
+const VALUE_FLOORS = [
+  { key: "any", label: "Any value", short: "Any value" },
+  { key: "nonzero", label: "Not zero", short: "Not zero" },
+  { key: "1", label: "$1", short: "$1+" },
+  { key: "100", label: "$100", short: "$100+" },
+  { key: "10000", label: "$10K", short: "$10K+" },
+] as const;
+type ValueFloor = (typeof VALUE_FLOORS)[number]["key"];
+
 export default function App() {
   const [investigation, setInvestigation] = useState<Investigation | null>(
     null,
@@ -174,6 +193,9 @@ export default function App() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [showDates, setShowDates] = useState(false);
+  const [valueFloor, setValueFloor] = useState<ValueFloor>("any");
+  const [hideUnpriced, setHideUnpriced] = useState(false);
+  const [showValue, setShowValue] = useState(false);
   const [view, setView] = useState<"graph" | "list">("graph");
   // Live quotes are fetched only when asked for: a price lookup is a network call, and
   // FlowLens does not make those in the background.
@@ -446,7 +468,7 @@ export default function App() {
       el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
   }, [investigation?.id, view, drawer]);
   const dateRangeInvalid = Boolean(from && to && from > to);
-  const filtered = useMemo(
+  const inScope = useMemo(
     () =>
       investigation && !dateRangeInvalid
         ? filterTransfers(investigation.transfers, investigation.root, {
@@ -459,6 +481,30 @@ export default function App() {
         : [],
     [investigation, chain, asset, direction, from, to, dateRangeInvalid],
   );
+  const valueFilter = useMemo<ValueFilter>(
+    () => ({
+      minUsd:
+        valueFloor === "any" || valueFloor === "nonzero"
+          ? 0
+          : Number(valueFloor),
+      hideZero: valueFloor !== "any",
+      hideUnpriced,
+    }),
+    [valueFloor, hideUnpriced],
+  );
+  // Every view filter at once: what the graph, headline and evidence view all show.
+  const filtered = useMemo(
+    () => filterByValue(inScope, activeBook, valueFilter),
+    [inScope, activeBook, valueFilter],
+  );
+  const hiddenByValue = inScope.length - filtered.length;
+  const priced = Object.keys(activeBook.quotes).length > 0;
+  // The evidence view shares the graph's scope. Hidden wallets stay in it, dimmed:
+  // hiding a path keeps its evidence.
+  const scoped = useMemo(
+    () => (investigation ? { ...investigation, transfers: filtered } : null),
+    [investigation, filtered],
+  );
   const graphTransfers = useMemo(
     () => (investigation ? visibleTransfers(investigation, filtered) : []),
     [investigation, filtered],
@@ -470,17 +516,71 @@ export default function App() {
         : [],
     [investigation],
   );
-  const flows = useMemo(
-    () => (investigation ? aggregateFlows(filtered, investigation.root) : []),
-    [filtered, investigation],
+  const summary = useMemo(
+    () =>
+      investigation
+        ? summarizeFlows(filtered, investigation.root, activeBook)
+        : null,
+    [filtered, investigation, activeBook],
   );
-  const primaryFlow = flows.find((f) => f.asset.symbol === "USDC") || flows[0];
+  // The headline row: one USD figure across assets once prices are loaded, otherwise
+  // the most active asset in its own units.
+  const headline = (() => {
+    const usd = summary?.usd && summary.assets > 1 ? summary.usd : null;
+    if (summary && usd) {
+      const unpriced = usd.unpricedAssets;
+      return {
+        inflow: formatUsdAmount(usd.inflow),
+        outflow: formatUsdAmount(usd.outflow),
+        net: `${usd.net > 0 ? "+" : ""}${formatUsdAmount(usd.net)}`,
+        unit: "USD",
+        scope: `${summary.assets} assets · ${
+          usd.pricing === "spot"
+            ? "USD at spot"
+            : usd.pricing === "block"
+              ? "USD at transfer time"
+              : "USD at transfer time and spot"
+        }`,
+        detail: `Focus wallet · loaded scope only · ${
+          unpriced
+            ? `${unpriced} unpriced asset${unpriced === 1 ? "" : "s"} not counted`
+            : "every asset priced"
+        }`,
+      };
+    }
+    const flow = summary?.primary;
+    if (!summary || !flow)
+      return {
+        inflow: "0",
+        outflow: "0",
+        net: "0",
+        unit: "—",
+        scope: "No matching evidence",
+        detail: "Focus wallet · loaded scope only",
+      };
+    const others = summary.assets - 1;
+    return {
+      inflow: displayUnits(flow.inflow, flow.asset.decimals),
+      outflow: displayUnits(flow.outflow, flow.asset.decimals),
+      net: `${BigInt(flow.net) > 0n ? "+" : ""}${displayUnits(flow.net, flow.asset.decimals)}`,
+      unit: flow.asset.symbol,
+      scope: `${flow.asset.symbol} · ${chainName(flow.asset.chainId)}`,
+      detail: `Focus wallet · loaded scope only${
+        others > 0 ? ` · ${others} other asset${others === 1 ? "" : "s"}` : ""
+      }`,
+    };
+  })();
+  const canTotal =
+    investigation?.mode === "live" && !priced && (summary?.assets ?? 0) > 1;
+  const usdFloor = valueFloor !== "any" && valueFloor !== "nonzero";
   const resetFilters = () => {
     setChain("all");
     setAsset("all");
     setDirection("all");
     setFrom("");
     setTo("");
+    setValueFloor("any");
+    setHideUnpriced(false);
   };
   const selectNode = (n: WalletNode) => {
     setSelectedNode(n);
@@ -838,7 +938,13 @@ export default function App() {
     c.streams.includes("internal"),
   ).length;
   const hasFilter =
-    chain !== "all" || asset !== "all" || direction !== "all" || from || to;
+    chain !== "all" ||
+    asset !== "all" ||
+    direction !== "all" ||
+    from ||
+    to ||
+    valueFloor !== "any" ||
+    hideUnpriced;
   return (
     <div className="app-shell">
       <Sidebar
@@ -1032,14 +1138,15 @@ export default function App() {
                     <h2>
                       {/* The built-in fixture already carries its own title, and an agent
                       can create demo-mode cases with names of their own. */}
-                      {investigation.title}
+                      {caseHeading(investigation)}
                       <span className="case-badge">
                         {investigation.mode === "demo" ? "DEMO" : "LOCAL"}
                       </span>
                     </h2>
                     <span className="case-subtitle">
                       {short(investigation.root)} <span>·</span>{" "}
-                      {networks.length} networks <span>·</span>{" "}
+                      {networks.length} network
+                      {networks.length === 1 ? "" : "s"} <span>·</span>{" "}
                       {investigation.transfers.length} evidence records
                       {investigation.protocolEvidence?.hypercore && (
                         <>
@@ -1132,10 +1239,24 @@ export default function App() {
                 </label>
                 <button
                   className={`filter-select date-toggle ${from || to ? "active" : ""}`}
+                  aria-expanded={showDates}
                   onClick={() => setShowDates((v) => !v)}
                 >
                   <SlidersHorizontal size={14} />
                   <span>{from || to ? "Custom dates" : "All time"}</span>
+                  <ChevronDown size={12} />
+                </button>
+                <button
+                  className={`filter-select date-toggle ${valueFloor !== "any" || hideUnpriced ? "active" : ""}`}
+                  aria-expanded={showValue}
+                  onClick={() => setShowValue((v) => !v)}
+                >
+                  <CircleDollarSign size={14} />
+                  <span>
+                    {valueFloor === "any" && hideUnpriced
+                      ? "Priced only"
+                      : `${VALUE_FLOORS.find((floor) => floor.key === valueFloor)!.short}${hideUnpriced ? " · priced" : ""}`}
+                  </span>
                   <ChevronDown size={12} />
                 </button>
                 {hasFilter && (
@@ -1165,22 +1286,22 @@ export default function App() {
                 <div className="date-row">
                   <label>
                     From UTC{" "}
-                    <input
-                      type="date"
-                      aria-label="From date"
+                    <DateField
+                      label="From date"
+                      pickerLabel="Choose the start date"
                       value={from}
-                      onChange={(e) => setFrom(e.target.value)}
+                      onChange={setFrom}
                     />
                   </label>
                   <span>→</span>
                   <label>
                     To UTC{" "}
-                    <input
-                      type="date"
-                      aria-label="To date"
+                    <DateField
+                      label="To date"
+                      pickerLabel="Choose the end date"
                       value={to}
                       min={from}
-                      onChange={(e) => setTo(e.target.value)}
+                      onChange={setTo}
                     />
                   </label>
                   <span
@@ -1193,11 +1314,66 @@ export default function App() {
                   </span>
                 </div>
               )}
+              {showValue && (
+                <div className="date-row value-row">
+                  <span className="value-row-label">Minimum</span>
+                  <div
+                    className="value-floors"
+                    role="group"
+                    aria-label="Minimum transfer value"
+                  >
+                    {VALUE_FLOORS.map((floor) => (
+                      <button
+                        key={floor.key}
+                        type="button"
+                        aria-pressed={valueFloor === floor.key}
+                        className={valueFloor === floor.key ? "active" : ""}
+                        onClick={() => setValueFloor(floor.key)}
+                      >
+                        {floor.label}
+                      </button>
+                    ))}
+                  </div>
+                  <label
+                    className="value-unpriced"
+                    title={
+                      priced
+                        ? "Unpriced tokens include airdrop spam, and some real tokens with no pool price"
+                        : "Load USD prices first"
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={hideUnpriced}
+                      disabled={!priced}
+                      onChange={(e) => setHideUnpriced(e.target.checked)}
+                    />
+                    Hide unpriced tokens
+                  </label>
+                  <span className="date-hint">
+                    {usdFloor && !priced ? (
+                      <>
+                        USD floors need prices.{" "}
+                        {investigation.mode === "live" && (
+                          <button
+                            className="text-button"
+                            disabled={pricing}
+                            onClick={() => void loadPrices()}
+                          >
+                            {pricing ? "Pricing…" : "Load USD prices"}
+                          </button>
+                        )}
+                      </>
+                    ) : hiddenByValue ? (
+                      `${hiddenByValue} transfer${hiddenByValue === 1 ? "" : "s"} hidden by value · evidence is kept`
+                    ) : (
+                      "Hides loaded evidence from view; nothing is deleted."
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="summary-scope-mobile">
-                {primaryFlow
-                  ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)} · focus wallet · loaded scope`
-                  : "No matching evidence"}
-                {flows.length > 1 ? ` · ${flows.length - 1} other assets` : ""}
+                {headline.scope} · {headline.detail}
               </div>
               <div className="flow-summary">
                 <div>
@@ -1205,13 +1381,8 @@ export default function App() {
                     <ArrowDownLeft size={13} /> Gross inflow
                   </span>
                   <strong className="inflow">
-                    {primaryFlow
-                      ? displayUnits(
-                          primaryFlow.inflow,
-                          primaryFlow.asset.decimals,
-                        )
-                      : "0"}
-                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                    {headline.inflow}
+                    <small>{headline.unit}</small>
                   </strong>
                 </div>
                 <div>
@@ -1219,26 +1390,15 @@ export default function App() {
                     <ArrowUpRight size={13} /> Gross outflow
                   </span>
                   <strong>
-                    {primaryFlow
-                      ? displayUnits(
-                          primaryFlow.outflow,
-                          primaryFlow.asset.decimals,
-                        )
-                      : "0"}
-                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                    {headline.outflow}
+                    <small>{headline.unit}</small>
                   </strong>
                 </div>
                 <div>
                   <span className="metric-label">Net flow</span>
                   <strong className="net">
-                    {primaryFlow && BigInt(primaryFlow.net) > 0n ? "+" : ""}
-                    {primaryFlow
-                      ? displayUnits(
-                          primaryFlow.net,
-                          primaryFlow.asset.decimals,
-                        )
-                      : "0"}
-                    <small>{primaryFlow?.asset.symbol || "—"}</small>
+                    {headline.net}
+                    <small>{headline.unit}</small>
                   </strong>
                 </div>
                 <div className="scope-note">
@@ -1246,16 +1406,21 @@ export default function App() {
                     <LayoutGrid size={16} />
                   </span>
                   <p>
-                    <strong>
-                      {primaryFlow
-                        ? `${primaryFlow.asset.symbol} · ${chainName(primaryFlow.asset.chainId)}`
-                        : "No matching evidence"}
-                    </strong>
+                    <strong>{headline.scope}</strong>
                     <span>
-                      Focus wallet · loaded scope only
-                      {flows.length > 1
-                        ? ` · ${flows.length - 1} other assets`
-                        : ""}
+                      {headline.detail}
+                      {canTotal && (
+                        <>
+                          {" · "}
+                          <button
+                            className="text-button"
+                            disabled={pricing}
+                            onClick={() => void loadPrices()}
+                          >
+                            {pricing ? "Pricing…" : "Total in USD"}
+                          </button>
+                        </>
+                      )}
                     </span>
                   </p>
                 </div>
@@ -1265,11 +1430,11 @@ export default function App() {
                   <span className="eyebrow">
                     {view === "graph" ? "FUNDING GRAPH" : "TRANSACTION HISTORY"}
                   </span>
-                  {view === "graph" && (
-                    <span className="record-count">
-                      {filtered.length} transfers
-                    </span>
-                  )}
+                  <span className="record-count">
+                    {filtered.length === investigation.transfers.length
+                      ? `${filtered.length} transfers`
+                      : `${filtered.length} of ${investigation.transfers.length} transfers`}
+                  </span>
                 </div>
                 <div>
                   <button
@@ -1348,13 +1513,13 @@ export default function App() {
                   ) : (
                     <div className="address-page">
                       <AddressOverview
-                        investigation={investigation}
+                        investigation={scoped!}
                         address={selectedNode?.address ?? investigation.root}
                         book={activeBook}
                         onSelectWallet={selectNode}
                       />
                       <TransferTable
-                        investigation={investigation}
+                        investigation={scoped!}
                         address={selectedNode?.address ?? investigation.root}
                         book={activeBook}
                         onSelect={selectTransfer}

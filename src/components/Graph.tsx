@@ -22,6 +22,7 @@ import {
   nodeKey,
 } from "../domain/engine.ts";
 import { projectGraph } from "../domain/graph-projection.ts";
+import { rootLabel } from "../domain/workspace.ts";
 import {
   EMPTY_PRICE_BOOK,
   formatCompact,
@@ -101,9 +102,16 @@ const roleOf = (node: WalletNode): Role =>
         ? "labelled"
         : "wallet";
 const RADIUS = { focus: 28, node: 22 };
-/** Each node is its disc with a two-line caption underneath, in one foreignObject. */
+/**
+ * Each node is its disc with a caption underneath, in one foreignObject: the address,
+ * then a label of up to two lines (`.node-sub`).
+ */
 const LABEL_WIDTH = 170;
-const LABEL_HEIGHT = 40;
+const LABEL_HEIGHT = 53;
+/** A label line's height and the characters that fit on it (`.node-sub`, 10px). */
+const SUB_LINE = 13;
+const subLines = (text: string) =>
+  textWidth(text, 10) > LABEL_WIDTH - 8 ? 2 : 1;
 /** The hop captions sit this far above the topmost disc. */
 const HOP_OFFSET = 44;
 /** Room above each disc for its selection ring and the focus wallet's glow. */
@@ -115,8 +123,8 @@ const cleanLabel = (text: string) =>
 /** Width of monospace text at a font size: about 0.6em per character. */
 const textWidth = (text: string, size: number, tracking = 0) =>
   text.length * size * (0.6 + tracking);
-/** Line captions are 9px (`.edge-label`). */
-const captionWidth = (text: string) => textWidth(text, 9);
+/** Line captions are 10px (`.edge-label`). */
+const captionWidth = (text: string) => textWidth(text, 10);
 const hopText = (layer: number) =>
   layer === 0
     ? "Focus"
@@ -264,6 +272,10 @@ export function Graph({
     );
   }, [edges, byKey, grouped, root]);
   const radiusOf = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
+  const focusLabel = useMemo(() => {
+    const label = rootLabel(investigation);
+    return label ? cleanLabel(label.text) : "";
+  }, [investigation]);
   const { minX, maxX, minY, maxY } = layout.bounds;
   const hopY = minY - RADIUS.focus - HOP_OFFSET + 12;
 
@@ -275,13 +287,14 @@ export function Graph({
         ? ROOT
         : nodeKey(chainId, address as `0x${string}`);
     const radius = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
-    // Half the width of each wallet's caption (address over label or chain).
-    const half = new Map(
+    // Each wallet's caption (address over label or chain): half its width, and how
+    // many lines its label takes.
+    const caption = new Map(
       [...layout.nodes.keys()].map((key) => {
         const node = byKey.get(key);
         const sub =
           key === ROOT
-            ? "Focus wallet"
+            ? focusLabel || "Focus wallet"
             : node?.label
               ? cleanLabel(node.label.text)
               : chainName(node!.chainId);
@@ -289,8 +302,17 @@ export function Graph({
           textWidth(short(key === ROOT ? root : node!.address), 11),
           textWidth(sub, 10),
         );
-        return [key, Math.min(LABEL_WIDTH / 2, wide / 2 + 4)];
+        return [
+          key,
+          {
+            half: Math.min(LABEL_WIDTH / 2, wide / 2 + 4),
+            lines: subLines(sub),
+          },
+        ];
       }),
+    );
+    const half = new Map(
+      [...caption].map(([key, { half }]) => [key, half] as const),
     );
     const clear = new Map<number, number>();
     for (const [key, p] of layout.nodes)
@@ -304,9 +326,10 @@ export function Graph({
             { cx: p.x, cy: p.y, hw: r + 4, hh: r + 4, angle: 0 },
             {
               cx: p.x,
-              cy: p.y + r + 18.5,
+              cy:
+                p.y + r + 18.5 + ((caption.get(key)!.lines - 1) * SUB_LINE) / 2,
               hw: half.get(key)!,
-              hh: 15,
+              hh: 15 + ((caption.get(key)!.lines - 1) * SUB_LINE) / 2,
               angle: 0,
             },
           ],
@@ -446,7 +469,7 @@ export function Graph({
         high = Math.min(high, point.y);
       }
     return { routes, captions, tucked, low, high, weights };
-  }, [edges, layout, byKey, root, hopY, book]);
+  }, [edges, layout, byKey, root, hopY, book, focusLabel]);
 
   // Hovering or focusing a wallet or line brings out its connections; the rest dims.
   const [spotlight, setSpotlight] = useState<
@@ -661,12 +684,12 @@ export function Graph({
                     className={`graph-node role-${role}${isSelected ? " selected" : ""}`}
                     aria-label={
                       focus
-                        ? `Focus wallet ${short(root)}`
+                        ? `Focus wallet ${short(root)}${focusLabel ? ` · ${focusLabel}` : ""}`
                         : `${short(node!.address)} · ${label || "No label"} · ${chainName(node!.chainId)}`
                     }
                     title={
                       focus
-                        ? `${root}\nFocus wallet · labels are per chain in the wallet panel`
+                        ? `${root}\n${focusLabel ? `${focusLabel} · focus wallet` : "Focus wallet"} · labels are per chain in the wallet panel`
                         : `${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
                     }
                     onClick={() =>
@@ -702,7 +725,7 @@ export function Graph({
                     </strong>
                     <span className="node-sub">
                       {focus
-                        ? "Focus wallet"
+                        ? focusLabel || "Focus wallet"
                         : label || chainName(node!.chainId)}
                     </span>
                   </button>

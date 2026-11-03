@@ -113,6 +113,19 @@ export function WalletFlows({
             : label.claimType === "provider-assertion"
               ? "Provider assertion"
               : "Legacy label";
+  // A long amount may wrap, but only at its decimal point.
+  const splitFraction = (amount: string) => {
+    const point = amount.indexOf(".");
+    return point < 0 ? (
+      amount
+    ) : (
+      <>
+        {amount.slice(0, point)}
+        <wbr />
+        {amount.slice(point)}
+      </>
+    );
+  };
   const totalRows = (flows: typeof base.flows) =>
     flows.map((flow) => (
       <div className="wallet-total-row" key={assetKey(flow.asset)} role="row">
@@ -135,8 +148,9 @@ export function WalletFlows({
             key={index}
             title={`${formatUnits(raw, flow.asset.decimals)} ${flow.asset.symbol}`}
           >
-            {index === 2 && BigInt(raw) > 0n ? "+" : ""}
-            {displayUnits(raw, flow.asset.decimals)}
+            {splitFraction(
+              `${index === 2 && BigInt(raw) > 0n ? "+" : ""}${displayUnits(raw, flow.asset.decimals)}`,
+            )}
           </span>
         ))}
       </div>

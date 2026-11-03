@@ -303,7 +303,9 @@ function CounterpartiesPanel({
                         className="txparty-addr"
                         title={`${counterparty.address} on ${chainName(counterparty.chainId)}`}
                       >
-                        ({short(counterparty.address)})
+                        {label
+                          ? `(${short(counterparty.address)})`
+                          : short(counterparty.address)}
                       </span>
                     </span>
                   </td>

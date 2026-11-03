@@ -9,7 +9,7 @@ FlowLens has one evidence engine and four callers: browser, CLI, HTTP API and st
 - An investigation contains its focus wallet, evidence, nodes, provenance-aware labels, per-provider wallet/chain coverage, cursors, notes and presentation state. Its version is `1`.
 - Loaded history and graph traversal are separate. Expansion names one wallet/chain, advances explicit page budgets, and preserves the original focus wallet. No recursive fanout is implicit.
 - A coverage stream can exhaust while other chains/transfer kinds remain absent. Provider errors retain the last successful evidence/cursor. Conflicting payloads under an existing evidence ID reject the page.
-- The parsed case snapshot is bounded to 5 MB, 20,000 transfers and 2,000 retained nodes. The human graph is a readable projection of the focus wallet plus at most 80 counterparties; it does not discard retained history or addresses.
+- The parsed case snapshot is bounded to 5 MB, 20,000 transfers and 2,000 retained nodes. The human graph is a readable projection of the focus wallet plus at most 400 counterparties, drawing a busy wallet's biggest counterparties as nodes and the rest as chips in one box; it does not discard retained history or addresses.
 - Imports reconstruct known fields, canonicalize timestamps to UTC and reject invalid mode/evidence combinations. This validates shape and internal consistency; importing JSON does not authenticate a source's claims.
 - Browser persistence is local storage; durable agent/API cases are private JSON files. CLI and API share atomic writes and writer locks. Full-snapshot API saves use the original `updatedAt` for conflict detection.
 

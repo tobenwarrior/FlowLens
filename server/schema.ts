@@ -1,3 +1,5 @@
+import { GRAPH_NODE_LIMIT } from "../src/domain/graph-projection.ts";
+
 /** Versioned machine contract shared by the HTTP API and CLI. Register jsonSchema.$id before resolving contract refs. */
 const SCHEMA_ID = "urn:flowlens:schema:v1";
 type Schema = Record<string, unknown>;
@@ -1059,7 +1061,7 @@ export const operationSchema = {
     liveChains: [1, 957, 8453, 42161, 999, 4663],
     maxPagesPerExpansion: 3,
     maxNodes: 2000,
-    maxGraphCounterparties: 80,
+    maxGraphCounterparties: GRAPH_NODE_LIMIT,
     liveRowsPerStream: 10,
     maxHypurrtraceRowsPerStream: 100,
     maxHypercoreEntriesPerPage: 500,

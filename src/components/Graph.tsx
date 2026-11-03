@@ -21,26 +21,40 @@ import {
   formatUnits,
   nodeKey,
 } from "../domain/engine.ts";
-import { projectGraph } from "../domain/graph-projection.ts";
+import {
+  chainIdForTransfers,
+  graphFocusChainId,
+  projectGraph,
+} from "../domain/graph-projection.ts";
+import {
+  groupCounterparties,
+  type CounterpartyGroup,
+} from "../domain/graph-groups.ts";
 import { rootLabel } from "../domain/workspace.ts";
 import {
   EMPTY_PRICE_BOOK,
   formatCompact,
   formatUsdAmount,
+  readablePlaces,
+  roundUnits,
   sumUsd,
   wholeUnits,
   type PriceBook,
 } from "../domain/pricing.ts";
 import {
   COLUMN_GAP,
+  ROW_GAP,
   layoutFlow,
   linkKey,
   type FlowLink,
 } from "../domain/graph-layout.ts";
 import {
+  ARROW_GAP,
+  LANE,
   captionAt,
   placeCaptions,
   pointAt,
+  reverseRoute,
   routeBackward,
   routeForward,
   type Caption,
@@ -68,6 +82,17 @@ export const displayUnits = (
     return `${BigInt(raw) < 0n ? ">−" : "<"}0.${"0".repeat(Math.max(0, maxFraction - 1))}1`;
   const [whole, fraction] = value.split(".");
   return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction ? `.${fraction}` : ""}`;
+};
+/** An amount rounded for reading (see readablePlaces); tiny amounts stay visible. */
+export const displayAmount = (
+  raw: string,
+  asset: { symbol: string; decimals: number },
+) => {
+  const places = readablePlaces(raw, asset);
+  const rounded = roundUnits(raw, asset.decimals, places);
+  if (BigInt(rounded) === 0n && BigInt(raw) !== 0n)
+    return `${BigInt(raw) < 0n ? ">−" : "<"}0.${"0".repeat(Math.max(0, places - 1))}1`;
+  return displayUnits(rounded, asset.decimals, places);
 };
 export const explorer = (id: number, type: "tx" | "address", value: string) => {
   const origin = (
@@ -102,6 +127,36 @@ const roleOf = (node: WalletNode): Role =>
         ? "labelled"
         : "wallet";
 const RADIUS = { focus: 28, node: 22 };
+/** A group box: a header over a grid of address chips (`.counterparty-group`). */
+const CHIP = { width: 86, height: 20, gap: 4 };
+const BOX = { pad: 8, head: 24 };
+/** Chips drawn per box; past this, one "+N more" chip opens the full list. */
+const MAX_CHIPS = 59;
+/**
+ * A box's grid. It stays three chips wide in a busy column; with nothing beyond it,
+ * a big group may grow to five, outwards from its wallet.
+ */
+const boxShape = (members: number, roomy: boolean) => {
+  const chips = Math.min(members, MAX_CHIPS + 1);
+  const columns =
+    chips <= 8 ? 2 : chips <= 24 || !roomy ? 3 : chips <= 48 ? 4 : 5;
+  const rows = Math.ceil(chips / columns);
+  return {
+    columns,
+    shown: members > MAX_CHIPS + 1 ? MAX_CHIPS : members,
+    width: columns * CHIP.width + (columns - 1) * CHIP.gap + 2 * BOX.pad,
+    height: BOX.head + rows * CHIP.height + (rows - 1) * CHIP.gap + 2 * BOX.pad,
+  };
+};
+/** A line the graph draws: between two wallets, or between a wallet and a group. */
+interface DrawnEdge {
+  id: string;
+  fromKey: string;
+  toKey: string;
+  transfers: Transfer[];
+  /** "0xab…cd to 0xef…01", for the line's accessible name. */
+  name: string;
+}
 /**
  * Each node is its disc with a caption underneath, in one foreignObject: the address,
  * then a label of up to two lines (`.node-sub`).
@@ -186,6 +241,7 @@ export function Graph({
   book = EMPTY_PRICE_BOOK,
   onExpand,
   busy = false,
+  focusChain,
 }: {
   investigation: Investigation;
   transfers: Transfer[];
@@ -198,6 +254,8 @@ export function Graph({
   /** Loads a wallet's next page of history, from the "+" on its disc. */
   onExpand?: (n: WalletNode) => void;
   busy?: boolean;
+  /** Explicit network filter to use when opening the focus wallet. */
+  focusChain?: number;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 1100, height: 600 });
@@ -228,6 +286,12 @@ export function Graph({
     py: number;
   } | null>(null);
   const root = investigation.root.toLowerCase();
+  const rootChain = graphFocusChainId(
+    investigation.root,
+    transfers,
+    investigation.transfers,
+    focusChain,
+  );
   const projection = useMemo(
     () =>
       projectGraph(investigation, transfers, {
@@ -249,14 +313,86 @@ export function Graph({
     address.toLowerCase() === root
       ? ROOT
       : nodeKey(chainId, address as `0x${string}`);
-  const layout = useMemo(() => {
-    const links: FlowLink[] = edges.map((edge) => ({
-      from:
-        edge.from.toLowerCase() === root
-          ? ROOT
-          : nodeKey(edge.chainId, edge.from),
-      to:
-        edge.to.toLowerCase() === root ? ROOT : nodeKey(edge.chainId, edge.to),
+  // A busy wallet keeps its biggest counterparties as nodes and boxes the rest, as
+  // investigators draw it. Pinned, selected and labelled wallets keep their nodes.
+  const grouping = useMemo(() => {
+    const keyed = edges.map((edge) => ({
+      from: keyOf(edge.chainId, edge.from),
+      to: keyOf(edge.chainId, edge.to),
+      transfers: edge.transfers,
+    }));
+    const keep = [
+      ...investigation.pinned,
+      ...(selected ? [selected] : []),
+      ...nodes
+        .filter((node) => node.label)
+        .map((node) => nodeKey(node.chainId, node.address)),
+    ];
+    const { groups, grouped } = groupCounterparties(ROOT, keyed, {
+      keep,
+      value: (transfers) => {
+        const usd = sumUsd(transfers, book);
+        return usd.priced ? usd.amount : 0;
+      },
+    });
+    const byGroup = new Map(groups.map((group) => [group.key, group]));
+    return { groups, grouped, byGroup };
+    // keyOf reads only `root`.
+  }, [edges, investigation.pinned, selected, nodes, book, root]);
+  const groupName = (group: CounterpartyGroup) =>
+    `${group.members.length} more ${group.direction === "in" ? "senders" : "recipients"} on ${chainName(group.chainId)}`;
+  const drawn = useMemo<DrawnEdge[]>(() => {
+    const plain = edges
+      .map((edge) => ({
+        id: edge.id,
+        fromKey: keyOf(edge.chainId, edge.from),
+        toKey: keyOf(edge.chainId, edge.to),
+        transfers: edge.transfers,
+        name: `${short(edge.from)} to ${short(edge.to)}`,
+      }))
+      .filter(
+        (edge) =>
+          !grouping.grouped.has(edge.fromKey) &&
+          !grouping.grouped.has(edge.toKey),
+      );
+    // One line per group and direction: the members' flow, and any flow back.
+    const boxed = grouping.groups.flatMap((group): DrawnEdge[] => {
+      const members = new Set(group.members);
+      const inbound = group.links
+        .filter((link) => members.has(link.from))
+        .flatMap((link) => link.transfers);
+      const outbound = group.links
+        .filter((link) => members.has(link.to))
+        .flatMap((link) => link.transfers);
+      const anchor =
+        group.anchor === ROOT
+          ? short(root)
+          : short(byKey.get(group.anchor)!.address);
+      return [
+        inbound.length && {
+          id: `${group.key}:in`,
+          fromKey: group.key,
+          toKey: group.anchor,
+          transfers: inbound,
+          name: `${groupName(group)} to ${anchor}`,
+        },
+        outbound.length && {
+          id: `${group.key}:out`,
+          fromKey: group.anchor,
+          toKey: group.key,
+          transfers: outbound,
+          name: `${anchor} to ${groupName(group)}`,
+        },
+      ].filter((edge): edge is DrawnEdge => Boolean(edge));
+    });
+    return [...plain, ...boxed];
+  }, [edges, grouping, byKey, root]);
+  // Lay out with narrow boxes first. A box with nothing beyond it may then widen,
+  // outwards from its wallet, and the layout runs again for its new height.
+  const { layout, shapes } = useMemo(() => {
+    const links: FlowLink[] = drawn.map((edge) => ({
+      from: edge.fromKey,
+      to: edge.toKey,
       transfers: edge.transfers.length,
       firstAt: edge.transfers.reduce(
         (first, transfer) =>
@@ -264,40 +400,163 @@ export function Graph({
         edge.transfers[0].timestamp,
       ),
     }));
-    return layoutFlow(
-      ROOT,
-      [...byKey.keys()],
-      links,
-      grouped ? (key) => byKey.get(key)?.category ?? "" : undefined,
+    const keys = [
+      ...[...byKey.keys()].filter((key) => !grouping.grouped.has(key)),
+      ...grouping.groups.map((group) => group.key),
+    ];
+    type Shape = ReturnType<typeof boxShape> & { dx: number };
+    const run = (shapes: Map<string, Shape>) =>
+      layoutFlow(
+        ROOT,
+        keys,
+        links,
+        grouped ? (key) => byKey.get(key)?.category ?? "" : undefined,
+        // A box needs its own height plus the room a wallet's caption would take.
+        (key) => (shapes.has(key) ? shapes.get(key)!.height + 36 : ROW_GAP),
+      );
+    const narrow = new Map(
+      grouping.groups.map((group): [string, Shape] => [
+        group.key,
+        { ...boxShape(group.members.length, false), dx: 0 },
+      ]),
     );
-  }, [edges, byKey, grouped, root]);
+    const first = run(narrow);
+    const used = new Set([...first.nodes.values()].map((p) => p.layer));
+    const shapes = new Map(
+      grouping.groups.map((group): [string, Shape] => {
+        const p = first.nodes.get(group.key),
+          anchor = first.nodes.get(group.anchor);
+        const outward = p && anchor ? Math.sign(p.layer - anchor.layer) : 0;
+        if (!outward || used.has(p!.layer + outward))
+          return [group.key, narrow.get(group.key)!];
+        const shape = boxShape(group.members.length, true);
+        return [
+          group.key,
+          {
+            ...shape,
+            dx: outward * Math.max(0, shape.width / 2 - LABEL_WIDTH / 2),
+          },
+        ];
+      }),
+    );
+    const widened = [...shapes].some(
+      ([key, shape]) => shape.width !== narrow.get(key)!.width,
+    );
+    return { layout: widened ? run(shapes) : first, shapes };
+  }, [drawn, byKey, grouping, grouped]);
+  // Columns move apart where a busy wallet fans out, so each of its lines has a lane
+  // to bend in (see LANE in graph-drawing).
+  const columnX = useMemo(() => {
+    const fan = new Map<string, number>(),
+      widest = new Map<number, number>();
+    for (const edge of drawn) {
+      const a = layout.nodes.get(edge.fromKey),
+        b = layout.nodes.get(edge.toKey);
+      if (!a || !b || Math.abs(a.layer - b.layer) !== 1) continue;
+      const left = Math.min(a.layer, b.layer);
+      for (const key of [edge.fromKey, edge.toKey]) {
+        const id = `${key}|${left}`;
+        fan.set(id, (fan.get(id) ?? 0) + 1);
+        widest.set(left, Math.max(widest.get(left) ?? 0, fan.get(id)!));
+      }
+    }
+    const extra = (left: number) =>
+      Math.min(240, Math.max(0, (widest.get(left) ?? 0) - 4) * LANE);
+    const x = new Map<number, number>([[0, 0]]);
+    const after = layout.layers.filter((layer) => layer > 0);
+    const before = layout.layers.filter((layer) => layer < 0).reverse();
+    let previous = 0;
+    for (const layer of after) {
+      x.set(
+        layer,
+        x.get(previous)! + (layer - previous) * COLUMN_GAP + extra(layer - 1),
+      );
+      previous = layer;
+    }
+    previous = 0;
+    for (const layer of before) {
+      x.set(
+        layer,
+        x.get(previous)! - (previous - layer) * COLUMN_GAP - extra(layer),
+      );
+      previous = layer;
+    }
+    return x;
+  }, [drawn, layout]);
+  /** Where a node is drawn: its column, and a widened box shifted outwards. */
+  const at = (key: string) => {
+    const p = layout.nodes.get(key)!;
+    return { ...p, x: columnX.get(p.layer)! + (shapes.get(key)?.dx ?? 0) };
+  };
   const radiusOf = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
+  // Address poisoning: different wallets whose shortened forms match. Each is flagged,
+  // so nobody takes one for another; the full address is in its tooltip.
+  const lookalikes = useMemo(() => {
+    const byShort = new Map<string, Set<string>>();
+    for (const address of [root, ...nodes.map((node) => node.address)]) {
+      const key = short(address).toLowerCase();
+      if (!byShort.has(key)) byShort.set(key, new Set());
+      byShort.get(key)!.add(address.toLowerCase());
+    }
+    return new Set(
+      [...byShort.values()]
+        .filter((set) => set.size > 1)
+        .flatMap((set) => [...set]),
+    );
+  }, [nodes, root]);
+  const chainLine = (node: WalletNode) =>
+    lookalikes.has(node.address.toLowerCase())
+      ? `Lookalike · ${chainName(node.chainId)}`
+      : chainName(node.chainId);
   const focusLabel = useMemo(() => {
     const label = rootLabel(investigation);
     return label ? cleanLabel(label.text) : "";
   }, [investigation]);
-  const { minX, maxX, minY, maxY } = layout.bounds;
-  const hopY = minY - RADIUS.focus - HOP_OFFSET + 12;
+  // What each node covers around its centre: a group's box, or a disc with its caption.
+  const reach = (key: string) => {
+    const shape = shapes.get(key);
+    return shape
+      ? {
+          half: shape.width / 2,
+          above: shape.height / 2,
+          below: shape.height / 2,
+        }
+      : {
+          half: LABEL_WIDTH / 2,
+          above: RADIUS.focus,
+          below: RADIUS.focus + LABEL_HEIGHT,
+        };
+  };
+  const placed = [...layout.nodes.keys()].map((key) => [key, at(key)] as const);
+  const minX = Math.min(...placed.map(([key, p]) => p.x - reach(key).half));
+  const maxX = Math.max(...placed.map(([key, p]) => p.x + reach(key).half));
+  const top = Math.min(...placed.map(([key, p]) => p.y - reach(key).above));
+  const bottom = Math.max(...placed.map(([key, p]) => p.y + reach(key).below));
+  const hopY = top - HOP_OFFSET + 12;
 
   // Route every line around the wallets and place its caption where it covers no
   // text. Wallet discs, their captions and the hop captions are the obstacles.
   const drawing = useMemo(() => {
-    const keyFor = (chainId: number, address: string) =>
-      address.toLowerCase() === root
-        ? ROOT
-        : nodeKey(chainId, address as `0x${string}`);
-    const radius = (key: string) => (key === ROOT ? RADIUS.focus : RADIUS.node);
+    // A line meets a box at its side, as it meets a wallet at its disc.
+    const radius = (key: string) =>
+      shapes.has(key)
+        ? shapes.get(key)!.width / 2
+        : key === ROOT
+          ? RADIUS.focus
+          : RADIUS.node;
     // Each wallet's caption (address over label or chain): half its width, and how
     // many lines its label takes.
     const caption = new Map(
       [...layout.nodes.keys()].map((key) => {
+        if (shapes.has(key))
+          return [key, { half: shapes.get(key)!.width / 2, lines: 1 }];
         const node = byKey.get(key);
         const sub =
           key === ROOT
             ? focusLabel || "Focus wallet"
             : node?.label
               ? cleanLabel(node.label.text)
-              : chainName(node!.chainId);
+              : chainLine(node!);
         const wide = Math.max(
           textWidth(short(key === ROOT ? root : node!.address), 11),
           textWidth(sub, 10),
@@ -318,7 +577,22 @@ export function Graph({
     for (const [key, p] of layout.nodes)
       clear.set(p.layer, Math.max(clear.get(p.layer) ?? 0, half.get(key)!));
     const walletRects = new Map(
-      [...layout.nodes].map(([key, p]): [string, Rect[]] => {
+      [...layout.nodes.keys()].map((key): [string, Rect[]] => {
+        const p = at(key);
+        const shape = shapes.get(key);
+        if (shape)
+          return [
+            key,
+            [
+              {
+                cx: p.x,
+                cy: p.y,
+                hw: shape.width / 2 + 4,
+                hh: shape.height / 2 + 4,
+                angle: 0,
+              },
+            ],
+          ];
         const r = radius(key);
         return [
           key,
@@ -337,27 +611,41 @@ export function Graph({
       }),
     );
     const hopRects: Rect[] = layout.layers.map((layer) => ({
-      cx: layer * COLUMN_GAP,
+      cx: columnX.get(layer)!,
       cy: hopY - 4,
       hw: textWidth(hopText(layer), 10, 0.12) / 2 + 4,
       hh: 8,
       angle: 0,
     }));
     const degree = new Map<string, number>();
-    for (const edge of edges)
-      for (const key of [
-        keyFor(edge.chainId, edge.from),
-        keyFor(edge.chainId, edge.to),
-      ])
+    for (const edge of drawn)
+      for (const key of [edge.fromKey, edge.toKey])
         degree.set(key, (degree.get(key) ?? 0) + 1);
     // Decide each line's shape first, so the lines in each fan can be given slots.
-    const lines = edges.flatMap((edge) => {
-      const fromKey = keyFor(edge.chainId, edge.from),
-        toKey = keyFor(edge.chainId, edge.to);
-      const a = layout.nodes.get(fromKey),
-        b = layout.nodes.get(toKey);
-      if (!a || !b || fromKey === toKey) return [];
-      const backward = layout.backward.has(linkKey(fromKey, toKey));
+    // Money flowing back to the previous column runs as a second straight line beside
+    // the first, not a loop: it is laid out left to right, then reversed.
+    const pairs = new Set(
+      drawn.map((edge) => linkKey(edge.fromKey, edge.toKey)),
+    );
+    const lines = drawn.flatMap((edge) => {
+      if (edge.fromKey === edge.toKey) return [];
+      const start = layout.nodes.get(edge.fromKey),
+        finish = layout.nodes.get(edge.toKey);
+      if (!start || !finish) return [];
+      const back = layout.backward.has(linkKey(edge.fromKey, edge.toKey));
+      const flipped = back && start.layer - finish.layer === 1;
+      const backward = back && !flipped;
+      const [fromKey, toKey] = flipped
+        ? [edge.toKey, edge.fromKey]
+        : [edge.fromKey, edge.toKey];
+      const a = at(fromKey),
+        b = at(toKey);
+      // The two directions of one pair sit a little apart, so both arrows show.
+      const shift = pairs.has(linkKey(edge.toKey, edge.fromKey))
+        ? flipped
+          ? 4
+          : -4
+        : 0;
       // A fan bends next to its busy wallet, so the level runs (and captions) sit a row apart.
       const busyFrom = degree.get(fromKey)!,
         busyTo = degree.get(toKey)!;
@@ -367,7 +655,7 @@ export function Graph({
           : busyFrom > busyTo
             ? "start"
             : "end";
-      return [{ edge, fromKey, toKey, a, b, backward, bend }];
+      return [{ edge, fromKey, toKey, a, b, backward, flipped, shift, bend }];
     });
     const fans = new Map<string, typeof lines>();
     for (const line of lines)
@@ -387,36 +675,47 @@ export function Graph({
       );
     }
     const routes = new Map<string, Route>();
-    const requests: { id: string; texts: string[]; route: Route }[] = [];
-    for (const { edge, fromKey, toKey, a, b, backward, bend } of lines) {
+    const requests: {
+      id: string;
+      texts: string[];
+      route: Route;
+      below?: boolean;
+    }[] = [];
+    for (const line of lines) {
+      const { edge, fromKey, toKey, a, b, backward, flipped, shift, bend } =
+        line;
+      // A reversed line's arrowhead lands on its left end, so the gap moves there.
       const from = {
         x: a.x,
-        y: a.y,
-        r: radius(fromKey),
+        y: a.y + shift,
+        r: radius(fromKey) + (flipped ? ARROW_GAP : 0),
         clear: clear.get(a.layer)!,
       };
       const to = {
         x: b.x,
-        y: b.y,
-        r: radius(toKey),
+        y: b.y + shift,
+        r: radius(toKey) - (flipped ? ARROW_GAP : 0),
         clear: clear.get(b.layer)!,
       };
       const blockers = [...walletRects]
         .filter(([key]) => key !== fromKey && key !== toKey)
         .flatMap(([, rects]) => rects);
-      const route = backward
+      const ahead = backward
         ? routeBackward(from, to, blockers)
         : routeForward(from, to, blockers, bend, slots.get(edge.id));
+      const route = flipped ? reverseRoute(ahead) : ahead;
       routes.set(edge.id, route);
+      // The two lines of a pair are labelled one over, one under, like ⇄ in a diagram.
       requests.push({
         id: edge.id,
         texts: edgeCaptions(edge.transfers, book),
         route,
+        below: shift > 0,
       });
     }
     // Priced lines are weighted by USD value, on a log scale; unpriced lines stay thin.
     const values = new Map(
-      edges.map((edge) => {
+      drawn.map((edge) => {
         const usd = sumUsd(edge.transfers, book);
         return [edge.id, usd.priced && !usd.unpriced ? usd.amount : null];
       }),
@@ -435,13 +734,12 @@ export function Graph({
     );
     // Lines at the focus wallet claim their caption spots first, then the busiest lines.
     const weight = new Map(
-      edges.map((edge) => [edge.id, edge.transfers.length]),
+      drawn.map((edge) => [edge.id, edge.transfers.length]),
     );
     const atFocus = (id: string) =>
-      edges.some(
+      drawn.some(
         (edge) =>
-          edge.id === id &&
-          (edge.from.toLowerCase() === root || edge.to.toLowerCase() === root),
+          edge.id === id && (edge.fromKey === ROOT || edge.toKey === ROOT),
       );
     requests.sort(
       (a, b) =>
@@ -458,7 +756,10 @@ export function Graph({
     const tucked = new Map<string, Caption>(
       requests
         .filter(({ id }) => !captions.has(id))
-        .map(({ id, texts, route }) => [id, captionAt(route, texts[0])]),
+        .map(({ id, texts, route, below }) => [
+          id,
+          captionAt(route, texts[0], route.prefer, below),
+        ]),
     );
     let low = -Infinity,
       high = Infinity;
@@ -469,7 +770,18 @@ export function Graph({
         high = Math.min(high, point.y);
       }
     return { routes, captions, tucked, low, high, weights };
-  }, [edges, layout, byKey, root, hopY, book, focusLabel]);
+  }, [
+    drawn,
+    layout,
+    byKey,
+    shapes,
+    columnX,
+    root,
+    hopY,
+    book,
+    focusLabel,
+    lookalikes,
+  ]);
 
   // Hovering or focusing a wallet or line brings out its connections; the rest dims.
   const [spotlight, setSpotlight] = useState<
@@ -480,9 +792,9 @@ export function Graph({
     const wallets = new Set<string>(),
       lines = new Set<string>();
     if ("node" in spotlight) wallets.add(spotlight.node);
-    for (const edge of edges) {
-      const from = keyOf(edge.chainId, edge.from),
-        to = keyOf(edge.chainId, edge.to);
+    for (const edge of drawn) {
+      const from = edge.fromKey,
+        to = edge.toKey;
       if (
         "edge" in spotlight
           ? edge.id === spotlight.edge
@@ -494,17 +806,14 @@ export function Graph({
       }
     }
     return { wallets, lines };
-  }, [spotlight, edges, root]);
+  }, [spotlight, drawn]);
 
   // The drawn extent: discs, captions under them, hop captions and loops below.
   const extent = {
-    left: minX - LABEL_WIDTH / 2 - 16,
-    right: maxX + LABEL_WIDTH / 2 + 16,
-    top: Math.min(
-      minY - RADIUS.focus - HOP_OFFSET - RING - 16,
-      drawing.high - 24,
-    ),
-    bottom: Math.max(maxY + RADIUS.focus + LABEL_HEIGHT + 16, drawing.low + 16),
+    left: minX - 16,
+    right: maxX + 16,
+    top: Math.min(top - HOP_OFFSET - RING - 16, drawing.high - 24),
+    bottom: Math.max(bottom + 16, drawing.low + 16),
   };
   const centre = {
     x: (extent.left + extent.right) / 2,
@@ -530,6 +839,19 @@ export function Graph({
   }, [signature, fitZoom]);
   const adjusted = () => {
     fitted.current.adjusted = true;
+  };
+  const walletAt = (key: string, chainId = rootChain): WalletNode =>
+    key === ROOT ? { address: investigation.root, chainId } : byKey.get(key)!;
+  // A wallet's line opens its first transfer; a group's opens the wallet it trades
+  // with, whose panel lists every counterparty.
+  const inspect = (edge: DrawnEdge) => {
+    const group =
+      grouping.byGroup.get(edge.fromKey) ?? grouping.byGroup.get(edge.toKey);
+    if (group)
+      onNode(
+        walletAt(group.anchor, chainIdForTransfers(edge.transfers, rootChain)),
+      );
+    else onTransfer(edge.transfers[0]);
   };
 
   return (
@@ -596,7 +918,7 @@ export function Graph({
           {layout.layers.map((layer) => (
             <text
               key={layer}
-              x={layer * COLUMN_GAP}
+              x={columnX.get(layer)}
               y={hopY}
               className="hop-label"
               textAnchor="middle"
@@ -605,12 +927,16 @@ export function Graph({
               {hopText(layer)}
             </text>
           ))}
-          {edges.map((edge) => {
+          {drawn.map((edge) => {
             const route = drawing.routes.get(edge.id);
             if (!route) return null;
-            const fromKey = keyOf(edge.chainId, edge.from);
+            const fromKey = edge.fromKey;
             const role =
-              fromKey === ROOT ? "focus" : roleOf(byKey.get(fromKey)!);
+              fromKey === ROOT
+                ? "focus"
+                : shapes.has(fromKey)
+                  ? "wallet"
+                  : roleOf(byKey.get(fromKey)!);
             const placed = drawing.captions.get(edge.id);
             const caption = placed ?? drawing.tucked.get(edge.id)!;
             const weight = drawing.weights.get(edge.id);
@@ -626,10 +952,10 @@ export function Graph({
                   className="edge-hit"
                   role="button"
                   tabIndex={0}
-                  aria-label={`Inspect ${edge.transfers.length} transfers from ${short(edge.from)} to ${short(edge.to)}`}
-                  onClick={() => onTransfer(edge.transfers[0])}
+                  aria-label={`Inspect ${edge.transfers.length} transfers from ${edge.name}`}
+                  onClick={() => inspect(edge)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") onTransfer(edge.transfers[0]);
+                    if (e.key === "Enter") inspect(edge);
                   }}
                   onFocus={() => setSpotlight({ edge: edge.id })}
                   onBlur={() => setSpotlight(null)}
@@ -645,7 +971,7 @@ export function Graph({
                 <text
                   className={`edge-label${placed ? "" : " tucked"}`}
                   transform={`translate(${caption.x} ${caption.y}) rotate(${caption.angle})`}
-                  y={-5}
+                  y={caption.below ? 13 : -5}
                   textAnchor="middle"
                   pointerEvents="none"
                 >
@@ -654,7 +980,8 @@ export function Graph({
               </g>
             );
           })}
-          {[...layout.nodes].map(([key, p]) => {
+          {[...layout.nodes.keys()].map((key) => {
+            const p = at(key);
             const node = byKey.get(key);
             const focus = key === ROOT;
             if (!focus && !node) return null;
@@ -681,24 +1008,18 @@ export function Graph({
                   onBlur={() => setSpotlight(null)}
                 >
                   <button
-                    className={`graph-node role-${role}${isSelected ? " selected" : ""}`}
+                    className={`graph-node role-${role}${isSelected ? " selected" : ""}${!focus && lookalikes.has(node!.address.toLowerCase()) ? " lookalike" : ""}`}
                     aria-label={
                       focus
                         ? `Focus wallet ${short(root)}${focusLabel ? ` · ${focusLabel}` : ""}`
-                        : `${short(node!.address)} · ${label || "No label"} · ${chainName(node!.chainId)}`
+                        : `${short(node!.address)} · ${label || "No label"} · ${chainLine(node!)}`
                     }
                     title={
                       focus
                         ? `${root}\n${focusLabel ? `${focusLabel} · focus wallet` : "Focus wallet"} · labels are per chain in the wallet panel`
-                        : `${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
+                        : `${lookalikes.has(node!.address.toLowerCase()) ? "Lookalike address: another wallet here shortens the same way. Compare the full address.\n" : ""}${node!.address}\n${node!.label ? `${label} · ${node!.label.claimType || node!.label.kind} / ${node!.label.confidence}` : "Ownership unknown"} · ${chainName(node!.chainId)}`
                     }
-                    onClick={() =>
-                      onNode(
-                        focus
-                          ? { address: investigation.root, chainId: 1 }
-                          : node!,
-                      )
-                    }
+                    onClick={() => onNode(focus ? walletAt(ROOT) : node!)}
                   >
                     <span className="node-disc">
                       <span className="node-shape">
@@ -726,7 +1047,7 @@ export function Graph({
                     <span className="node-sub">
                       {focus
                         ? focusLabel || "Focus wallet"
-                        : label || chainName(node!.chainId)}
+                        : label || chainLine(node!)}
                     </span>
                   </button>
                   {!focus && onExpand && (
@@ -740,6 +1061,86 @@ export function Graph({
                       <Plus size={12} />
                     </button>
                   )}
+                </div>
+              </foreignObject>
+            );
+          })}
+          {grouping.groups.map((group) => {
+            const shape = shapes.get(group.key);
+            if (!layout.nodes.has(group.key) || !shape) return null;
+            const p = at(group.key);
+            return (
+              <foreignObject
+                key={group.key}
+                className={`node-box${related?.wallets.has(group.key) ? " is-related" : ""}`}
+                x={p.x - shape.width / 2}
+                y={p.y - shape.height / 2}
+                width={shape.width}
+                height={shape.height}
+              >
+                <div
+                  className="counterparty-group"
+                  role="group"
+                  aria-label={groupName(group)}
+                  onMouseEnter={() => setSpotlight({ node: group.key })}
+                  onMouseLeave={() => setSpotlight(null)}
+                >
+                  <span className="group-head">{groupName(group)}</span>
+                  <div
+                    className="group-chips"
+                    style={{
+                      gridTemplateColumns: `repeat(${shape.columns}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {group.members.slice(0, shape.shown).map((member) => {
+                      const node = byKey.get(member)!;
+                      const lookalike = lookalikes.has(
+                        node.address.toLowerCase(),
+                      );
+                      const moved = group.links
+                        .filter(
+                          (link) => link.from === member || link.to === member,
+                        )
+                        .flatMap((link) => link.transfers);
+                      const [amount] = edgeCaptions(moved, book);
+                      return (
+                        <button
+                          key={member}
+                          className={`group-chip${lookalike ? " lookalike" : ""}`}
+                          aria-label={`${short(node.address)} · ${chainLine(node)} · ${amount}`}
+                          title={`${lookalike ? "Lookalike address: another wallet here shortens the same way.\n" : ""}${node.address}\n${amount} · ${chainName(node.chainId)}\nSelect to draw this wallet with its own line`}
+                          onClick={() => onNode(node)}
+                          onFocus={() => setSpotlight({ node: group.key })}
+                          onBlur={() => setSpotlight(null)}
+                        >
+                          <i
+                            className={`chain-dot chain-${node.chainId}`}
+                            aria-hidden="true"
+                          />
+                          {short(node.address)}
+                        </button>
+                      );
+                    })}
+                    {group.members.length > shape.shown && (
+                      <button
+                        className="group-chip group-more"
+                        title="List every counterparty in the wallet panel"
+                        onClick={() =>
+                          onNode(
+                            walletAt(
+                              group.anchor,
+                              chainIdForTransfers(
+                                group.links.flatMap((link) => link.transfers),
+                                rootChain,
+                              ),
+                            ),
+                          )
+                        }
+                      >
+                        +{group.members.length - shape.shown} more
+                      </button>
+                    )}
+                  </div>
                 </div>
               </foreignObject>
             );

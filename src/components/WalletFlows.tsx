@@ -17,7 +17,7 @@ import type {
 } from "../domain/types.ts";
 import { assetKey, formatUnits, nodeKey } from "../domain/engine.ts";
 import { walletFlows } from "../domain/wallet-flows.ts";
-import { chainName, displayUnits, short } from "./Graph.tsx";
+import { chainName, displayAmount, short } from "./Graph.tsx";
 
 export interface VisibilityChange {
   nodeKeys?: string[];
@@ -149,7 +149,7 @@ export function WalletFlows({
             title={`${formatUnits(raw, flow.asset.decimals)} ${flow.asset.symbol}`}
           >
             {splitFraction(
-              `${index === 2 && BigInt(raw) > 0n ? "+" : ""}${displayUnits(raw, flow.asset.decimals)}`,
+              `${index === 2 && BigInt(raw) > 0n ? "+" : ""}${displayAmount(raw, flow.asset)}`,
             )}
           </span>
         ))}
@@ -378,15 +378,13 @@ export function WalletFlows({
                           </span>
                           {direction !== "out" && (
                             <span className="inflow">
-                              In{" "}
-                              {displayUnits(flow.inflow, flow.asset.decimals)}{" "}
+                              In {displayAmount(flow.inflow, flow.asset)}{" "}
                               {flow.asset.symbol}
                             </span>
                           )}
                           {direction !== "in" && (
                             <span>
-                              Out{" "}
-                              {displayUnits(flow.outflow, flow.asset.decimals)}{" "}
+                              Out {displayAmount(flow.outflow, flow.asset)}{" "}
                               {flow.asset.symbol}
                             </span>
                           )}
@@ -468,10 +466,7 @@ export function WalletFlows({
                               ? "In"
                               : "Out"}
                         </span>
-                        {displayUnits(
-                          transfer.rawAmount,
-                          transfer.asset.decimals,
-                        )}{" "}
+                        {displayAmount(transfer.rawAmount, transfer.asset)}{" "}
                         {transfer.asset.symbol}
                       </strong>
                       <span>

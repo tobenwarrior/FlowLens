@@ -1,8 +1,11 @@
 import { nodeKey, normalizeAddress } from "./engine.ts";
 import type { Investigation, Transfer, WalletNode } from "./types.ts";
 
-/** The human graph is a readable projection; retained evidence has a larger bound. */
-export const GRAPH_NODE_LIMIT = 80;
+/**
+ * The human graph is a readable projection; retained evidence has a larger bound. A
+ * busy wallet's smaller counterparties are drawn as chips in a box, so this many fit.
+ */
+export const GRAPH_NODE_LIMIT = 400;
 
 export interface GraphProjectionOptions {
   /** A selected counterparty is shown before pinned and activity-ranked nodes. */
@@ -18,6 +21,44 @@ export interface GraphProjection {
   transfers: Transfer[];
   totalCounterparties: number;
   omittedCounterparties: number;
+}
+
+/** Pick a deterministic chain for the focus wallet shown by the graph. */
+export function graphFocusChainId(
+  root: string,
+  filteredTransfers: readonly Transfer[],
+  loadedTransfers: readonly Transfer[],
+  activeChain?: number,
+): number {
+  if (activeChain !== undefined) return activeChain;
+  const normalized = normalizeAddress(root);
+  for (const source of [filteredTransfers, loadedTransfers]) {
+    const chains = [
+      ...new Set(
+        source
+          .filter(
+            (transfer) =>
+              normalizeAddress(transfer.from) === normalized ||
+              normalizeAddress(transfer.to) === normalized,
+          )
+          .map((transfer) => transfer.chainId),
+      ),
+    ].sort((a, b) => a - b);
+    if (chains.length) return chains[0]!;
+  }
+  return 1;
+}
+
+/** Preserve the chain represented by an edge or grouped transfer list. */
+export function chainIdForTransfers(
+  transfers: readonly Transfer[],
+  fallback: number,
+): number {
+  return (
+    [...new Set(transfers.map((transfer) => transfer.chainId))].sort(
+      (a, b) => a - b,
+    )[0] ?? fallback
+  );
 }
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

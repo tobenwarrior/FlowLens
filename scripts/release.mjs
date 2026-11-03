@@ -167,6 +167,7 @@ const allowlist = [
   "src/domain/graph-projection.ts",
   "src/domain/graph-layout.ts",
   "src/domain/graph-drawing.ts",
+  "src/domain/graph-groups.ts",
   "src/domain/flow-summary.ts",
   "src/domain/value-filter.ts",
   "src/domain/hypercore.ts",

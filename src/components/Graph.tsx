@@ -25,6 +25,7 @@ import { projectGraph } from "../domain/graph-projection.ts";
 import {
   EMPTY_PRICE_BOOK,
   formatCompact,
+  formatUsdAmount,
   sumUsd,
   wholeUnits,
   type PriceBook,
@@ -154,7 +155,7 @@ export function edgeCaptions(
   const usd = sumUsd(transfers, book);
   const priced = usd.priced > 0 && usd.unpriced === 0;
   const amount = priced
-    ? `$${formatCompact(usd.amount, 2)}`
+    ? formatUsdAmount(usd.amount)
     : `${formatCompact(wholeUnits(main.raw.toString(), main.decimals), 2)} ${main.symbol}`;
   if (transfers.length === 1) {
     const at = transfers[0].timestamp;

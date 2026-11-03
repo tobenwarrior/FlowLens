@@ -4,7 +4,12 @@ import { netFlowSeries } from "../domain/net-flow.ts";
 import { rankCounterparties } from "../domain/counterparties.ts";
 import { walletFlows } from "../domain/wallet-flows.ts";
 import type { NetFlowSeries } from "../domain/net-flow.ts";
-import { formatCompact, quoteFor, wholeUnits } from "../domain/pricing.ts";
+import {
+  formatCompact,
+  formatUsdAmount,
+  quoteFor,
+  wholeUnits,
+} from "../domain/pricing.ts";
 import type { PriceBook } from "../domain/pricing.ts";
 import type { Address, Investigation } from "../domain/types.ts";
 import { chainName, short } from "./Graph.tsx";
@@ -15,7 +20,7 @@ const PAD_LEFT = 46;
 const PAD_BOTTOM = 18;
 
 function axisLabel(series: NetFlowSeries, value: number): string {
-  if (series.unit?.kind === "usd") return `$${formatCompact(value, 1)}`;
+  if (series.unit?.kind === "usd") return formatUsdAmount(value, 1);
   return formatCompact(value, 1);
 }
 
@@ -219,7 +224,7 @@ function AssetsPanel({
 }
 
 function usdCell(value: number | null): string {
-  return value === null ? "—" : `$${formatCompact(value, 2)}`;
+  return value === null ? "—" : formatUsdAmount(value);
 }
 
 /**

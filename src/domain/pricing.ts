@@ -122,11 +122,16 @@ export function formatCompact(value: number, decimals = 3): string {
   return `${sign}${trimZeros(magnitude.toFixed(decimals))}`;
 }
 
+/** A dollar amount in compact form, its sign ahead of the dollar sign. */
+export function formatUsdAmount(amount: number, decimals = 2): string {
+  return `${amount < 0 ? "-" : ""}$${formatCompact(Math.abs(amount), decimals)}`;
+}
+
 export function formatUsd(value: UsdValue | null): string {
   if (!value) return "—";
   const amount = decimalToNumber(value.amount);
   if (amount === 0) return "$0";
-  return `$${formatCompact(amount, 2)}`;
+  return formatUsdAmount(amount);
 }
 
 /** Total USD across transfers that have quotes; returns null when none are priced. */

@@ -389,6 +389,14 @@ const bounds = (r: Rect): Bounds => {
 const apart = (a: Bounds, b: Bounds) =>
   a.maxX < b.minX || b.maxX < a.minX || a.maxY < b.minY || b.maxY < a.minY;
 
+/** How far a line may turn under its own caption before it counts as crossing it. */
+const PARALLEL = (20 * Math.PI) / 180;
+/** The angle between two directions, ignoring which way along the line each points. */
+const turn = (a: number, b: number) => {
+  const d = Math.abs(a - b) % Math.PI;
+  return Math.min(d, Math.PI - d);
+};
+
 /** A line as thin boxes, one per sampled stretch, with their overall bounds. */
 const stroke = (route: Route) => {
   const boxes: (Bounds & { rect: Rect })[] = [];
@@ -435,14 +443,20 @@ export function placeCaptions(
   const placed = new Map<string, Caption>();
   const taken: Rect[] = [...obstacles];
   const lines = requests.map(({ route }) => stroke(route));
+  // Another line anywhere in the caption crosses it. The caption's own line touches
+  // it all along the stretch it sits on, so only that line's turns count: parts more
+  // than PARALLEL off the caption's direction.
   const crossed = (box: Rect, own: Route) => {
     const area = bounds(box);
     return lines.some(
       (line) =>
-        line.route !== own &&
         !apart(line, area) &&
         line.boxes.some(
-          (part) => !apart(part, area) && overlaps(box, part.rect),
+          (part) =>
+            (line.route !== own ||
+              turn(part.rect.angle, box.angle) > PARALLEL) &&
+            !apart(part, area) &&
+            overlaps(box, part.rect),
         ),
     );
   };

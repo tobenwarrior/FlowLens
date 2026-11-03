@@ -77,7 +77,7 @@ function Party({
         className="txparty-addr"
         title={`${address} on ${chainName(chainId)}`}
       >
-        ({short(address)})
+        {label ? `(${short(address)})` : short(address)}
       </span>
     </span>
   );

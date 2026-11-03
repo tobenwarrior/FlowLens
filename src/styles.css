@@ -2726,6 +2726,107 @@ label.filter-select > select option {
   color: var(--text-faint);
 }
 
+/* span.date-field > input[text] + button(calendar) + input[date].date-picker. The
+   native picker only opens from the button, so the field always reads YYYY-MM-DD. */
+.date-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.date-row .date-field input[type="text"] {
+  width: 112px;
+  padding-right: 28px;
+}
+.date-row .date-field input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.date-field button {
+  position: absolute;
+  right: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.date-field button:hover {
+  color: var(--text-bright);
+}
+.date-field .date-picker {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* div.date-row.value-row > span + div.value-floors(button…) + label(checkbox) + hint */
+.value-row .value-row-label {
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.value-floors {
+  display: inline-flex;
+  align-items: stretch;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: hidden;
+}
+.value-floors button {
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.value-floors button + button {
+  border-left: 1px solid var(--border);
+}
+.value-floors button:hover {
+  background: var(--selected);
+  color: var(--text-dim);
+}
+.value-floors button.active,
+.value-floors button.active:hover {
+  background: var(--selected-strong);
+  color: var(--text-bright);
+  box-shadow: inset 0 -1px 0 var(--blue);
+}
+.value-floors button:focus-visible {
+  outline-offset: -2px;
+}
+.date-row .value-unpriced {
+  gap: 6px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.date-row .value-unpriced input {
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  accent-color: var(--blue);
+}
+.date-row .value-unpriced:has(input:disabled) {
+  opacity: 0.55;
+}
+.date-row .date-hint .text-button {
+  font-size: 10px;
+}
+
 /* ------------------------------------------------- flow summary (area) */
 
 /* Duplicate of .scope-note for narrow screens; hidden while .scope-note is shown. */
@@ -3056,16 +3157,21 @@ label.filter-select > select option {
 /* ------------------------------------------------ funding graph canvas */
 
 /*
- * Graph.tsx sizes the SVG viewBox from the measured box of .graph-wrap. The SVG is
- * the wrapper's only in-flow child and gets its height from CSS, so the measurement
- * stays stable. Lanes, legend, controls and the empty note are overlays and do not
- * add to that height. .graph-wrap must not gain its own height, padding, border or
- * other in-flow children, or the ResizeObserver loop that grows the graph returns.
+ * Graph.tsx sizes the SVG viewBox from the measured box of .graph-wrap, and the SVG
+ * fills that box, so one drawing unit is one pixel at 100%. The wrapper's height is
+ * fixed here, never by its content, so measuring it cannot grow it. Lanes, legend,
+ * controls and the empty note are overlays and add nothing to it.
  */
+.graph-wrap:has(> .graph-svg[height]) {
+  /* Tall enough to read a few hops at full size, short enough to keep the controls
+     above it in view on a laptop. */
+  height: clamp(480px, calc(100vh - 220px), 1040px);
+  overflow: hidden;
+}
 .graph-svg {
   display: block;
   width: 100%;
-  height: clamp(440px, 62vh, 640px);
+  height: 100%;
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
@@ -3097,7 +3203,7 @@ label.filter-select > select option {
 
 /* Hop captions above each column. */
 .graph-svg .hop-label {
-  fill: var(--text-faint);
+  fill: var(--text-dim);
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -3158,7 +3264,7 @@ label.filter-select > select option {
 .flow-edge .edge-label {
   fill: var(--text-dim);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   paint-order: stroke;
   stroke: var(--navy);
@@ -3269,14 +3375,18 @@ label.filter-select > select option {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Labels get two lines before they shorten; Graph.tsx sizes their room to match. */
 .graph-node .node-sub {
+  display: -webkit-box;
   max-width: 100%;
   overflow: hidden;
   color: var(--text-dim);
   font-size: 10px;
   line-height: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 /* The wallet's chain, as a badge on the disc's lower right. */
 .graph-node .node-chain {
@@ -3659,7 +3769,7 @@ label.expand-network option {
    existing 860px block as long as that block comes after these rules). No rule is
    needed at 1100px: that breakpoint only stacks the drawer, which widens the graph. */
 @media (max-width: 860px) {
-  .graph-svg {
+  .graph-wrap:has(> .graph-svg[height]) {
     height: clamp(360px, 58vh, 480px);
   }
   /* The legend wraps into rows so it clears the controls at phone width. */
@@ -4812,13 +4922,6 @@ label.expand-network option {
   margin: 0 var(--gutter) var(--gutter);
 }
 
-/* A graph that sizes itself to its container (an explicit pixel height on the svg)
-   needs a bounded container, or each measurement grows it further. */
-.graph-wrap:has(> .graph-svg[height]) {
-  height: clamp(420px, 64vh, 760px);
-  overflow: hidden;
-}
-
 /* ---------------------------------------------------------- start screen */
 /* Shown before any case is open: what FlowLens does, public wallets to try, and the
    ways back into saved or agent-made cases. */
@@ -4877,12 +4980,25 @@ label.expand-network option {
   opacity: 0.5;
   cursor: progress;
 }
-.start-example strong {
+.start-example-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.start-example strong,
+.start-example small {
   overflow: hidden;
-  color: var(--text);
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.start-example strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.start-example small {
+  color: var(--text-faint);
+  font-size: 10px;
 }
 .start-example code {
   color: var(--text-muted);

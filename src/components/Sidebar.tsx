@@ -8,6 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Investigation } from "../domain/types.ts";
+import { caseHeading } from "../domain/workspace.ts";
 
 interface SidebarProps {
   /** Null on the start screen, before any case is open. */
@@ -94,7 +95,7 @@ export function Sidebar({
       {investigation && (
         <div className="rail-case">
           <span className="eyebrow">CURRENT INVESTIGATION</span>
-          <strong>{investigation.title}</strong>
+          <strong>{caseHeading(investigation)}</strong>
           <span>
             <i className="status-dot" />
             {investigation.mode === "demo" ? "Test fixture" : "Local case"}

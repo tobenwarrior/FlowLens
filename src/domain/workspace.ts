@@ -4,7 +4,31 @@ import {
   parseInvestigation,
   parseLabel,
 } from "./engine.ts";
-import type { Investigation } from "./types.ts";
+import type { Investigation, Label } from "./types.ts";
+
+/** The focus wallet's label: Ethereum's first, then the lowest chain ID's. */
+export function rootLabel(investigation: Investigation): Label | undefined {
+  const root = normalizeAddress(investigation.root);
+  return investigation.nodes
+    .filter((node) => node.label && normalizeAddress(node.address) === root)
+    .sort(
+      (a, b) =>
+        Number(b.chainId === 1) - Number(a.chainId === 1) ||
+        a.chainId - b.chainId,
+    )[0]?.label;
+}
+
+// Titles FlowLens gives a case by itself: the app's and the API's.
+const AUTOMATIC_TITLE =
+  /^(Untitled investigation|Trace 0x[0-9a-f]{4}…[0-9a-f]{4})$/i;
+
+/** What to call a case: the focus wallet's label, unless someone named the case. */
+export function caseHeading(investigation: Investigation): string {
+  const label = rootLabel(investigation);
+  return label && AUTOMATIC_TITLE.test(investigation.title)
+    ? label.text
+    : investigation.title;
+}
 
 function object(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== "object" || Array.isArray(input))

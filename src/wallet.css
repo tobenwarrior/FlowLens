@@ -48,9 +48,6 @@
 }
 .wallet-flow-toolbar > span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--text-faint);
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -103,7 +100,7 @@
 .wallet-total-head,
 .wallet-total-row {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(64px, 0.8fr) repeat(3, minmax(0, 1fr));
   align-items: center;
   column-gap: 6px;
   padding: 0 9px;
@@ -151,11 +148,11 @@
   color: var(--text-faint);
   font-size: 9px;
 }
+/* Amounts wrap rather than shorten, at the decimal point (a <wbr>) where they can:
+   a cut-off figure is not evidence. */
 .wallet-total-row > [role="cell"] {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
   text-align: right;
   color: var(--text-dim);
 }

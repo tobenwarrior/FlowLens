@@ -53,11 +53,12 @@ Ethereum (1) and Derive Chain (957) can use the keyless legacy Blockscout routes
 
 | Capability        | What you get                                                                                                        |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Funding graph     | Follow incoming and outgoing transfers; expand one wallet at a time, filter, group, pin or hide nodes.              |
-| Wallet analysis   | Per-asset gross inflow, outflow and net; ranked counterparties, transfer history and cumulative net-flow charts.    |
+| Funding graph     | Money flows left to right, one column per hop, with lines weighted and captioned by value. Expand a wallet from the graph, spotlight its connections, and group, pin or hide wallets. |
+| Wallet analysis   | Gross inflow, outflow and net across every priced asset in USD, or per asset in exact units; ranked counterparties, transfer history and cumulative net-flow charts. |
+| Filters           | Network, asset, direction, date and value filters shared by the graph and evidence views. Hide zero-value transfers, transfers under a USD floor or unpriced tokens such as airdrop spam; the evidence stays in the case. |
 | Evidence          | Exact raw amounts, transaction hashes, blocks, UTC timestamps, token contracts and provider provenance.             |
-| Labels and cases  | Save investigations, add sourced labels and notes, and export or reopen case JSON.                                  |
-| USD prices        | Optional current values from Uniswap V3 over public RPC; historical prices with your Etherscan key.                 |
+| Labels and cases  | Save investigations, add sourced labels and notes, and export or reopen case JSON. A labelled focus wallet names its case. |
+| USD prices        | Optional current values from Uniswap V3 over public RPC, loaded when you ask; historical prices with your Etherscan key. |
 | Protocol evidence | Bounded Safe reads, Circle CCTP bridge transactions and single-transaction call traces, separate from graph totals. |
 | Reports           | Agent workflows for source-cited PDF, Word and HTML reports with reviewed screenshots.                              |
 
@@ -82,8 +83,8 @@ Derive subaccount collateral, positions and trades are not wallet transfers; a w
 
 ## How it works
 
-1. **Start with a wallet.** Load the newest Ethereum history page, then use **Expand wallet** to query a supported network explicitly. FlowLens does not automatically discover every chain where an address has activity.
-2. **Inspect the evidence.** Select a connection or wallet to examine individual transfers and per-asset flows. Filter by network, asset, direction or date; filters never fetch more history.
+1. **Start with a wallet.** Load the newest Ethereum history page, then follow the money: the **+** beside a wallet in the graph loads its next page, and **Expand wallet** queries a supported network explicitly. FlowLens does not automatically discover every chain where an address has activity.
+2. **Inspect the evidence.** Select a line or wallet to examine individual transfers and per-asset flows. Filter by network, asset, direction, date or value; filters never fetch more history, and hiding dust or spam never deletes it.
 3. **Check coverage and save.** Review **Sources & coverage** for loaded streams, missing data and resume cursors. Add notes or labels, then save or export your case.
 
 For a new investigation, check each relevant network in the source table and continue its saved pagination until its provider stream is exhausted or a limit is reported. `collect` below can load a bounded batch of pages; repeat it to continue after `budget-reached`. An error needs review before another attempt. An exhausted stream describes what that provider returned within its saved window; it does not certify all-chain completeness. HyperCore has its own ledger operation and coverage.
@@ -93,19 +94,27 @@ For a new investigation, check each relevant network in the source table and con
 
 ### Start a trace
 
-![Address entry and public organization-wallet examples](docs/images/how-start.png)
+Paste an address, or start from a public organisation wallet. Each example says where its owner publishes the address.
+
+![Address entry and three public organisation wallets to try, each with where its address is published](docs/images/how-start.png)
 
 ### Inspect a connection
 
-![Transfer evidence with exact amounts, transaction identity and provider provenance](docs/images/how-evidence.png)
+Select a line to see the transfers behind it. The graph spotlights that line while the drawer shows the evidence.
+
+![Transfer evidence for an 800,000 USDT payout, with exact amounts, transaction identity and provider provenance, beside the spotlighted line](docs/images/how-evidence.png)
 
 ### Follow a wallet
 
-![Wallet inspector with per-asset flows and expansion controls](docs/images/how-wallet.png)
+Select a wallet to see its flows and counterparties, then load its next page of history.
+
+![Wallet inspector for a payout Safe, with per-asset flows, counterparties and a control to load more history](docs/images/how-wallet.png)
 
 ### Review history
 
-![Asset flows, counterparties and filterable transfer history](docs/images/how-history.png)
+The evidence view uses the same filters as the graph.
+
+![Evidence view filtered like the graph: asset flows, cumulative net flow, ranked counterparties and transfer history](docs/images/how-history.png)
 
 ### Understand coverage
 

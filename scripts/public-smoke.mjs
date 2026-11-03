@@ -5,6 +5,14 @@ import {
   demoProvider,
 } from "../src/domain/demo.ts";
 import { inspectDerive } from "../server/derive-provider.ts";
+import { createEtherscanMcpProvider } from "../server/etherscan-mcp.ts";
+import { operationSchema } from "../server/schema.ts";
+
+for (const operation of ["create", "expand"]) {
+  const description = operationSchema.contracts[operation].description;
+  assert.match(description, /Etherscan MCP/i);
+  assert.match(description, /FLOWLENS_ETHERSCAN_MCP=off/);
+}
 
 const investigation = await createDemoInvestigation();
 assert.equal(investigation.mode, "demo");
@@ -66,3 +74,88 @@ assert.deepEqual(deriveResult.data.subaccount_ids, [123]);
 assert.equal(deriveResult.coverage.status, "complete");
 
 console.log("Public synthetic smoke checks passed (demo and injected Derive).");
+
+const MCP_ROOT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const MCP_SENDER = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const MCP_TOKEN = "0xcccccccccccccccccccccccccccccccccccccccc";
+const MCP_HASH = `0x${"11".repeat(32)}`;
+const MCP_TOPIC =
+  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const mcpTopicAddress = (value) => `0x${"0".repeat(24)}${value.slice(2)}`;
+const mcpCalls = [];
+const mcpResponse = (id, result) =>
+  new globalThis.Response(JSON.stringify({ jsonrpc: "2.0", id, result }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      "mcp-session-id": "public-smoke-session",
+    },
+  });
+const mcpFetch = async (_input, init) => {
+  const body = JSON.parse(init.body);
+  mcpCalls.push(init.method);
+  assert.equal(init.redirect, "error");
+  assert.ok(init.signal);
+  if (body.method === "initialize")
+    return mcpResponse(body.id, {
+      protocolVersion: "2025-06-18",
+      capabilities: { tools: {} },
+      serverInfo: { name: "public-smoke", version: "1" },
+    });
+  if (body.method === "notifications/initialized")
+    return new globalThis.Response(null, { status: 200 });
+  const name = body.params.name;
+  const result =
+    name === "get_block_by_timestamp"
+      ? "4660"
+      : name === "get_transactions"
+        ? []
+        : name === "get_token_transfers"
+          ? [
+              {
+                hash: MCP_HASH,
+                blockNumber: "4660",
+                timeStamp: "1735757265",
+                contractAddress: MCP_TOKEN,
+                tokenDecimal: "6",
+                tokenSymbol: "USDC",
+              },
+            ]
+          : {
+              transactionHash: MCP_HASH,
+              blockNumber: "0x1234",
+              status: "0x1",
+              logs: [
+                {
+                  address: MCP_TOKEN,
+                  transactionHash: MCP_HASH,
+                  blockNumber: "0x1234",
+                  logIndex: "0x2a",
+                  topics: [
+                    MCP_TOPIC,
+                    mcpTopicAddress(MCP_SENDER),
+                    mcpTopicAddress(MCP_ROOT),
+                  ],
+                  data: "0x2a",
+                },
+              ],
+            };
+  return mcpResponse(body.id, {
+    structuredContent: { data: { ok: true, status: "1", result } },
+    content: [],
+  });
+};
+const mcpProvider = createEtherscanMcpProvider({
+  fetch: mcpFetch,
+  intervalMs: 0,
+});
+const mcpPage = await mcpProvider.fetchPage({
+  address: MCP_ROOT,
+  chainId: 8453,
+  pageSize: 1,
+});
+assert.equal(mcpPage.transfers.length, 1);
+assert.equal(mcpPage.transfers[0].eventIndex, "42");
+assert.equal(mcpPage.transfers[0].rawAmount, "42");
+assert.ok(mcpCalls.every((method) => method === "POST"));
+console.log("Public synthetic smoke checks passed (keyless Etherscan MCP).");

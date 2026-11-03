@@ -24,6 +24,7 @@ import { operationSchema } from "./schema.ts";
 import { createHypurrtraceProvider } from "./hypurrtrace.ts";
 import { createAlchemyProvider } from "./alchemy.ts";
 import { createSelfHostedBlockscoutProvider } from "./self-hosted-blockscout.ts";
+import { createEtherscanMcpProvider } from "./etherscan-mcp.ts";
 
 export interface Providers {
   demo: TraceProvider;
@@ -57,15 +58,21 @@ export function providersFromEnvironment(): Providers {
   const alchemy = process.env.ALCHEMY_API_KEY
     ? createAlchemyProvider({ apiKey: process.env.ALCHEMY_API_KEY })
     : undefined;
+  const mcpSwitch = process.env.FLOWLENS_ETHERSCAN_MCP ?? "";
+  if (!["", "on", "off"].includes(mcpSwitch))
+    throw new Error("FLOWLENS_ETHERSCAN_MCP must be empty, on or off");
+  const keylessBase =
+    mcpSwitch === "off" ? undefined : createEtherscanMcpProvider();
   const live = new Map<number, TraceProvider>();
   for (const chainId of operationSchema.limits.liveChains) {
     // Provider selection is configuration, never a silent retry/fallback after a failure.
-    // A user-owned Alchemy key selects Base before the hosted Blockscout route.
+    // Explicit Base sources take priority; otherwise use the keyless route.
     const provider =
       (ETHERSCAN_CHAINS.includes(chainId) ? etherscan : undefined) ??
       (BLOCKSCOUT_CHAINS.includes(chainId) ? blockscout : undefined) ??
       (chainId === 8453 ? selfHostedBase : undefined) ??
       (chainId === 8453 ? alchemy : undefined) ??
+      (chainId === 8453 ? keylessBase : undefined) ??
       (BLOCKSCOUT_PRO_CHAINS.includes(chainId) ? blockscoutPro : undefined) ??
       (chainId === 999 ? hypurrtrace : undefined);
     if (provider) live.set(chainId, provider);
@@ -83,7 +90,7 @@ function liveProvider(providers: Providers, chainId: number): TraceProvider {
   if (chainId === 8453)
     throw new ProviderError(
       "KEY_REQUIRED",
-      "Base history needs FLOWLENS_BASE_BLOCKSCOUT_URL for a ready local Base Blockscout, ALCHEMY_API_KEY, or a BLOCKSCOUT_API_KEY with Base plan access in the local server environment. No complete hosted keyless Base history source is configured.",
+      "Base history is unavailable with the current configuration. Enable the keyless Etherscan route by leaving FLOWLENS_ETHERSCAN_MCP unset, or configure a ready local Base Blockscout, Alchemy, or hosted Blockscout with Base plan access. Each source has explicit coverage limits.",
     );
   if (chainId === 42161)
     throw new ProviderError(

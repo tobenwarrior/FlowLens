@@ -58,6 +58,10 @@ import {
   refreshWorkspace,
   setVisibility,
 } from "./domain/workspace.ts";
+import {
+  coverageProviderLabel,
+  isEarlierEmptyFailure,
+} from "./domain/coverage.ts";
 import { visibleTransfers } from "./domain/wallet-flows.ts";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { StartPanel } from "./components/StartPanel.tsx";
@@ -380,26 +384,27 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => {
         if (!alive) return;
-        // New cases load Ethereum first, so name the provider serving it.
+        // New cases load Ethereum first, so name the provider serving it. If that
+        // route is unavailable but another chain is configured, keep the label
+        // generic instead of guessing that the available provider is Etherscan.
         const ethereum = s?.providers?.live?.routes?.find?.(
           (r: { chainId: number }) => r.chainId === 1,
         )?.provider;
+        const anyLiveRoute = s?.providers?.live?.routes?.some?.(
+          (r: { provider?: string }) => typeof r.provider === "string",
+        );
         setProvider(
-          ethereum === "blockscout-v2"
-            ? "Blockscout"
-            : ethereum === "etherscan-v2"
-              ? "Etherscan"
-              : ethereum
-                ? "Live provider"
-                : s?.providers?.etherscan?.available ||
-                    s?.liveAvailable ||
-                    s?.etherscan?.available ||
-                    s?.providers?.some?.(
-                      (p: { id: string; available: boolean }) =>
-                        p.id.includes("etherscan") && p.available,
-                    )
-                  ? "Etherscan"
-                  : null,
+          ethereum
+            ? coverageProviderLabel(ethereum)
+            : anyLiveRoute ||
+                s?.providers?.etherscan?.available ||
+                s?.liveAvailable ||
+                s?.etherscan?.available ||
+                s?.providers?.some?.(
+                  (p: { id: string; available: boolean }) => p.available,
+                )
+              ? "Live history"
+              : null,
         );
       })
       .catch(() => {});
@@ -569,7 +574,8 @@ export default function App() {
         (c) =>
           c.address === n.address &&
           c.chainId === n.chainId &&
-          c.status === "error",
+          c.status === "error" &&
+          !isEarlierEmptyFailure(c, next.coverage),
       );
       if (failure) setError(failure.error || failure.warnings.join(" "));
       else setToast("One bounded page loaded. Evidence and cursor preserved.");

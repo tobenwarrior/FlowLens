@@ -2,6 +2,8 @@
 
 ## Unreleased — open-source launch
 
+- Base wallet history now defaults to official keyless Etherscan MCP when self-hosted Blockscout or Alchemy is not configured. It uses receipt-derived ERC20 event identities and provider-bound cursors; prior failed source attempts remain visible. No API key or automatic fallback is required. Internal transfers, NFTs and fees remain uncovered by this route.
+
 - Expanded wallet-history routes: keyless HyperEVM, keyed hosted Base/Arbitrum/Robinhood Chain, optional Alchemy Base, and a readiness-checked loopback Base Blockscout connector with deployment preparation files. Access and indexed coverage remain provider-specific; no Base indexer or universal all-chain history is bundled.
 - Added bounded, resumable CLI history collection. Cases retain up to 2,000 nodes and 20,000 transfers within 5 MB; the graph separately projects at most 80 counterparties without dropping retained evidence.
 - Added separate HyperCore non-funding ledger evidence, explicit protocol-accounting endpoints, and strict links to already-loaded Arbitrum bridge transfers. These entries do not change EVM transfer totals.

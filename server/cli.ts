@@ -15,6 +15,7 @@ import {
 } from "../src/domain/engine.ts";
 import type { Investigation } from "../src/domain/types.ts";
 import { DEMO_ROOT } from "../src/domain/demo.ts";
+import { isEarlierEmptyFailure } from "../src/domain/coverage.ts";
 import {
   expandCase,
   operationSchema,
@@ -159,7 +160,7 @@ async function main() {
       exitCodes: {
         0: "success; coverage may still be partial",
         1: "validation, unavailable provider or operation error",
-        2: "saved investigation contains provider/coverage error; resume after resolving it",
+        2: "saved investigation contains a current provider/coverage error; earlier empty source attempts remain visible without causing exit 2",
       },
     });
     return;
@@ -477,7 +478,13 @@ async function main() {
       return created;
     });
     print(value);
-    if (value.coverage.some((c) => c.status === "error")) process.exitCode = 2;
+    if (
+      value.coverage.some(
+        (c) =>
+          c.status === "error" && !isEarlierEmptyFailure(c, value.coverage),
+      )
+    )
+      process.exitCode = 2;
     return;
   }
   if (command === "annotate" || command === "visibility") {
@@ -571,7 +578,13 @@ async function main() {
       return next;
     });
     print(value);
-    if (value.coverage.some((c) => c.status === "error")) process.exitCode = 2;
+    if (
+      value.coverage.some(
+        (c) =>
+          c.status === "error" && !isEarlierEmptyFailure(c, value.coverage),
+      )
+    )
+      process.exitCode = 2;
     return;
   }
   const value = await readSnapshot(path);

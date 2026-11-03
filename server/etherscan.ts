@@ -20,6 +20,8 @@ export { ProviderError };
 const ENDPOINT = "https://api.etherscan.io/v2/api";
 export const ETHERSCAN_CHAINS = [1, 42161];
 const MAX_RESPONSE_BYTES = 2_000_000;
+const DEFAULT_MAX_RECEIPT_LOGS = 2_000;
+const MAX_HISTORY_ROWS = 10_000;
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const HASH = /^0x[0-9a-fA-F]{64}$/;
@@ -28,6 +30,19 @@ const WARNINGS = [
   "Results are indexed provider evidence, not independent chain verification. Reorganizations and indexing gaps remain possible.",
   "Gross transfer flows are not buys, sells, profit, unique capital or proof of ownership.",
 ];
+function maxHistoryPage(size: number): number {
+  return Math.floor(MAX_HISTORY_ROWS / size);
+}
+function capWarning(stream: "native" | "erc20"): string {
+  return `The ${stream} history stream reached Etherscan's ${MAX_HISTORY_ROWS.toLocaleString("en-US")}-row window; remaining history is unknown and requires another adapter.`;
+}
+function historyWindowLimit(stream: "native" | "erc20"): ProviderError {
+  return new ProviderError(
+    "HISTORY_WINDOW_LIMIT",
+    `The ${stream} history stream reached Etherscan's ${MAX_HISTORY_ROWS.toLocaleString("en-US")}-row window; remaining history is unknown and no over-cap request was made.`,
+    false,
+  );
+}
 interface Cursor {
   v: 1;
   chain: number;
@@ -38,9 +53,20 @@ interface Cursor {
   token: number;
   nativeDone: boolean;
   tokenDone: boolean;
+  provider?: string;
 }
-function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
+function decodeCursor(
+  value: string,
+  query: TraceQuery,
+  size: number,
+  provider?: string,
+): Cursor {
   try {
+    const maxPage = maxHistoryPage(size);
+    const validPage = (page: number, done: boolean) =>
+      Number.isSafeInteger(page) &&
+      page >= 1 &&
+      (page <= maxPage || (page === maxPage + 1 && !done));
     if (value.length > 1024) throw new Error();
     const cursor = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
@@ -52,14 +78,11 @@ function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
       cursor.size !== size ||
       !Number.isSafeInteger(cursor.end) ||
       cursor.end < 0 ||
-      !Number.isSafeInteger(cursor.native) ||
-      cursor.native < 1 ||
-      !Number.isSafeInteger(cursor.token) ||
-      cursor.token < 1 ||
-      cursor.native > 10000 ||
-      cursor.token > 10000 ||
+      !validPage(cursor.native, cursor.nativeDone) ||
+      !validPage(cursor.token, cursor.tokenDone) ||
       typeof cursor.nativeDone !== "boolean" ||
-      typeof cursor.tokenDone !== "boolean"
+      typeof cursor.tokenDone !== "boolean" ||
+      (provider !== undefined && cursor.provider !== provider)
     )
       throw new Error();
     return cursor;
@@ -72,14 +95,25 @@ function decodeCursor(value: string, query: TraceQuery, size: number): Cursor {
 }
 /** Allowlisted V2 history. Credentials never enter the evidence contract. */
 export function createEtherscanProvider(
-  options: { key?: string; fetch?: typeof fetch; intervalMs?: number } = {},
+  options: {
+    key?: string;
+    fetch?: typeof fetch;
+    intervalMs?: number;
+    request?: EtherscanActionRequest;
+    chains?: readonly number[];
+    id?: string;
+    source?: string;
+    cursorProvider?: string;
+    maxResponseBytes?: number;
+    maxReceiptLogs?: number;
+  } = {},
 ): TraceProvider {
   const fetcher = options.fetch ?? fetch;
   const key = options.key ?? process.env.ETHERSCAN_API_KEY ?? "";
   const interval = options.intervalMs ?? 1000;
   let queue: Promise<unknown> = Promise.resolve();
   let lastCall = 0;
-  async function request(
+  async function restRequest(
     chainId: number,
     parameters: Record<string, string>,
   ): Promise<Row> {
@@ -110,7 +144,7 @@ export function createEtherscanProvider(
             `Provider returned HTTP ${response.status}; no page was committed.`,
             response.status >= 500,
           );
-        const body = row(await boundedJson(response, MAX_RESPONSE_BYTES));
+        const body = row(await boundedJson(response, maxResponseBytes));
         if (body.error || body.status === "0") {
           const detail =
             `${body.message ?? ""} ${body.result ?? ""}`.toLowerCase();
@@ -152,13 +186,20 @@ export function createEtherscanProvider(
     queue = task.catch(() => undefined);
     return task;
   }
+  const request = options.request ?? restRequest;
+  const chains = options.chains ?? ETHERSCAN_CHAINS;
+  const providerId = options.id ?? "etherscan-v2";
+  const sourceName = options.source ?? "Etherscan V2";
+  const cursorProvider = options.cursorProvider;
+  const maxResponseBytes = options.maxResponseBytes ?? MAX_RESPONSE_BYTES;
+  const maxReceiptLogs = options.maxReceiptLogs ?? DEFAULT_MAX_RECEIPT_LOGS;
   async function fetchPage(query: TraceQuery): Promise<TransferPage> {
-    if (!key)
+    if (!options.request && !key)
       throw new ProviderError(
         "KEY_REQUIRED",
         "Set ETHERSCAN_API_KEY in the local server environment to enable live tracing.",
       );
-    if (!ETHERSCAN_CHAINS.includes(query.chainId))
+    if (!chains.includes(query.chainId))
       throw new ProviderError(
         "UNSUPPORTED_CHAIN",
         "Live tracing supports Ethereum (1) and Arbitrum One (42161) only in this slice. Base, BSC and Optimism history may require a paid provider plan and are not enabled.",
@@ -180,7 +221,8 @@ export function createEtherscanProvider(
         "Live page size must be an integer from 1 to 10 rows per stream.",
       );
     let cursor: Cursor;
-    if (query.cursor) cursor = decodeCursor(query.cursor, query, size);
+    if (query.cursor)
+      cursor = decodeCursor(query.cursor, query, size, cursorProvider);
     else {
       const anchor = await request(query.chainId, {
         module: "proxy",
@@ -204,6 +246,7 @@ export function createEtherscanProvider(
         token: 1,
         nativeDone: false,
         tokenDone: false,
+        ...(cursorProvider ? { provider: cursorProvider } : {}),
       };
     }
     const warnings = [
@@ -212,7 +255,10 @@ export function createEtherscanProvider(
     ];
     const transfers: Transfer[] = [];
     const retrievedAt = new Date().toISOString();
+    const maxPage = maxHistoryPage(size);
     const history = async (action: string, page: number): Promise<Row[]> => {
+      const stream = action === "txlist" ? "native" : "erc20";
+      if (page > maxPage) throw historyWindowLimit(stream);
       const result = await request(query.chainId, {
         module: "account",
         action,
@@ -262,12 +308,13 @@ export function createEtherscanProvider(
         timestamp,
         blockNumber: integer(record.blockNumber),
         status: "success",
-        source: "Etherscan V2",
+        source: sourceName,
         retrievedAt,
       };
     };
     if (!cursor.nativeDone) {
-      const records = await history("txlist", cursor.native);
+      const nativePage = cursor.native;
+      const records = await history("txlist", nativePage);
       for (const record of records) {
         if (
           record.isError === "1" ||
@@ -300,11 +347,14 @@ export function createEtherscanProvider(
           );
         }
       }
-      cursor.native++;
       cursor.nativeDone = records.length < size;
+      if (!cursor.nativeDone) cursor.native++;
+      if (!cursor.nativeDone && nativePage === maxPage)
+        warnings.push(capWarning("native"));
     }
     if (!cursor.tokenDone) {
-      const records = await history("tokentx", cursor.token);
+      const tokenPage = cursor.token;
+      const records = await history("tokentx", tokenPage);
       const byHash = new Map<string, Row[]>();
       for (const record of records) {
         if (typeof record.hash !== "string" || !HASH.test(record.hash)) {
@@ -361,7 +411,7 @@ export function createEtherscanProvider(
           throw mismatch();
         }
         if (receipt.status === "0x0") continue;
-        if (receipt.logs.length > 2000)
+        if (receipt.logs.length > maxReceiptLogs)
           throw new ProviderError(
             "RECEIPT_TOO_LARGE",
             "A token receipt exceeds the bounded log budget; this page needs another adapter.",
@@ -442,8 +492,10 @@ export function createEtherscanProvider(
           }
         }
       }
-      cursor.token++;
       cursor.tokenDone = records.length < size;
+      if (!cursor.tokenDone) cursor.token++;
+      if (!cursor.tokenDone && tokenPage === maxPage)
+        warnings.push(capWarning("erc20"));
     }
     const exhausted = cursor.nativeDone && cursor.tokenDone;
     if (exhausted)
@@ -475,5 +527,10 @@ export function createEtherscanProvider(
       exhausted,
     };
   }
-  return { id: "etherscan-v2", mode: "live", fetchPage };
+  return { id: providerId, mode: "live", fetchPage };
 }
+
+export type EtherscanActionRequest = (
+  chainId: number,
+  parameters: Record<string, string>,
+) => Promise<Row>;

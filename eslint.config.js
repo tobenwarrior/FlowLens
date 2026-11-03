@@ -8,6 +8,7 @@ export default defineConfig([
       "node_modules/**",
       "dist/**",
       ".local/**",
+      ".claude/worktrees/**",
       "artifacts/**",
       "test-results/**",
       "playwright-report/**",
@@ -16,6 +17,9 @@ export default defineConfig([
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: {
+      parserOptions: { tsconfigRootDir: import.meta.dirname },
+    },
     rules: {
       // TypeScript resolves names, including DOM and Node globals.
       "no-undef": "off",

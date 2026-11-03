@@ -6,11 +6,12 @@ FlowLens itself is licensed under [AGPL-3.0-only](LICENSE). Dependency licenses 
 
 ## Installed runtime versions
 
-These versions and texts were read from the local installation corresponding to `package-lock.json` on 2026-10-21. Recheck this file whenever the dependency lock changes. Optional compiler peers and development tools are outside this runtime collection.
+These versions and texts were read from the local installation corresponding to `package-lock.json` on 2026-11-03. Recheck this file whenever the dependency lock changes. Optional compiler peers and development tools are outside this runtime collection.
 
 | Dependency                   | Version | License information                                          | Local license source                                |
 | ---------------------------- | ------- | ------------------------------------------------------------ | --------------------------------------------------- |
 | @adraffy/ens-normalize       | 1.11.1  | MIT                                                          | `node_modules/@adraffy/ens-normalize/LICENSE`       |
+| @modelcontextprotocol/client | 2.3.1   | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/client/LICENSE` |
 | @modelcontextprotocol/core   | 2.3.1   | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/core/LICENSE`   |
 | @modelcontextprotocol/server | 2.3.1   | Metadata: Apache-2.0; full Apache/MIT transition terms below | `node_modules/@modelcontextprotocol/server/LICENSE` |
 | @noble/ciphers               | 1.3.0   | MIT                                                          | `node_modules/@noble/ciphers/LICENSE`               |
@@ -20,14 +21,24 @@ These versions and texts were read from the local installation corresponding to 
 | @scure/bip32                 | 1.7.0   | MIT                                                          | `node_modules/@scure/bip32/LICENSE`                 |
 | @scure/bip39                 | 1.6.0   | MIT                                                          | `node_modules/@scure/bip39/LICENSE`                 |
 | abitype                      | 1.2.3   | MIT                                                          | `node_modules/abitype/LICENSE`                      |
+| cross-spawn                  | 7.0.6   | MIT                                                          | `node_modules/cross-spawn/LICENSE`                  |
 | eventemitter3                | 5.0.1   | MIT                                                          | `node_modules/eventemitter3/LICENSE`                |
+| eventsource                  | 3.0.7   | MIT                                                          | `node_modules/eventsource/LICENSE`                  |
+| eventsource-parser           | 3.1.1   | MIT                                                          | `node_modules/eventsource-parser/LICENSE`           |
+| isexe                        | 3.1.1   | ISC                                                          | `node_modules/isexe/LICENSE`                        |
 | isows                        | 1.0.7   | MIT                                                          | `node_modules/isows/LICENSE`                        |
+| jose                         | 6.2.13  | MIT                                                          | `node_modules/jose/LICENSE.md`                      |
 | lucide-react                 | 0.468.0 | ISC; includes attribution for Feather portions               | `node_modules/lucide-react/LICENSE`                 |
 | ox                           | 0.14.56 | MIT                                                          | `node_modules/ox/LICENSE`                           |
+| path-key                     | 3.1.1   | MIT                                                          | `node_modules/path-key/license`                     |
+| pkce-challenge               | 5.0.1   | MIT                                                          | `node_modules/pkce-challenge/LICENSE`               |
 | react                        | 19.3.1  | MIT                                                          | `node_modules/react/LICENSE`                        |
 | react-dom                    | 19.3.1  | MIT                                                          | `node_modules/react-dom/LICENSE`                    |
 | scheduler                    | 0.28.0  | MIT                                                          | `node_modules/scheduler/LICENSE`                    |
+| shebang-command              | 2.0.0   | MIT                                                          | `node_modules/shebang-command/license`              |
+| shebang-regex                | 3.0.0   | MIT                                                          | `node_modules/shebang-regex/license`                |
 | viem                         | 2.57.7  | MIT                                                          | `node_modules/viem/LICENSE`                         |
+| which                        | 2.0.2   | ISC                                                          | `node_modules/which/LICENSE`                        |
 | ws                           | 8.21.0  | MIT                                                          | `node_modules/ws/LICENSE`                           |
 | zod                          | 4.6.7   | MIT                                                          | `node_modules/zod/LICENSE`                          |
 
@@ -149,9 +160,9 @@ SOFTWARE.
 
 <!-- END UPSTREAM LICENSE zod -->
 
-### Model Context Protocol Server and Core — upstream licensing transition
+### Model Context Protocol Client, Server and Core — upstream licensing transition
 
-Packages: `@modelcontextprotocol/server`, `@modelcontextprotocol/core`
+Packages: `@modelcontextprotocol/client`, `@modelcontextprotocol/server`, `@modelcontextprotocol/core`
 
 Source: `node_modules/@modelcontextprotocol/server/LICENSE`
 
@@ -381,6 +392,281 @@ the full license text.
 ```
 
 <!-- END UPSTREAM LICENSE mcp -->
+
+### Cross-spawn — MIT
+
+Packages: `cross-spawn`
+
+Source: `node_modules/cross-spawn/LICENSE`
+
+Source bytes: 1105
+
+SHA-256: `aaa78451b6fecd1b9c4594c796c133c0e90cad100372ff8bc6de615e9ef9adf1`
+
+<!-- BEGIN UPSTREAM LICENSE cross-spawn -->
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE cross-spawn -->
+
+### EventSource — MIT
+
+Packages: `eventsource`
+
+Source: `node_modules/eventsource/LICENSE`
+
+Source bytes: 1087
+
+SHA-256: `f683a72ffe6a9675b5507af22fe0f448d8c8de3da1e14f139d370a7e6a54a23e`
+
+<!-- BEGIN UPSTREAM LICENSE eventsource -->
+
+```text
+The MIT License
+
+Copyright (c) EventSource GitHub organisation
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE eventsource -->
+
+### EventSource Parser — MIT
+
+Packages: `eventsource-parser`
+
+Source: `node_modules/eventsource-parser/LICENSE`
+
+Source bytes: 1098
+
+SHA-256: `835eb611a23301b27115ca1be9f754c876e643ceb7fe63049c6b50609a1cafeb`
+
+<!-- BEGIN UPSTREAM LICENSE eventsource-parser -->
+
+```text
+MIT License
+
+Copyright (c) 2026 Espen Hovlandsdal <espen@hovlandsdal.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE eventsource-parser -->
+
+### Jose — MIT
+
+Packages: `jose`
+
+Source: `node_modules/jose/LICENSE.md`
+
+Source bytes: 1079
+
+SHA-256: `8078b0829d6c3e9ecde2f003e1966e4cad3efc6e7a640efbab0313cc166b1af1`
+
+<!-- BEGIN UPSTREAM LICENSE jose -->
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2018 Filip Skokan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE jose -->
+
+### PKCE Challenge — MIT
+
+Packages: `pkce-challenge`
+
+Source: `node_modules/pkce-challenge/LICENSE`
+
+Source bytes: 1057
+
+SHA-256: `feb87a2e0c305de3464cc44077da5393c52d8ca6362d37427157d04ec6f4510d`
+
+<!-- BEGIN UPSTREAM LICENSE pkce-challenge -->
+
+```text
+MIT License
+
+Copyright (c) 2019 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE pkce-challenge -->
+
+### Path-key and Shebang-regex — MIT
+
+Packages: `path-key`, `shebang-regex`
+
+Source: `node_modules/path-key/license`
+
+Source bytes: 1109
+
+SHA-256: `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0`
+
+<!-- BEGIN UPSTREAM LICENSE path-key -->
+
+```text
+MIT License
+
+Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE path-key -->
+
+### Shebang-command — MIT
+
+Packages: `shebang-command`
+
+Source: `node_modules/shebang-command/license`
+
+Source bytes: 1116
+
+SHA-256: `69dee148a2cc470554dfa7142e830662062394d0fe67cddd379aba90dc60d6b3`
+
+<!-- BEGIN UPSTREAM LICENSE shebang-command -->
+
+```text
+MIT License
+
+Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE shebang-command -->
+
+### Isexe and Which — ISC
+
+Packages: `isexe`, `which`
+
+Source: `node_modules/which/LICENSE`
+
+Source bytes: 765
+
+SHA-256: `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b`
+
+<!-- BEGIN UPSTREAM LICENSE which -->
+
+```text
+The ISC License
+
+Copyright (c) Isaac Z. Schlueter and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
+
+<!-- END UPSTREAM LICENSE which -->
 
 ### Viem and Isows — MIT
 

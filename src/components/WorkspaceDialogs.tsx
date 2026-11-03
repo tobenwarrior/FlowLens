@@ -14,6 +14,10 @@ import {
   X,
 } from "lucide-react";
 import type { Investigation } from "../domain/types.ts";
+import {
+  coverageProviderLabel,
+  isEarlierEmptyFailure,
+} from "../domain/coverage.ts";
 import { chainName, short } from "./Graph.tsx";
 import { EXAMPLES } from "./StartPanel.tsx";
 
@@ -267,38 +271,49 @@ export function WorkspaceDialogs({
                       ? "All wallets, labels, hashes and amounts in this case are invented. No financial or attribution claims."
                       : evidenceOnly
                         ? "No wallet history is indexed in this case. Keep explicitly acquired or imported protocol observations separately; an empty graph does not mean no activity."
-                        : "Each row names its provider, loaded streams and page state. Ethereum and Derive can use keyless Blockscout; Base and Arbitrum need configured history access. HyperEVM uses keyless HypurrTrace. HyperCore ledger entries appear separately in Evidence view."}
+                        : "Each row names its provider, loaded streams and page state. Ethereum and Derive can use keyless Blockscout; Base can use keyless Etherscan, local Alchemy or self-hosted Blockscout; Arbitrum can use configured Blockscout or Etherscan. HyperEVM uses keyless HypurrTrace. HyperCore ledger entries appear separately in Evidence view."}
                   </p>
                 </div>
                 <div className="coverage-list">
-                  {investigation.coverage.map((c) => (
-                    <div key={c.key}>
-                      <span
-                        className={`status-dot ${c.status === "error" ? "red" : "amber"}`}
-                      />
-                      <div>
-                        <strong>
-                          {chainName(c.chainId)} · {short(c.address)}
-                        </strong>
-                        <span>
-                          {c.provider} ·{" "}
-                          {c.streams.length
-                            ? c.streams.join(", ")
-                            : "no streams"}{" "}
-                          · {c.pagesLoaded} pages · {c.status}
-                        </span>
-                        {c.warnings.map((w, i) => (
-                          <p key={i}>{w}</p>
-                        ))}
-                        {c.error && <p className="error-text">{c.error}</p>}
-                        <code>
-                          {c.cursor
-                            ? `Resume cursor: ${c.cursor.slice(0, 90)}${c.cursor.length > 90 ? "…" : ""}`
-                            : "No next-page cursor in loaded stream"}
-                        </code>
+                  {investigation.coverage.map((c) => {
+                    const earlierFailure = isEarlierEmptyFailure(
+                      c,
+                      investigation.coverage,
+                    );
+                    return (
+                      <div key={c.key}>
+                        <span
+                          className={`status-dot ${c.status === "error" ? "red" : "amber"}`}
+                        />
+                        <div>
+                          <strong>
+                            {chainName(c.chainId)} · {short(c.address)}
+                            {earlierFailure && (
+                              <span className="case-badge">
+                                Earlier source attempt
+                              </span>
+                            )}
+                          </strong>
+                          <span>
+                            {coverageProviderLabel(c.provider)} ·{" "}
+                            {c.streams.length
+                              ? c.streams.join(", ")
+                              : "no streams"}{" "}
+                            · {c.pagesLoaded} pages · {c.status}
+                          </span>
+                          {c.warnings.map((w, i) => (
+                            <p key={i}>{w}</p>
+                          ))}
+                          {c.error && <p className="error-text">{c.error}</p>}
+                          <code>
+                            {c.cursor
+                              ? `Resume cursor: ${c.cursor.slice(0, 90)}${c.cursor.length > 90 ? "…" : ""}`
+                              : "No next-page cursor in loaded stream"}
+                          </code>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="warning-box">
                   <ShieldAlert size={18} />
@@ -395,9 +410,10 @@ export function WorkspaceDialogs({
                     start screen. Live Ethereum history needs no key: Blockscout
                     serves it and receives the wallet you trace. Derive Chain
                     expansions go to Blockscout at explorer.derive.xyz, key or
-                    not. Arbitrum needs a permitted Etherscan key; evidence-only
-                    cases start without an index. Each chain has separate
-                    coverage.
+                    not. Base can use the keyless Etherscan route, local Alchemy
+                    or self-hosted Blockscout; Arbitrum can use permitted
+                    Blockscout or Etherscan access. Evidence-only cases start
+                    without an index. Each chain has separate coverage.
                   </p>
                 </section>
               </div>

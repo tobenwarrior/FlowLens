@@ -55,6 +55,8 @@ node server/cli.ts export --file "$CASE_FILE"
 
 ## 5. Deliver a bounded verdict
 
+For an attribution report, check that the root and each verified controller were searched in the case store and any authorized archive. Verify that material leads were reviewed or are identified as blocked, unreviewed or outside the stated budget. A clean address header, an identified venue and an empty archive search each have a limited scope. Keep the strongest supported relationship visible and give copyable full addresses for every material wallet.
+
 For each material claim provide: claim category; exact chain/hash/event identity; full endpoints; asset contract and exact amount; block and UTC event time; provider/retrieval time; source URL; verification status and missing evidence. Finish with a coverage ledger and the next bounded check that could falsify the claim. Use “earliest observed” and “no link found within [scope]”, never unsupported “first ever” or “no link”. Do not assign ownership percentages or allege ownership.
 
 To save an [offline Markdown report](../../reporting/report-investigation/references/exporting.md), run `node scripts/report-investigation.ts --file CASE.json --output REPORT.md` with real paths under `.local/investigations/<case>/`. It makes no network requests, leaves the case unchanged and refuses to overwrite an existing report unless `--force` is explicitly supplied. Review generated claims and coverage before sharing.

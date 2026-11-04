@@ -34,6 +34,15 @@ Trading venues keep accounts that public chains do not show. Endpoints and acces
 
 **Sizing a trade.** Keep gross underlying notional, cash premium and risk separate, each with its convention and timestamp. Net premium is not maximum loss, and trade size says nothing about ownership.
 
+## Attribution review before a verdict
+
+Before a final verdict, including unresolved ownership, review the root and any distinct verified controller. Search the local case store and any authorized project archive by full address. A partial new trace does not replace a historical case. Check the older source dates, coverage and receipts, and refresh mutable labels when accessible. If older funding or material activity lies outside the loaded window, extend that scope within the trace budget or state the gap. An empty local result does not cover exported files or project notes. Record an unavailable archive explicitly.
+
+- Select material counterparties from both directions using the earliest meaningful funding, large or repeated flows, and any documented account or product clues. Start with up to three directly relevant non-pooled peers within a stated chain, time and page budget. Use their exact addresses for local and authorized label checks even when the user has named no candidate firm.
+- Classify each peer and verify the deciding hops. For an apparent company link, resolve the product or contract in first-party sources and inspect material receipts in both directions where accessible. Check the immediate source of a material onward payment in a bounded window before connecting it to an older receipt. Keep separate payments separate when there is no reliable join.
+- Record product use, payments, technical control and business ownership as separate findings. An entity's contract can serve its customers. A pooled service remains a stopping point unless an account-specific identifier supports the next step.
+- Before writing the verdict, record which archive, label and relationship checks were reviewed, unavailable, blocked or outside the stated budget. Treat unchecked material leads as unresolved scope. List the strongest verified relationship even if no firm is identified.
+
 ## 9. Testing a named firm
 
 When someone asks "is this firm X?":

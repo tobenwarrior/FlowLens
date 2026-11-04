@@ -80,9 +80,18 @@ const tools = [
   {
     operation: "list",
     description:
-      "List at most 1000 investigations from this local case store. No filesystem paths are accepted.",
+      "List at most 1000 investigations from this local case store, optionally matching an exact full wallet address and, only with that address, a chain ID. No filesystem paths are accepted.",
     readOnly: true,
-    input: z.object({}).strict(),
+    input: z
+      .object({
+        address: address.optional(),
+        chainId: positiveInteger.optional(),
+      })
+      .strict()
+      .refine(
+        (value) => value.chainId === undefined || value.address !== undefined,
+        "A chain ID requires an address.",
+      ),
   },
   {
     operation: "create",

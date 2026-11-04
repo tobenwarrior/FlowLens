@@ -208,8 +208,14 @@ export function createApiServer(options: ApiOptions) {
           await agentService.call("acquire", await body(req)),
         );
       if (parts[0] === "api" && parts[1] === "investigations") {
-        if (parts.length === 2 && method === "GET")
-          return send(res, 200, await store.list());
+        if (parts.length === 2 && method === "GET") {
+          const query: Record<string, unknown> = {};
+          if (url.searchParams.has("address"))
+            query.address = url.searchParams.get("address");
+          if (url.searchParams.has("chainId"))
+            query.chainId = Number(url.searchParams.get("chainId"));
+          return send(res, 200, await agentService.call("list", query));
+        }
         if (parts.length === 2 && method === "POST") {
           const input = await body(req);
           if (!input || typeof input !== "object")

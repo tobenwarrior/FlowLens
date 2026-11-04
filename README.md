@@ -144,6 +144,8 @@ node --env-file-if-exists=.env server/cli.ts inspect --file .local/endowment.jso
 
 Use `--chain 957` to expand on Derive. `create` will not overwrite a case; resume it with `expand` or `inspect`. Exit code `2` means a provider failed; retained evidence and coverage explain what was loaded.
 
+Use `node --env-file-if-exists=.env server/cli.ts list --address "$WALLET"` to find earlier cases in the configured local case store. Add `--chain 957` to require a matching retained node on Derive. For a newly verified controller, search by address across chains first. Standalone exports and private project notes can supply separate historical evidence.
+
 For an explicit bounded collection, use `collect` against one existing case file and one wallet/chain:
 
 ```sh

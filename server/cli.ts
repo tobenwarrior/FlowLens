@@ -129,6 +129,7 @@ async function main() {
       operations: {
         status: "No arguments; provider availability and limits.",
         schema: "No arguments; machine contract.",
+        list: "[--address EVM [--chain N]]; list local investigations, optionally matching an exact wallet and same-node chain.",
         "label-search":
           "[--query TEXT] [--chain N] [--address EVM] [--kind KIND] [--limit 1..1000] [--label-file PATH]; searches private labels plus the tracked shared catalogue without writing either.",
         hypercore:
@@ -172,6 +173,23 @@ async function main() {
   }
   if (command === "schema") {
     print(operationSchema);
+    return;
+  }
+  if (command === "list") {
+    if (flags["--file"] !== undefined)
+      throw new Error(
+        "list uses the configured local case store; --file is not accepted",
+      );
+    print(
+      await createAgentService({ providers }).call("list", {
+        ...(flags["--address"] === undefined
+          ? {}
+          : { address: flags["--address"] }),
+        ...(flags["--chain"] === undefined
+          ? {}
+          : { chainId: Number(flags["--chain"]) }),
+      }),
+    );
     return;
   }
   if (command === "label-search") {

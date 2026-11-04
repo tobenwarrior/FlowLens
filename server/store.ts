@@ -10,7 +10,11 @@ import {
 import { join, dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { parseInvestigation } from "../src/domain/engine.ts";
-import type { Investigation } from "../src/domain/types.ts";
+import type { Address, Investigation } from "../src/domain/types.ts";
+
+export type CaseListQuery =
+  | { address?: undefined; chainId?: undefined }
+  | { address: Address; chainId?: number };
 
 export function validCaseId(value: string): boolean {
   return /^[a-zA-Z0-9_-]{1,100}$/.test(value);
@@ -141,11 +145,25 @@ export class CaseStore {
   save(value: Investigation): Promise<void> {
     return writeSnapshot(this.path(value.id), value);
   }
-  async list() {
-    await mkdir(this.directory, { recursive: true, mode: 0o700 });
-    const names = (await readdir(this.directory))
-      .filter((name) => /^[a-zA-Z0-9_-]{1,100}\.json$/.test(name))
-      .slice(0, 1000);
+  async list(query: CaseListQuery = {}) {
+    if (query.address === undefined)
+      await mkdir(this.directory, { recursive: true, mode: 0o700 });
+    let names: string[];
+    try {
+      names = (await readdir(this.directory))
+        .filter((name) => /^[a-zA-Z0-9_-]{1,100}\.json$/.test(name))
+        .slice(0, 1000);
+    } catch (error) {
+      if (
+        query.address !== undefined &&
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )
+        return [];
+      throw error;
+    }
     // Read one bounded snapshot at a time; a thousand 5 MB cases must not coexist in memory.
     const values = [];
     for (const name of names) {
@@ -153,6 +171,16 @@ export class CaseStore {
         () => null,
       );
       if (!v) continue;
+      if (query.address !== undefined) {
+        const matchingNode = v.nodes.some(
+          (node) =>
+            node.address === query.address &&
+            (query.chainId === undefined || node.chainId === query.chainId),
+        );
+        const matchingRoot =
+          query.chainId === undefined && v.root === query.address;
+        if (!matchingNode && !matchingRoot) continue;
+      }
       values.push({
         id: v.id,
         title: v.title,

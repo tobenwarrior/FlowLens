@@ -27,6 +27,7 @@ import type { Providers } from "./operations.ts";
 import {
   CaseBusyError,
   CaseStore,
+  type CaseListQuery,
   nextRevision,
   validCaseId,
   withFileLock,
@@ -94,6 +95,33 @@ function caseId(input: unknown): string {
   if (!validCaseId(value))
     throw new AgentOperationError("INVALID_ARGUMENT", "Invalid case ID.");
   return value;
+}
+function listQuery(input: Record<string, unknown>): CaseListQuery {
+  const address =
+    input.address === undefined
+      ? undefined
+      : normalizeAddress(input.address as string);
+  let chainId: number | undefined;
+  if (input.chainId !== undefined) {
+    if (address === undefined)
+      throw new AgentOperationError(
+        "INVALID_ARGUMENT",
+        "A chain ID requires an address.",
+      );
+    if (
+      typeof input.chainId !== "number" ||
+      !Number.isSafeInteger(input.chainId) ||
+      input.chainId < 1
+    )
+      throw new AgentOperationError(
+        "INVALID_ARGUMENT",
+        "Chain ID must be a positive safe integer.",
+      );
+    chainId = input.chainId;
+  }
+  return address === undefined
+    ? {}
+    : { address, ...(chainId === undefined ? {} : { chainId }) };
 }
 function safeMessage(error: Error) {
   return error.message
@@ -413,7 +441,7 @@ export function createAgentService(options: AgentServiceOptions = {}) {
           example: createSyntheticProtocolEvidence(),
         },
       };
-    if (operation === "list") return await store.list();
+    if (operation === "list") return await store.list(listQuery(input));
     if (operation === "create") {
       const value = await startInvestigation(
         input.root,

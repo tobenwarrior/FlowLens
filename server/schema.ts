@@ -1158,6 +1158,13 @@ export const operationSchema = {
       description:
         "Provider availability and limits; no secrets. liveAvailable is a boolean. providers.live.routes names the provider serving each indexed chain: legacy blockscout-v2 serves Ethereum (1) and Derive Chain (957), blockscout-self-hosted-v1-<endpoint-digest> serves Base (8453) when FLOWLENS_BASE_BLOCKSCOUT_URL is configured, alchemy-transfers is next for Base when ALCHEMY_API_KEY is configured, etherscan-mcp-keyless-v2 serves Base by default without a key, with native/ERC-20 history and independently paged trace-checked internal candidates; FLOWLENS_BASE_INTERNALS=off selects the older etherscan-mcp-keyless-v1 native/ERC-20-only route, blockscout-pro-v2 serves keyed Base, Arbitrum One (42161) or Robinhood Chain (4663), etherscan-v2 can serve Ethereum or Arbitrum when configured, and hypurrtrace-indexed serves HyperEVM (999). A route's presence is configuration, not a readiness check or a complete-history guarantee; self-hosted readiness is checked before each wallet-history page.",
     },
+    list: {
+      method: "GET",
+      path: "/api/investigations",
+      cli: "list [--address EVM [--chain N]]",
+      description:
+        "List summaries from the configured local case store. Optional address matches exact roots or retained nodes. Optional chainId requires address and matches a retained node on that chain. At most 1000 snapshots are considered. No provider query or case change.",
+    },
     create: {
       method: "POST",
       path: "/api/investigations",

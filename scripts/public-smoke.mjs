@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { access, mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
 import {
   createDemoInvestigation,
   DEMO_ROOT,
@@ -10,6 +12,7 @@ import {
   createEtherscanMcpV2Provider,
 } from "../server/etherscan-mcp.ts";
 import { operationSchema } from "../server/schema.ts";
+import { createAgentService } from "../server/agent.ts";
 
 for (const operation of ["create", "expand"]) {
   const description = operationSchema.contracts[operation].description;
@@ -25,6 +28,39 @@ assert.ok(investigation.transfers.every((transfer) => transfer.synthetic));
 assert.ok(
   investigation.nodes.every((node) => node.label?.confidence === "synthetic"),
 );
+
+const listStore = await mkdtemp("flowlens-public-list-");
+try {
+  const listService = createAgentService({
+    dataDir: listStore,
+    labelFile: join(listStore, "labels.json"),
+    providers: { demo: demoProvider, live: new Map() },
+  });
+  await listService.call("import", { investigation });
+  const matching = await listService.call("list", { address: DEMO_ROOT });
+  assert.equal(matching.length, 1);
+  assert.equal(matching[0].root, DEMO_ROOT);
+  const absent = await listService.call("list", {
+    address: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  });
+  assert.deepEqual(absent, []);
+  const missingStore = join(listStore, "missing");
+  const missingService = createAgentService({
+    dataDir: missingStore,
+    labelFile: join(listStore, "missing-labels.json"),
+    providers: { demo: demoProvider, live: new Map() },
+  });
+  assert.deepEqual(
+    await missingService.call("list", { address: DEMO_ROOT }),
+    [],
+  );
+  await assert.rejects(
+    access(missingStore),
+    (error) => error?.code === "ENOENT",
+  );
+} finally {
+  await rm(listStore, { recursive: true, force: true });
+}
 
 const firstPage = await demoProvider.fetchPage({
   address: DEMO_ROOT,

@@ -32,7 +32,9 @@ provider dump.
 
 The required `redistribution` object records the basis and date of a human review.
 Confirm the right to redistribute the exact label and source before publishing.
-A publicly visible label can still be subject to provider restrictions.
+A publicly visible label can still be subject to provider restrictions. Keep
+Arkham observations local unless redistribution of the exact entry is authorized
+under the applicable [Arkham terms](https://info.arkm.com/terms-of-service).
 
 Prepare one selected label from a local file with:
 

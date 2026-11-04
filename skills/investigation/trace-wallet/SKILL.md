@@ -45,21 +45,14 @@ Without MCP, use `node server/cli.ts list --address <address>` for the local cas
 
 Use [cluster-wallets](../cluster-wallets/SKILL.md) for shared deposit addresses, repeated funding/sweeps and control clues. Keep infrastructure, possible shared account use and ownership separate. Do not combine customers of a hot/omnibus wallet or perform transitive ownership closure. The graph's `Group by type` is presentation, not automatic clustering.
 
-## 3. Check labels, free sources first
+## 3. Check Arkham labels and corroborating evidence
 
 Apply this list to the root, verified controller and material counterparties selected for attribution review. First, search the authorized local archive by exact address for the root and every verified controller. A blank root header or an identified venue does not close the relationship review.
 
-1. **FlowLens's own store:** `flowlens_label_search` with the `address` and `chainId`. A remembered label keeps its original source.
-2. **Explorer name tags:** the address page on the chain's explorer (for example Blockscout or Etherscan), including public name tags and verified contract names. "Funded by" usually names exchange infrastructure, not the owner.
-3. **Names the address chose itself:** ENS reverse record and names it holds, Basenames, `.hl` names, web3.bio, Farcaster, Lens, EFP, Snapshot, DeBank, Zerion and OpenSea profiles. Run each lookup on a known-positive address too. If that control also returns nothing, the result is inconclusive.
-4. **X:** search the full address, and any short prefix the user asked for, in Top and Latest results. A prefix hit counts only once the full address matches. Keep the post URL and date, and attribute third-party claims to their author as unverified. Use X only through access the user already has: their API key, or their signed-in browser with their permission.
-5. **Arkham and Nansen, only with the user's access:**
-   - Prefer the platform's official API with the user's own key, within what their plan and the platform's terms allow.
-   - Otherwise, ask first, then read the exact-address page in the user's own signed-in browser session. Read only what is visible. Expand "+N more" where offered. Keep entity labels separate from predictions, activity tags, first-funder tags and contract names.
-   - A blurred, gated or paywalled field is neither evidence for nor against anything.
-   - Do not scrape at scale or collect a provider's label set. If the user has no access, say so and carry on with the free sources.
-
-For every label you find, keep the exact wording, the provider, the label type, the URL and when you saw it. Copies of the same label on several sites are one claim, not independent corroboration.
+1. **Arkham, with permitted access:** use the exact address on the relevant chain. Use the visible Arkham-assigned wallet label verbatim. If Arkham shows only an assigned entity, record its exact entity name as an entity assertion. Keep separate the entity, wallet label, predictions, tags, first funder and private custom labels. Record which field supplied the label, its URL and when it was observed. If the label is absent or access is blocked, record that state and leave the Arkham label unset. Use a permitted official API or the user's authorized browser access. Read only what is visible and avoid scraping or bulk collection.
+2. **FlowLens's own store:** `flowlens_label_search` with the `address` and `chainId`. A remembered label keeps its original source and date. Report discrepancies between saved and current observations.
+3. **Explorer and self-chosen names:** check the chain's explorer, verified contract names and names the address chose itself, such as ENS, Basenames or `.hl`. Keep these as separate evidence. "Funded by" usually names exchange infrastructure.
+4. **X and other providers:** search the full address in Top and Latest on X with permitted access. A prefix hit counts once the full address matches. Record the post URL, date and author. Use Nansen or other sources within permitted access for corroboration. Copies of the same claim count as one source.
 
 ### Corporate hints: expand the business clue
 
@@ -69,15 +62,12 @@ When a source suggests a public company, follow [Corporate attribution](referenc
 
 Attach a label to a wallet already in the case with `flowlens_annotate` (`caseId`, `chainId`, `address`, `label`):
 
-| Situation                         | `kind`                                                         | `claimType`          | `confidence` |
-| --------------------------------- | -------------------------------------------------------------- | -------------------- | ------------ |
-| A provider labelled the wallet    | `entity`, `service` or `prediction`, as the provider framed it | `provider-assertion` | `reported`   |
-| You inferred it from the evidence | `ai`                                                           | `hypothesis`         | `unverified` |
+Use `kind: "entity"` or `kind: "service"` as appropriate, `claimType: "provider-assertion"` and `confidence: "reported"`. An Arkham assignment is a provider observation. Keep independent attribution hypotheses and activity findings in the evidence notes.
 
 ```json
 {
-  "text": "Example Exchange: deposit address",
-  "source": "Example label provider",
+  "text": "Example Exchange Deposit",
+  "source": "Arkham",
   "sourceUrl": "https://example.org/address/0x...",
   "kind": "service",
   "confidence": "reported",
@@ -87,7 +77,7 @@ Attach a label to a wallet already in the case with `flowlens_annotate` (`caseId
 }
 ```
 
-`flowlens_annotate` also remembers the label in the local store for later traces (best effort; confirm with `flowlens_label_search`), and remembered labels shape every later trace. So attach provider labels as you find them, but ask the user before attaching or remembering (`flowlens_label_put`) a hypothesis of your own. An `ai` label can never claim verified confidence.
+`flowlens_annotate` also remembers the label in the local store for later traces (best effort; confirm with `flowlens_label_search`). Existing labels retain their provenance.
 
 ### Update shared labels at trace close
 

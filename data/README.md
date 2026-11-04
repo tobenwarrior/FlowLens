@@ -1,8 +1,24 @@
 # Shared wallet labels
 
-`wallet-labels.json` is the tracked, reviewable catalogue that FlowLens may read on
-startup and when applying labels to a new trace. It is intentionally empty until a
-reviewed public entry is prepared and committed by a human.
+`wallet-labels.json` is the tracked catalogue that FlowLens reads when applying
+shared labels. Everyone who updates their clone receives the published entries.
+
+## Update the catalogue after each trace
+
+1. Check each new or corrected label against the catalogue using its chain ID and
+   full address. Confirm the source supports the exact address, chain and claim.
+2. Prepare each shareable candidate in an ignored `.local/` draft. Present the
+   chain, full address, proposed label, source, dates, confidence and redistribution
+   basis for human review.
+   Keep private case data, unsupported hypotheses and restricted labels local.
+3. After approval, add or update the exact entry in `wallet-labels.json`. Preserve
+   unrelated entries and retain the source, dates and confidence. Review conflicting
+   evidence before replacing a published label.
+4. Run `npm run labels:check`, review the catalogue diff, and commit and push
+   only the approved catalogue entries. If review is pending, keep the draft
+   local and record its status in the trace handoff.
+
+Follow the same review process for older labels when revisiting them.
 
 Each entry is one exact `chainId` plus full normalized address and reuses the local
 `StoredLabel` shape. A catalogue label must have an HTTPS `sourceUrl`, `observedAt`,
@@ -14,11 +30,9 @@ The validator accepts at most 50,000 entries, and the existing bounded JSON read
 limits the catalogue file to 5 MB. These safety limits are not a promise to import a
 provider dump.
 
-The required `redistribution` object records the basis and date of a review of
-redistribution rights by a person. `status: "reviewed"` is a review record, not a
-licence grant or permission to copy a provider's restricted data. Do not add Arkham, Nansen, provider-restricted or
-private investigation labels without separately confirming the right to redistribute
-the exact source and label.
+The required `redistribution` object records the basis and date of a human review.
+Confirm the right to redistribute the exact label and source before publishing.
+A publicly visible label can still be subject to provider restrictions.
 
 Prepare one selected label from a local file with:
 
@@ -26,14 +40,15 @@ Prepare one selected label from a local file with:
 node scripts/wallet-labels.ts prepare \
   --file .local/labels.json --chain 1 \
   --address 0x0000000000000000000000000000000000000000 \
-  --output .local/wallet-labels.draft.json \
-  --redistribution-basis "Human review of the cited public source"
+  --output .local/wallet-labels.draft.json
 ```
 
-Preparation writes a new draft only, refuses to overwrite an existing path, and never
-exports the private store broadly. Review the draft, run `validate`, then copy an
-approved entry into this tracked catalogue and review the diff before committing or
-sharing. If `--redistribution-basis` is omitted, the draft is marked
-`pending-review` and `validate` deliberately rejects it until a human records the
-review basis. `label_forget` only removes a private label; a shared label can reappear
-on a later trace unless the tracked catalogue entry is deliberately removed.
+Preparation selects one entry and writes a new file. The example produces a
+`pending-review` draft that the catalogue validator rejects. After human approval,
+prepare to a new filename with `--redistribution-basis` set to the approved basis
+and use `--reviewed-at` if the review took place earlier. Validate the reviewed draft
+with `node scripts/wallet-labels.ts validate --file <reviewed-draft>` before copying
+its approved entry into the catalogue.
+
+`label_forget` only removes a private label. To retract a shared label, remove
+the exact chain/address entry from the tracked catalogue and publish the correction.

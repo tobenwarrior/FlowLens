@@ -47,7 +47,7 @@ Use [cluster-wallets](../cluster-wallets/SKILL.md) for shared deposit addresses,
 
 ## 3. Check labels, free sources first
 
-Apply this list to the root, verified controller and material counterparties selected for attribution review. Run the exact-address archive search before this list for the root and every verified controller. A blank root header or an identified venue does not close the relationship review.
+Apply this list to the root, verified controller and material counterparties selected for attribution review. First, search the authorized local archive by exact address for the root and every verified controller. A blank root header or an identified venue does not close the relationship review.
 
 1. **FlowLens's own store:** `flowlens_label_search` with the `address` and `chainId`. A remembered label keeps its original source.
 2. **Explorer name tags:** the address page on the chain's explorer (for example Blockscout or Etherscan), including public name tags and verified contract names. "Funded by" usually names exchange infrastructure, not the owner.
@@ -88,6 +88,12 @@ Attach a label to a wallet already in the case with `flowlens_annotate` (`caseId
 ```
 
 `flowlens_annotate` also remembers the label in the local store for later traces (best effort; confirm with `flowlens_label_search`), and remembered labels shape every later trace. So attach provider labels as you find them, but ask the user before attaching or remembering (`flowlens_label_put`) a hypothesis of your own. An `ai` label can never claim verified confidence.
+
+### Update shared labels at trace close
+
+Review each new or corrected label against the shared catalogue by chain and full address. Prepare eligible entries for human review using the [shared catalogue workflow](../../../data/README.md). Include the exact claim, source, confidence and redistribution basis. Keep private findings, unsupported hypotheses and restricted source data local.
+
+Once the selected entries are approved, validate and publish the catalogue update. In the handoff, list published entries and drafts awaiting review, or say that the trace produced no shareable labels.
 
 ## 5. Report
 

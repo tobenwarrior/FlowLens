@@ -251,11 +251,11 @@ Missing a network or tracing workflow? [Open an issue](https://github.com/tobenw
 
 Clones receive the reviewed, tracked catalogue in
 [`data/wallet-labels.json`](data/wallet-labels.json); its format, rights-review policy
-and preparation workflow are documented in [`data/README.md`](data/README.md). The
-catalogue is currently empty, bounded to 50,000 entries and 5 MB, and read-only at
-runtime. Private `.local` labels and
-investigation cases stay local, override a shared label when present, and are never
-published by tagging or annotation.
+and update workflow are documented in [`data/README.md`](data/README.md). At the end
+of each trace, prepare new or corrected shareable labels for review. Publish approved
+entries so other FlowLens users receive them when they update their clone. The
+catalogue is read-only at runtime and bounded to 50,000 entries and 5 MB. Private
+`.local` labels stay local and take precedence when present.
 
 ## Develop and contribute
 

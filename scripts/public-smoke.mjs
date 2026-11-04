@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createDemoInvestigation,
@@ -28,6 +37,50 @@ assert.ok(investigation.transfers.every((transfer) => transfer.synthetic));
 assert.ok(
   investigation.nodes.every((node) => node.label?.confidence === "synthetic"),
 );
+
+const archiveFixture = await mkdtemp(
+  join(tmpdir(), "flowlens-public-archive-"),
+);
+try {
+  const logs = join(archiveFixture, "Logs");
+  const split = join(logs, "Split");
+  const outside = join(archiveFixture, "outside.md");
+  const alias = join(archiveFixture, "Alias");
+  const controller = "0x1234567890abcdef1234567890abcdef12345678";
+  await mkdir(split, { recursive: true });
+  await writeFile(
+    join(split, "Prior investigation.md"),
+    `# Synthetic log\r\nController: [${controller.toUpperCase()}](https://example.invalid/)\r\n`,
+  );
+  await writeFile(join(logs, "Different.md"), `0x1234\n${controller}a\n`);
+  await writeFile(outside, `${controller}\n`);
+  await symlink(outside, join(logs, "Alias.md"));
+  await symlink(logs, alias);
+  const archiveSearch = (address, directory = logs) =>
+    JSON.parse(
+      execFileSync(
+        process.execPath,
+        ["server/cli.ts", "archive-search", "--address", address],
+        {
+          encoding: "utf8",
+          env: { ...process.env, FLOWLENS_VAULT_LOG_DIR: directory },
+        },
+      ),
+    );
+  assert.equal(archiveSearch(controller, "").status, "unconfigured");
+  assert.equal(archiveSearch(controller, outside).status, "unavailable");
+  assert.equal(archiveSearch(controller, `${alias}/`).status, "unavailable");
+  const result = archiveSearch(controller);
+  assert.equal(result.status, "complete");
+  assert.deepEqual(result.matches, [
+    { path: "Split/Prior investigation.md", line: 2 },
+  ]);
+  assert.deepEqual(archiveSearch(DEMO_ROOT).matches, []);
+  await writeFile(join(logs, "Oversized.md"), Buffer.alloc(257 * 1024));
+  assert.equal(archiveSearch(controller).status, "partial");
+} finally {
+  await rm(archiveFixture, { recursive: true, force: true });
+}
 
 const listStore = await mkdtemp("flowlens-public-list-");
 try {

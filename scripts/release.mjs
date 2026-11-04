@@ -102,6 +102,7 @@ const allowlist = [
   "data/README.md",
   "data/wallet-labels.json",
   "server/agent.ts",
+  "server/archive-search.ts",
   "server/api.ts",
   "server/cli.ts",
   "server/etherscan.ts",

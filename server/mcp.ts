@@ -94,6 +94,13 @@ const tools = [
       ),
   },
   {
+    operation: "archive_search",
+    description:
+      "Search authorized local Markdown logs for a full address. Run at the start of a trace and repeat for each separately verified controller. Returns only relative file and line references, never note text. Directory is set by the local operator through FLOWLENS_VAULT_LOG_DIR. No provider request, caller-supplied path or case mutation.",
+    readOnly: true,
+    input: z.object({ address }).strict(),
+  },
+  {
     operation: "create",
     description:
       "Create and persist a local investigation. Demo uses the synthetic focus wallet. Live indexed history comes from Etherscan when the server has ETHERSCAN_API_KEY; without it, Ethereum history comes from keyless Blockscout (legacy host eth.blockscout.com), which then receives the traced wallet, unless FLOWLENS_BLOCKSCOUT=off. Base (8453) selects the server-environment FLOWLENS_BASE_BLOCKSCOUT_URL when configured, then optional Alchemy Transfers, then official keyless Etherscan MCP, or the user-local BLOCKSCOUT_API_KEY unified route when FLOWLENS_ETHERSCAN_MCP=off; the self-hosted route is loopback-only, needs no API key and checks readiness before each wallet-history page. Arbitrum One (42161) uses Etherscan when configured or the unified Blockscout route. Robinhood Chain (4663) uses only the user-local BLOCKSCOUT_API_KEY unified route when explicitly expanded; it has no keyless FlowLens history route. Account plans can restrict a keyed chain. HyperEVM (999) uses keyless HypurrTrace when enabled. Derive Chain (957) is reached by expanding a wallet there. No API or MCP field supplies a provider URL or key. Explicit evidence-only mode needs no key, makes no provider request and does not enumerate wallet history.",
@@ -484,6 +491,7 @@ function outputFor(operation: string) {
         required: ["id", "title", "root", "mode", "updatedAt", "transferCount"],
       },
     },
+    archive_search: reference("ArchiveSearchResult"),
     create: reference("Investigation"),
     expand: reference("Investigation"),
     annotate: reference("Investigation"),

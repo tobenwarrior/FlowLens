@@ -28,7 +28,7 @@ Blockchain data is public. Your investigation should stay under your control.
 - **Local-first.** Run on your computer; keep cases, notes and labels local. No telemetry.
 - **Evidence you can inspect.** Open a connection to see the transfers, exact amounts, source and transaction links behind it.
 - **Coverage you can see.** Missing streams, partial history and provider errors stay visible.
-- **Human and agent workflows.** Use the visual workspace, JSON CLI, local HTTP API or stdio MCP server (22 stdio MCP tools).
+- **Human and agent workflows.** Use the visual workspace, JSON CLI, local HTTP API or stdio MCP server (23 stdio MCP tools).
 - **Free and open source.** AGPL-3.0-only. No wallet connection, signing or custody.
 
 ## Get started
@@ -146,6 +146,14 @@ Use `--chain 957` to expand on Derive. `create` will not overwrite a case; resum
 
 Use `node --env-file-if-exists=.env server/cli.ts list --address "$WALLET"` to find earlier cases in the configured local case store. Add `--chain 957` to require a matching retained node on Derive. For a newly verified controller, search by address across chains first. Standalone exports and private project notes can supply separate historical evidence.
 
+When an operator has an authorized local vault archive, set `FLOWLENS_VAULT_LOG_DIR` to its Markdown `Logs` directory. FlowLens searches nested Markdown files by the full case-insensitive address and returns only relative paths and 1-based matching lines. It never returns note text, writes to the vault, or sends archive content over HTTP or to a provider. The lookup is available to agents as `flowlens_archive_search` and from the CLI:
+
+```sh
+npm run --silent cli -- archive-search --address "$WALLET"
+```
+
+The result reports `unconfigured`, `unavailable`, `partial` or `complete`. An empty result is not evidence of no archive hit unless the scan is `complete`. Run it for the root, then again for every independently verified controller and material peer before attribution review. Read matched notes locally and follow their explicit continuation links within the authorized archive.
+
 For an explicit bounded collection, use `collect` against one existing case file and one wallet/chain:
 
 ```sh
@@ -159,11 +167,11 @@ Reuse the command with the appropriate `--chain` from the source table for each 
 
 ### MCP
 
-Launch `node --env-file-if-exists=.env server/mcp.ts` from your MCP host and start with `flowlens_status`. The [MCP guide](docs/mcp.md) covers setup and all 22 tool contracts.
+Launch `node --env-file-if-exists=.env server/mcp.ts` from your MCP host and start with `flowlens_status`. The [MCP guide](docs/mcp.md) covers setup and all 23 tool contracts.
 
 `flowlens_hypercore` and `POST /api/hypercore` read one bounded HyperCore non-funding ledger page. Without a case ID they are explicit caller-scoped reads; with a live case ID they persist `protocolEvidence.hypercore` and resume its frozen provider window without changing EVM transfers or totals. See [Provider coverage and limits](docs/providers.md) for the separate retention boundary.
 
-Cases live in `.local/cases`; labels in `.local/labels.json`. For an MCP host that launches outside the repository, set absolute `FLOWLENS_DATA_DIR` and `FLOWLENS_LABEL_FILE` paths. The standard HTTP server uses `.local/cases` relative to the repository; `FLOWLENS_DATA_DIR` does not relocate its storage. Run `npm start` from the repository root.
+Cases live in `.local/cases`; labels in `.local/labels.json`. For an MCP host that launches outside the repository, set absolute `FLOWLENS_DATA_DIR` and `FLOWLENS_LABEL_FILE` paths. Set `FLOWLENS_VAULT_LOG_DIR` only when the process is allowed to read a local Markdown log archive. The standard HTTP server uses `.local/cases` relative to the repository; `FLOWLENS_DATA_DIR` does not relocate its storage. Archive search is stdio/CLI-only and is not exposed by the HTTP API. Run `npm start` from the repository root.
 
 ### Investigation skills
 
@@ -184,6 +192,7 @@ Start at the [skill index](skills/README.md), or read the [tracing method](skill
 - **USD prices:** public Ethereum RPC and, for historical prices, Etherscan. Lookups run when you select **Load USD prices**.
 - **Protocol reads:** fixed public RPC and protocol services, only when requested.
 - **Derive inspection:** the public Derive API receives the submitted wallet address or subaccount ID.
+- **Authorized local archive:** `FLOWLENS_VAULT_LOG_DIR` is read-only, stays on the local process, and returns only relative Markdown paths and line numbers. It is never included in case JSON, reports or HTTP responses.
 
 Cases and browser storage are **not encrypted**. Exports can contain sensitive research; review them before sharing. Set `FLOWLENS_BLOCKSCOUT=off` to disable all Blockscout history routes, including the self-hosted Base route and keyed unified Base/Arbitrum/Robinhood routes; Derive history is then unavailable. This switch does not disable an independently configured Alchemy Base route or the fixed keyless Etherscan MCP route. Set `FLOWLENS_ETHERSCAN_MCP=off` to disable the keyless Base route and allow configured hosted Blockscout to serve Base. `FLOWLENS_BASE_BLOCKSCOUT_URL`, `BLOCKSCOUT_API_KEY`, `ALCHEMY_API_KEY` and provider switches stay in the user-local server environment and are never accepted from API/MCP callers or written to cases, reports or logs. See [SECURITY.md](SECURITY.md).
 

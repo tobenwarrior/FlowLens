@@ -56,6 +56,7 @@ import { inspectDerive, parseDeriveQuery } from "./derive-provider.ts";
 import { createHypercoreProvider } from "./hypercore-provider.ts";
 import type { HypercoreProvider } from "./hypercore-provider.ts";
 import { acquireHypercoreHistory } from "./hypercore-acquisition.ts";
+import { searchVaultLogs } from "./archive-search.ts";
 
 export class AgentOperationError extends Error {
   code: string;
@@ -442,6 +443,14 @@ export function createAgentService(options: AgentServiceOptions = {}) {
         },
       };
     if (operation === "list") return await store.list(listQuery(input));
+    if (operation === "archive_search") {
+      if (Object.keys(input).length !== 1 || typeof input.address !== "string")
+        throw new AgentOperationError(
+          "INVALID_ARGUMENT",
+          "Archive search accepts only an exact address.",
+        );
+      return await searchVaultLogs(input.address);
+    }
     if (operation === "create") {
       const value = await startInvestigation(
         input.root,

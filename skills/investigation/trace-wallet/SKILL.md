@@ -18,11 +18,11 @@ Use FlowLens to gather the evidence, follow the method in [the tracing guide](re
 ## 1. Set up the case
 
 1. Call `flowlens_status` to see which chains and providers are available.
-2. Call `flowlens_list` with the exact `address` and `chainId` when known. Review relevant saved cases and search the authorized project archive, if available, for the full address. Check dates, chain and coverage before reusing evidence.
+2. Call `flowlens_list` with the exact `address` and `chainId` when known. Run `flowlens_archive_search` with the full address on this first pass. The tool reports whether the local archive is configured. Review the returned paths and line numbers locally, including explicit continuation links in matched notes. A `complete` empty result is scoped to the searched logs. `unconfigured`, `unavailable` and `partial` results are unresolved scope.
 3. Resume a suitable case or call `flowlens_create` with `root` (the full address), `mode: "live"` and a `title`. History requests disclose the wallet to the selected public providers; inspect `providers.live.routes` to identify them.
 4. Use the returned case ID. Never invent an ID.
 
-Without MCP, use `node server/cli.ts list --address <address>` for the local case store and `node server/cli.ts create --mode live --address <address> --file .local/<name>.json` for a standalone case file.
+Without MCP, use `node server/cli.ts list --address <address>` for the local case store, `npm run --silent cli -- archive-search --address <address>` for the configured local archive, and `node server/cli.ts create --mode live --address <address> --file .local/<name>.json` for a standalone case file.
 
 ## 2. Load and read the history
 
@@ -31,7 +31,7 @@ Without MCP, use `node server/cli.ts list --address <address>` for the local cas
 - Read flows and counterparties with `flowlens_wallet` (filter by chain, asset, direction or dates) and page the graph with `flowlens_graph`.
 - Verify material transfers with `flowlens_evidence`: exact amount, token contract, block, time, hash and provenance.
 - For first funding, counterparty classes, linking clues and Safes, follow steps 2 to 6 of the tracing guide. Protocol reads (`flowlens_acquire` with `kind` `safe`, `bridge` or `internal`) stay separate from the graph totals.
-- When the evidence yields a verified controller distinct from the root, repeat exact-address case, authorized archive and label lookups for the controller. Search for the controller across chains first and validate each relevant match on its own chain. Inspect incoming and outgoing activity and keep controller coverage separate from root coverage. Follow [Attribution review](references/attribution-and-venues.md) before closing the case.
+- As soon as the evidence verifies a distinct controller, run `flowlens_archive_search` with its full address and review the matched notes and their continuations. Repeat the case and label lookups across chains, and validate each relevant match on its own chain. Complete these checks before reviewing material peers. Inspect incoming and outgoing activity and keep controller coverage separate from root coverage. Follow [Attribution review](references/attribution-and-venues.md) before closing the case.
 
 ### Trace without Arkham history
 
@@ -47,7 +47,7 @@ Use [cluster-wallets](../cluster-wallets/SKILL.md) for shared deposit addresses,
 
 ## 3. Check labels, free sources first
 
-Apply this list to the root, verified controller and material counterparties selected for attribution review. A blank root header or an identified venue does not close the relationship review.
+Apply this list to the root, verified controller and material counterparties selected for attribution review. Run the exact-address archive search before this list for the root and every verified controller. A blank root header or an identified venue does not close the relationship review.
 
 1. **FlowLens's own store:** `flowlens_label_search` with the `address` and `chainId`. A remembered label keeps its original source.
 2. **Explorer name tags:** the address page on the chain's explorer (for example Blockscout or Etherscan), including public name tags and verified contract names. "Funded by" usually names exchange infrastructure, not the owner.

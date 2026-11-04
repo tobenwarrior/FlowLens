@@ -48,6 +48,7 @@ import { realpathSync } from "node:fs";
 import { applyPublicLabels, loadPublicLabels } from "./public-labels.ts";
 import { acquireHypercoreHistory } from "./hypercore-acquisition.ts";
 import { collectWalletHistory } from "./history-collection.ts";
+import { searchVaultLogs } from "./archive-search.ts";
 
 const args = process.argv.slice(2),
   command = args.shift() ?? "help";
@@ -130,6 +131,8 @@ async function main() {
         status: "No arguments; provider availability and limits.",
         schema: "No arguments; machine contract.",
         list: "[--address EVM [--chain N]]; list local investigations, optionally matching an exact wallet and same-node chain.",
+        "archive-search":
+          "--address EVM; locate exact address references in the configured local Markdown logs, without reading providers or returning note text.",
         "label-search":
           "[--query TEXT] [--chain N] [--address EVM] [--kind KIND] [--limit 1..1000] [--label-file PATH]; searches private labels plus the tracked shared catalogue without writing either.",
         hypercore:
@@ -164,6 +167,12 @@ async function main() {
         2: "saved investigation contains a current provider/coverage error; earlier empty source attempts remain visible without causing exit 2",
       },
     });
+    return;
+  }
+  if (command === "archive-search") {
+    if (!flags["--address"] || Object.keys(flags).length !== 1)
+      throw new Error("archive-search accepts only --address EVM");
+    print(await searchVaultLogs(flags["--address"]));
     return;
   }
   const providers = providersFromEnvironment();

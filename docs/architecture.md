@@ -1,6 +1,6 @@
 # Engine and investigation boundaries
 
-FlowLens has one evidence engine and four callers: browser, CLI, HTTP API and stdio MCP. Domain code has no provider credentials, filesystem imports or UI dependencies. Transport receives unknown data, validates it, and commits a page only after its evidence and cursor are consistent.
+FlowLens has one evidence engine and four callers: browser, CLI, HTTP API and stdio MCP. Domain code has no provider credentials, filesystem imports or UI dependencies. Transport receives unknown data, validates it, and commits a page only after its evidence and cursor are consistent. The opt-in archive lookup is a local attribution aid at the CLI/stdio boundary. It scans only the server-configured Markdown log directory, returns path and line references without note text, and never enters the browser or HTTP API.
 
 ## Data and state
 
@@ -48,7 +48,7 @@ Remaining product limits include reorg reconciliation, current-window refresh, a
 
 `safe.ts`, `bridges.ts` and `internal.ts` strictly parse supplied observations. `protocols.ts` coordinates mode-separated bundles and analyses. The optional investigation `protocolEvidence` field is durable and backward compatible with earlier version-1 snapshots; it never silently augments indexed transfers. The UI shows replay in a progressive drawer rather than mixing it with source coverage.
 
-`server/agent.ts` is the coded operation boundary for MCP and HTTP replay/acquisition. The official SDK owns stdio protocol framing; no custom JSON-RPC transport is implemented. The 22 tools include `flowlens_acquire`, `flowlens_derive` and `flowlens_hypercore`, and accept bounded JSON and case IDs, not provider URLs, credentials or filesystem paths. The self-hosted Base origin is server-environment configuration only; no HTTP or MCP operation accepts it. Graph cursors pin revision and filters. Case writes share the existing CLI/API file locks. Tool responses are bounded and report uncertain post-mutation overflow explicitly; inspect before retrying.
+`server/agent.ts` is the coded operation boundary for MCP and HTTP replay/acquisition. The official SDK owns stdio protocol framing; no custom JSON-RPC transport is implemented. The 23 tools include `flowlens_acquire`, `flowlens_derive`, `flowlens_hypercore` and `flowlens_archive_search`. The archive search accepts only a validated full address and reads the server-local `FLOWLENS_VAULT_LOG_DIR`; it returns bounded relative path/line references, never note text, and is not wired to HTTP. Other tools accept bounded JSON and case IDs, not provider URLs, credentials or filesystem paths. The self-hosted Base origin is server-environment configuration only; no HTTP or MCP operation accepts it. Graph cursors pin revision and filters. Case writes share the existing CLI/API file locks. Tool responses are bounded and report uncertain post-mutation overflow explicitly; inspect before retrying.
 
 The standalone `derive` operation inspects public venue associations, one margin snapshot or one time-bounded trade page through the same CLI, HTTP and MCP service. These are provider-reported venue records, not indexed transfers, chain ownership proofs or beneficial-owner labels.
 

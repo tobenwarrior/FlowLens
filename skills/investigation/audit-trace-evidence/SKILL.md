@@ -55,7 +55,7 @@ node server/cli.ts export --file "$CASE_FILE"
 
 ## 5. Deliver a bounded verdict
 
-For an attribution report, check that the root and each verified controller were searched in the case store and any authorized archive. Verify that material leads were reviewed or are identified as blocked, unreviewed or outside the stated budget. A clean address header, an identified venue and an empty archive search each have a limited scope. Keep the strongest supported relationship visible and give copyable full addresses for every material wallet.
+For an attribution report, check that the root and each verified controller were searched in the case store and with `flowlens_archive_search` when a local archive is configured. Record the archive status and exact matched paths/line references without copying private note text into the report. Verify that material leads were reviewed or are identified as blocked, unreviewed or outside the stated budget. A clean address header, an identified venue and an empty archive search each have a limited scope. Keep the strongest supported relationship visible and give copyable full addresses for every material wallet.
 
 For each material claim provide: claim category; exact chain/hash/event identity; full endpoints; asset contract and exact amount; block and UTC event time; provider/retrieval time; source URL; verification status and missing evidence. Finish with a coverage ledger and the next bounded check that could falsify the claim. Use “earliest observed” and “no link found within [scope]”, never unsupported “first ever” or “no link”. Do not assign ownership percentages or allege ownership.
 

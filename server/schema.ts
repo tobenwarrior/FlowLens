@@ -67,6 +67,28 @@ export const jsonSchema = {
       pattern: "^\\s*0[xX][0-9a-fA-F]{40}\\s*$",
       "x-normalizedTo": "trimmed lowercase 0x address",
     },
+    ArchiveSearchResult: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        address: ref("Address"),
+        status: {
+          enum: ["unconfigured", "unavailable", "complete", "partial"],
+        },
+        notesSearched: integer(),
+        matches: array(
+          {
+            type: "object",
+            additionalProperties: false,
+            properties: { path: { type: "string" }, line: integer(1) },
+            required: ["path", "line"],
+          },
+          100,
+        ),
+        limits: { type: "array", items: { type: "string" } },
+      },
+      required: ["address", "status", "notesSearched", "matches", "limits"],
+    },
     Timestamp: {
       type: "string",
       maxLength: 40,
@@ -1033,6 +1055,7 @@ export const operationSchema = {
     "status",
     "schema",
     "list",
+    "archive_search",
     "create",
     "inspect",
     "expand",
@@ -1164,6 +1187,12 @@ export const operationSchema = {
       cli: "list [--address EVM [--chain N]]",
       description:
         "List summaries from the configured local case store. Optional address matches exact roots or retained nodes. Optional chainId requires address and matches a retained node on that chain. At most 1000 snapshots are considered. No provider query or case change.",
+    },
+    archive_search: {
+      cli: "archive-search --address EVM",
+      responseSchema: contractRef("ArchiveSearchResult"),
+      description:
+        "Offline exact-address lookup of relative Markdown path and line references under the configured FLOWLENS_VAULT_LOG_DIR. CLI and stdio MCP only. No note content, HTTP route, provider request or case mutation.",
     },
     create: {
       method: "POST",

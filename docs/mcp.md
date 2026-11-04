@@ -26,7 +26,8 @@ Configure a host manually only when desired. This is an illustrative client entr
       "args": ["/ABSOLUTE/PATH/TO/FlowLens/server/mcp.ts"],
       "env": {
         "FLOWLENS_DATA_DIR": "/ABSOLUTE/PATH/TO/FlowLens/.local/cases",
-        "FLOWLENS_LABEL_FILE": "/ABSOLUTE/PATH/TO/FlowLens/.local/labels.json"
+        "FLOWLENS_LABEL_FILE": "/ABSOLUTE/PATH/TO/FlowLens/.local/labels.json",
+        "FLOWLENS_VAULT_LOG_DIR": "/ABSOLUTE/PATH/TO/AUTHORIZED/LOGS"
       }
     }
   }
@@ -34,6 +35,8 @@ Configure a host manually only when desired. This is an illustrative client entr
 ```
 
 `FLOWLENS_DATA_DIR` selects a private local case store. It defaults to `.local/cases` relative to the launch directory. Use an absolute path when a host may launch elsewhere. To share cases with the web/API instance, point both at that instance's case directory. The MCP tools accept case IDs, **not filesystem paths, provider URLs or keys**; the self-hosted Base URL is server-environment configuration only.
+
+`FLOWLENS_VAULT_LOG_DIR` is an optional server-local boundary for an operator-authorized Markdown log archive. `flowlens_archive_search` accepts one full EVM address, searches that directory and nested directories case-insensitively, and returns only `status`, `notesSearched`, relative Markdown paths with 1-based line numbers, and bounded `limits`. It does not return note text, follow links, write files, query the network or expose the archive through HTTP. Hidden entries and symlinks are excluded. The scan is capped at 10,000 entries, 24 nested levels, 256 KiB per note, 32 MiB total and 100 matched lines. `unconfigured`, `unavailable` and `partial` results are not negative evidence. Read returned notes locally, then follow only explicit continuation links inside the same authorized boundary.
 
 Remembered entity labels live beside the cases in `.local/labels.json`, or the file `FLOWLENS_LABEL_FILE` names, also resolved against the launch directory. `flowlens_label_put` writes it, and `flowlens_annotate` keeps it in step on a best-effort basis: a label attached or edited in a case is remembered, and one removed is forgotten, unless the label file is busy or cannot be written, in which case the case change still stands. `flowlens_create` and `flowlens_expand` fill stored labels into every unlabelled wallet in the case, and the web UI does the same for live cases through the HTTP API; browser demo cases and CLI case-file commands do not hydrate private labels, though CLI case commands do apply the tracked shared catalogue. The CLI's `label-search` command can search private labels explicitly. A label the case already holds wins, and a live case never takes a synthetic or demo one. Point MCP and the web/API instance at the same file to share attribution.
 
@@ -112,9 +115,24 @@ Call `flowlens_list` with `{ "address": "<full EVM address>" }` to find case roo
 
 The lookup reads at most 1,000 candidate snapshots in the local case directory and skips unreadable or invalid snapshots. It does not search standalone exports, browser-only saves, vault notes or external providers. A match locates a case for review. Check its `mode`, dates, evidence and coverage separately before using it for attribution.
 
+### Search an authorized local archive
+
+Use `flowlens_archive_search` at the start of a trace and immediately after verifying a distinct controller. `flowlens_list` covers the FlowLens store. Archive lookup covers the configured local Markdown log directory.
+
+```json
+{
+  "name": "flowlens_archive_search",
+  "arguments": {
+    "address": "<full EVM address>"
+  }
+}
+```
+
+The CLI equivalent is `npm run --silent cli -- archive-search --address "$WALLET"`. A `complete` scan with no matches means no matching address was found within that configured archive at that time. Any other empty result means the archive was unavailable, unconfigured or only partially scanned and must be recorded as unresolved scope.
+
 ## Tools
 
-The server advertises 22 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
+The server advertises 23 tools, with JSON Schema inputs, per-tool result schemas, a structured error envelope and behavior annotations through `tools/list`. Investigation, transfer, flow and coverage schemas reuse the shared domain definitions; graph outputs additionally describe page/scope metadata. Protocol replay/acquisition analyses expose their envelopes here and retain detailed typed models and runtime validation in the domain modules.
 
 `flowlens_wallet`, `flowlens_annotate` and `flowlens_visibility` share the [wallet controls and attribution contracts](workspace-controls.md). They do not fetch history or label providers. Wallet transfer pages after offset zero require the returned revision guard. Retained case state is bounded to 2,000 nodes, 20,000 transfers and 5 MB; the human graph projection shows the focus wallet plus at most 400 counterparties, while loaded addresses and evidence remain retained within those bounds.
 
@@ -125,6 +143,7 @@ Import and replay tools are marked as potentially destructive because they can r
 | `flowlens_status`           | `{}`                                                                                               | Provider availability and limits; no secrets. `providers.live.routes` names self-hosted Base with an endpoint-bound `blockscout-self-hosted-v1-<endpoint-digest>` ID when configured, `etherscan-mcp-keyless-v2` when the fixed keyless Base route is eligible, and keyed `blockscout-pro-v2` for Robinhood Chain (4663); route presence is not a readiness or completeness check |
 | `flowlens_schema`           | `{}`                                                                                               | Shared operation/evidence contracts                                                                                                                                           |
 | `flowlens_list`             | Optional `address`, optional `chainId` with `address`                                               | Bounded local case summaries, optionally matched by exact wallet                                                                                                               |
+| `flowlens_archive_search`   | `address`                                                                                             | Read-only exact-address search of the configured local Markdown archive; returns status, relative paths and line numbers only; never searches providers or HTTP-visible state |
 | `flowlens_create`           | `root`, `mode`, optional `title`, `historyMode`                                                    | Creates a synthetic demo, indexed live case or empty live evidence-only case; Base selects self-hosted Blockscout, then Alchemy, then fixed keyless Etherscan MCP v2 unless disabled, then hosted keyed Blockscout according to server environment; Robinhood is keyed Blockscout only when explicitly expanded |
 | `flowlens_inspect`          | `caseId`                                                                                           | Metadata, exact gross/net flows, coverage and attached protocol analysis                                                                                                      |
 | `flowlens_expand`           | `caseId`, `address`, `chainId`, optional `maxPages`, `pageSize`                                    | Resumes one wallet/chain; Base uses self-hosted Blockscout, then Alchemy, then fixed keyless Etherscan MCP v2 unless disabled, then hosted keyed Blockscout by server configuration; v2 keeps native/ERC-20/internal cursors independent and limits internal candidates to one per page for trace verification; Robinhood Chain (4663) uses keyed Blockscout only; readiness/access errors remain explicit, standard routes accept at most 10 rows per stream, HyperEVM up to 100; no automatic recursion |

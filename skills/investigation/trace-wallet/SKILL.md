@@ -95,6 +95,8 @@ Once the selected entries are approved, validate and publish the catalogue updat
 
 Offer `flowlens_export` so the user can keep or share the case, and warn that exports can contain sensitive research.
 
+When the user asks for a flow map, continue through the [transaction-map workflow](../render-transaction-map/SKILL.md). Build the selection from the case ledger, fetch evidence for every selected member and run its receipt check before delivering a verified map. Include the receipt index and the remaining coverage gaps.
+
 ## Related
 
 - [Tracing method](references/tracing-method.md) and [attribution/venue continuation](references/attribution-and-venues.md): the full procedure

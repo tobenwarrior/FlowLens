@@ -7,6 +7,8 @@ description: Use when a wallet trace needs a compact transaction-flow graphic, a
 
 Use after [trace-wallet](../trace-wallet/SKILL.md) and [audit-trace-evidence](../audit-trace-evidence/SKILL.md). The map is a presentation of a validated ledger. It never replaces the ledger, coverage record or claim review.
 
+Start from the full addresses or a saved case. Acquire, reconcile, select, verify, render and inspect in that order. Deliver the map with its receipt index and a count of acquired, displayed and verified rows. See [the diagonal layout](references/diagonal-layout.md) for a reusable composition and [displayed-transfer verification](references/receipts.md) for the final check.
+
 ## 1. Build the ledger before drawing
 
 1. Read the case with `flowlens_inspect`, then page the relevant wallet and chain with `flowlens_wallet` or `flowlens_graph`. Resume every provider stream with `flowlens_expand` until it is terminal, reaches a stated limit, or records an error. Keep each coverage record.
@@ -86,7 +88,13 @@ Use a white canvas, compact nodes, directional arrows and concise amount/date la
 
 Before clearing a map for external sharing, check every displayed member against transaction and receipt evidence. For ERC-20 transfers, match the successful receipt's exact log index, canonical token contract, endpoints and raw amount. For native value, match the transaction's endpoints and value with a successful receipt. Check block times for date and timing claims, recompute each route total, and cite provider labels separately. Report how many rows were checked against raw chain evidence and how many still depend on indexed observations. Share a receipt list for the displayed routes when useful.
 
-When an RPC cannot decode a historical receipt or requires archive access, retain the error against the affected hashes. If another receipt source is authorized, request only the unresolved hashes and match its receipts to the chain's transaction and block records by hash and block number. A returned receipt with mismatched fields is a conflict to investigate. A missing receipt leaves the member unverified. Save the verification source per row and reconcile the verified count to the displayed count.
+Use [the receipt gate](references/receipts.md) on the same route manifest that drives the final export.
+
+```sh
+node skills/investigation/render-transaction-map/check-ledger.mjs "$MAP_MANIFEST" --require-receipts
+```
+
+If the gate reports unresolved rows, investigate those exact members. Keep unresolved transfers in the full ledger. The verified transfer map uses only passing rows, with amounts and counts recomputed from that selection. Treat traces and venue ledger entries as separate evidence with their own verification check.
 
 Render only facts that the ledger supports. Use full labels from providers verbatim, and include provenance beside the label in the report or metadata. Never put a private wallet case, vault note, API key, restricted provider response or unverified owner name in a public fixture, screenshot or source export.
 

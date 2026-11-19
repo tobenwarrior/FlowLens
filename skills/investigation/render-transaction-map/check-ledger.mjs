@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { checkReceipts } from "./check-receipts.mjs";
 
 const displayStates = new Set([
   "shown",
@@ -11,16 +12,16 @@ const displayStates = new Set([
 ]);
 const onMap = new Set(["shown", "aggregated"]);
 
-function claimEvent(events, id, signature) {
+function claimEvent(events, id, signature, transfer = null) {
   if (typeof id !== "string" || !id)
     throw new Error("Acquired event has no ID");
-  if (events.has(id) && events.get(id) !== signature) {
+  if (events.has(id) && events.get(id).signature !== signature) {
     throw new Error(`Conflicting evidence for ${id}`);
   }
-  events.set(id, signature);
+  events.set(id, { signature, transfer });
 }
 
-async function check(manifestPath) {
+async function check(manifestPath, requireReceipts) {
   const folder = dirname(resolve(manifestPath));
   const read = async (path) =>
     JSON.parse(await readFile(resolve(folder, path), "utf8"));
@@ -29,6 +30,7 @@ async function check(manifestPath) {
     hypercore = [],
     display,
     routes,
+    proofs,
   } = await read(resolve(manifestPath));
   if (
     !Array.isArray(cases) ||
@@ -56,7 +58,15 @@ async function check(manifestPath) {
           row.to,
           row.rawAmount,
           row.status,
+          ...(requireReceipts
+            ? [
+                row.blockNumber,
+                Date.parse(row.timestamp),
+                row.synthetic === true,
+              ]
+            : []),
         ]),
+        row,
       );
     }
   }
@@ -103,20 +113,32 @@ async function check(manifestPath) {
     if (onMap.has(state) && !drawn.has(id))
       throw new Error(`Displayed event has no route: ${id}`);
   }
-  console.log(
-    JSON.stringify({
-      acquired: events.size,
-      onMap: drawn.size,
-      offMap: events.size - drawn.size,
-      routes: routeEntries.length,
-    }),
+  const summary = {
+    acquired: events.size,
+    onMap: drawn.size,
+    offMap: events.size - drawn.size,
+    routes: routeEntries.length,
+  };
+  if (!requireReceipts) {
+    console.log(JSON.stringify(summary));
+    return;
+  }
+  const verification = checkReceipts(
+    proofs === undefined ? [] : await read(proofs),
+    drawn,
+    events,
   );
+  console.log(JSON.stringify({ ...summary, ...verification }));
+  if (verification.unresolved.length) process.exitCode = 1;
 }
 
 try {
-  if (process.argv.length !== 3)
-    throw new Error("Usage: node check-ledger.mjs <manifest.json>");
-  await check(process.argv[2]);
+  const [manifestPath, flag, ...extra] = process.argv.slice(2);
+  if (!manifestPath || extra.length || (flag && flag !== "--require-receipts"))
+    throw new Error(
+      "Usage: node check-ledger.mjs <manifest.json> [--require-receipts]",
+    );
+  await check(manifestPath, flag === "--require-receipts");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

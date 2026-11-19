@@ -48,6 +48,12 @@ Test these as possibilities, not assumptions about a particular exchange:
 
 The memo/tag, rotation/reassignment and merchant examples are general counterexamples, not claims that any specific provider exposes customer assignments or that these checks were available in a previous investigation. Public chain data generally cannot resolve private exchange-account records.
 
+### Broker control or client settlement
+
+- Compare a broker's own trading wallet with a client-operated or jointly governed wallet that uses the broker for funding, collateral or settlement. Read first-party custody and financing terms that were in effect during the transfers. Dedicated client wallets, delegated signing and shared governance are different arrangements.
+- Draw the client-facing deposit and the broker's onward sweep as separate hops. Small gas top-ups, a timed sweep of an exact total, reciprocal test-sized transfers and shared exchange routes can support a settlement or coordination finding. Keep the reason for each transfer open unless a receipt, message or account record establishes it.
+- Check full signer, delegate, venue master and subaccount addresses for a link to the broker, and distinguish trade authorization from custody and beneficial ownership. Similar agent names or use of the same execution software can support a coordination lead. They leave the controller unresolved without address-specific corroboration.
+
 ## 5. What would strengthen or falsify the relationship
 
 Look for contemporaneous, public account-specific evidence, repeated independently supported use and relevant control observations. State whether a source supports endpoint assignment, account use, signing capacity or an organization disclosure; none silently fills the others. Never request private customer records, credentials or a signature to manufacture proof.

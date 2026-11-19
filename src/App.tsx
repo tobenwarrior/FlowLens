@@ -75,6 +75,7 @@ import { visibleTransfers } from "./domain/wallet-flows.ts";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { StartPanel } from "./components/StartPanel.tsx";
 import { WorkspaceDialogs } from "./components/WorkspaceDialogs.tsx";
+import { assetOptionLabels } from "./components/asset-option-label.ts";
 import type {
   AgentCaseSummary,
   WorkspaceModal,
@@ -521,6 +522,10 @@ export default function App() {
         : [],
     [investigation],
   );
+  const assetOptions = useMemo(() => {
+    const assets = allFlows.map(({ asset: value }) => value);
+    return assetOptionLabels(assets, chainName);
+  }, [allFlows]);
   const summary = useMemo(
     () =>
       investigation
@@ -1220,9 +1225,9 @@ export default function App() {
                     onChange={(e) => setAsset(e.target.value)}
                   >
                     <option value="all">All assets</option>
-                    {allFlows.map((f) => (
-                      <option key={assetKey(f.asset)} value={assetKey(f.asset)}>
-                        {f.asset.symbol} · {chainName(f.asset.chainId)}
+                    {assetOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
                       </option>
                     ))}
                   </select>

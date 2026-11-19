@@ -60,7 +60,7 @@ Ethereum (1) and Derive Chain (957) can use the keyless legacy Blockscout routes
 | Labels and cases  | Save investigations, add sourced labels and notes, and export or reopen case JSON. A labelled focus wallet names its case. |
 | USD prices        | Optional current values from Uniswap V3 over public RPC, loaded when you ask; historical prices with your Etherscan key. |
 | Protocol evidence | Bounded Safe reads, Circle CCTP bridge transactions and single-transaction call traces, separate from graph totals. |
-| Reports           | Agent workflows for source-cited PDF, Word and HTML reports with reviewed screenshots.                              |
+| Reports           | Agent workflows for receipt-checked transaction maps and source-cited PDF, Word and HTML reports.                     |
 
 ### Supported history sources
 
@@ -180,6 +180,7 @@ Cases live in `.local/cases`; labels in `.local/labels.json`. For an MCP host th
 | [Trace a wallet](skills/investigation/trace-wallet/SKILL.md)         | Follow funding, classify counterparties and build an attribution case with explicit uncertainty.                                                     |
 | [Review a cluster](skills/investigation/cluster-wallets/SKILL.md)    | Examine dedicated deposit-address leads; stop indiscriminate expansion through pooled exchanges. Bounded review, not automatic ownership clustering. |
 | [Audit evidence](skills/investigation/audit-trace-evidence/SKILL.md) | Check event identity, provenance, coverage gaps and what a conclusion actually establishes.                                                          |
+| [Map transactions](skills/investigation/render-transaction-map/SKILL.md) | Build a readable cross-chain map with one ledger and a receipt list for the displayed routes.                                                        |
 | [Create a report](skills/reporting/report-investigation/SKILL.md)    | Turn reviewed evidence and screenshots into cited PDF, Word or HTML documents.                                                                       |
 
 Start at the [skill index](skills/README.md), or read the [tracing method](skills/investigation/trace-wallet/references/tracing-method.md).

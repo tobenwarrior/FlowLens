@@ -5,6 +5,7 @@
 | Scope and gather | [trace-wallet](trace-wallet/SKILL.md) |
 | Test a deposit/account/control relationship | [cluster-wallets](cluster-wallets/SKILL.md) |
 | Challenge the evidence and interpretation | [audit-trace-evidence](audit-trace-evidence/SKILL.md) |
+| Draw a complete evidence map | [render-transaction-map](render-transaction-map/SKILL.md) |
 
 A CEX label does not automatically close a route: inspect a plausible dedicated deposit endpoint within a stated budget. Stop indiscriminate expansion through pooled hot wallets, custodians and service infrastructure.
 

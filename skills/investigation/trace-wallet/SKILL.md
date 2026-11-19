@@ -102,4 +102,5 @@ Offer `flowlens_export` so the user can keep or share the case, and warn that ex
 - [MCP guide](../../../docs/mcp.md): every tool's arguments
 - [Wallet controls](../../../docs/workspace-controls.md): labels, claim types and visibility
 - [Evidence review](../audit-trace-evidence/SKILL.md): validate coverage, exact amounts, source provenance and claim boundaries before reporting
+- [Transaction map](../render-transaction-map/SKILL.md): render a compact graph only after the complete ledger and coverage reconciliation are recorded
 - [PDF/DOCX report](../../reporting/report-investigation/SKILL.md): build a local evidence report with cited, privacy-reviewed screenshots and all-page inspection
